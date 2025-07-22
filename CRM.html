@@ -41,9 +41,9 @@
             <!-- NEW: Authentication Section -->
             <div id="auth-container" class="space-y-4">
                  <p class="text-sm text-center text-gray-600">Sign in with Google to access your Calendar and Classroom data.</p>
-                 <button id="auth-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center transition-opacity duration-300">
-                     <svg class="w-5 h-5 mr-3" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.089,5.571l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
-                     <span>Sign In with Google</span>
+                 <button id="auth-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center transition-opacity duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                     <svg id="auth-button-icon" class="w-5 h-5 mr-3" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.089,5.571l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
+                     <span id="auth-button-text">Loading Auth...</span>
                  </button>
                  <div id="auth-status" class="hidden text-center text-sm">
                      <p>Signed in as: <span id="user-email" class="font-semibold"></span></p>
@@ -86,13 +86,8 @@
     <!-- JavaScript Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("DEBUG: DOMContentLoaded fired. App is starting.");
             // --- IMPORTANT: CONFIGURATION ---
-            // 1. Go to the Google Cloud Console: https://console.cloud.google.com/
-            // 2. Create a new project.
-            // 3. Go to "APIs & Services" > "OAuth consent screen", configure it for "External" users, and add the required scopes.
-            // 4. Go to "APIs & Services" > "Credentials", create an "OAuth 2.0 Client ID" for a "Web application".
-            // 5. Add your domain to "Authorized JavaScript origins" (e.g., http://localhost, https://your-website.com).
-            // 6. Copy the Client ID and paste it below.
             const CLIENT_ID = '1042460892509-sf5mdkggbed4g8nivs6kjmc46nph3kc5.apps.googleusercontent.com';
             const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.students';
             
@@ -116,6 +111,7 @@
             const dom = {
                 authContainer: document.getElementById('auth-container'),
                 authButton: document.getElementById('auth-button'),
+                authButtonText: document.getElementById('auth-button-text'),
                 signoutButton: document.getElementById('signout-button'),
                 authStatus: document.getElementById('auth-status'),
                 userEmail: document.getElementById('user-email'),
@@ -128,30 +124,57 @@
                 tabControls: document.getElementById('tab-controls'),
                 tabButtons: document.querySelectorAll('.tab-button'),
             };
+            
+            dom.authButton.disabled = true; // Disable button until auth is ready
 
             // --- SCRIPT LOADING & INITIALIZATION ---
             function checkScripts() {
+                console.log("DEBUG: Checking for Google API scripts...");
                 if (typeof gapi !== 'undefined' && typeof google !== 'undefined') {
+                    console.log("DEBUG: Google API scripts found. Initializing...");
                     gapi.load('client', initializeGapiClient);
                     initializeGisClient();
                 } else {
+                    console.log("DEBUG: Scripts not found yet, checking again in 100ms.");
                     setTimeout(checkScripts, 100);
                 }
             }
 
-            function initializeGapiClient() {
-                gapi.client.init({}).catch(e => console.error('Error initializing GAPI client', e));
+            async function initializeGapiClient() {
+                console.log("DEBUG: Initializing GAPI client...");
+                try {
+                    await gapi.client.init({});
+                    console.log("DEBUG: GAPI client initialized successfully.");
+                } catch (e) {
+                    console.error('DEBUG: Error initializing GAPI client', e);
+                    renderNotification("Error initializing Google API Client. Check console.", "error");
+                }
             }
 
             function initializeGisClient() {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: tokenCallback,
-                });
+                console.log("DEBUG: Initializing GIS client (Token Client)...");
+                try {
+                    tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: SCOPES,
+                        callback: tokenCallback,
+                        error_callback: (error) => {
+                            console.error("DEBUG: GIS Error Callback:", error);
+                            renderNotification(`Authentication Error: ${error.message || 'Check console for details.'}`, "error");
+                        }
+                    });
+                    console.log("DEBUG: GIS client initialized successfully. Auth is ready.");
+                    dom.authButton.disabled = false;
+                    dom.authButtonText.textContent = "Sign In with Google";
+                } catch (e) {
+                    console.error('DEBUG: Error initializing GIS client', e);
+                    renderNotification("Error initializing Google Sign-In. Check console.", "error");
+                    dom.authButtonText.textContent = "Auth Failed to Load";
+                }
             }
 
             function tokenCallback(tokenResponse) {
+                console.log("DEBUG: Token callback received.", tokenResponse);
                 if (tokenResponse && tokenResponse.access_token) {
                     state.accessToken = tokenResponse.access_token;
                     gapi.client.setToken(tokenResponse);
@@ -164,13 +187,14 @@
                         if (data.email) dom.userEmail.textContent = data.email;
                     });
                 } else {
-                    console.error("No access token in response");
+                    console.error("DEBUG: No access token in response from token callback.");
                     renderNotification("Authentication failed. Please try again.", "error");
                 }
             }
 
             // --- UI & AUTH HANDLERS ---
             function updateUiForSignIn() {
+                console.log("DEBUG: Updating UI for signed-in state.");
                 dom.authButton.classList.add('hidden');
                 dom.authStatus.classList.remove('hidden');
                 dom.mainApp.classList.remove('hidden');
@@ -182,6 +206,7 @@
             }
 
             function updateUiForSignOut() {
+                console.log("DEBUG: Updating UI for signed-out state.");
                 state.accessToken = '';
                 state.clients = {};
                 state.courses = null;
@@ -193,21 +218,22 @@
             }
 
             function handleAuthClick() {
-                if (CLIENT_ID.startsWith('YOUR_CLIENT_ID')) {
-                    renderNotification('Please configure your Google OAuth Client ID in the script.', 'error');
-                    return;
-                }
+                console.log("DEBUG: Auth button clicked!");
                 if (!tokenClient) {
-                    renderNotification('Authentication library is not ready. Please wait.', 'error');
+                    console.error("DEBUG: Auth button clicked, but tokenClient is not initialized.");
+                    renderNotification('Authentication library is not ready. Please wait or refresh.', 'error');
                     return;
                 }
+                console.log("DEBUG: Requesting access token...");
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             }
 
             function handleSignOutClick() {
+                console.log("DEBUG: Sign out clicked.");
                 const token = gapi.client.getToken();
                 if (token) {
                     google.accounts.oauth2.revoke(token.access_token, () => {
+                        console.log("DEBUG: Token revoked.");
                         gapi.client.setToken('');
                         updateUiForSignOut();
                     });
@@ -585,7 +611,8 @@
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
                     renderClients(state.clients);
-                } catch (err) {
+                } catch (err)
+                 {
                     renderNotification(`Search failed: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
                 } finally {
@@ -753,4 +780,3 @@
     </script>
 </body>
 </html>
-
