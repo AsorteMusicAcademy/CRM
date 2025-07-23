@@ -73,6 +73,14 @@
                     <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
                 </div>
 
+                <!-- NEW: Discipline Filter -->
+                <div>
+                    <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Discipline</label>
+                    <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+
                 <div id="tab-controls">
                     <div class="flex justify-center border-b border-gray-700">
                         <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
@@ -116,6 +124,7 @@
                 isSearching: false,
                 fetched: false,
                 expandedClient: null,
+                activeDiscipline: 'all', // NEW: State for discipline filter
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -132,6 +141,7 @@
                 tabButtons: document.querySelectorAll('.tab-button'),
                 accessTokenInput: document.getElementById('accessTokenInput'),
                 setTokenBtn: document.getElementById('setTokenBtn'),
+                disciplineFilter: document.getElementById('disciplineFilter'), // NEW: Discipline filter element
             };
 
             // --- Authorization Logic (Suspended for testing, but kept in code) ---
@@ -409,17 +419,45 @@
                 lucide.createIcons();
             };
             
-            const renderClients = (clientsToDisplay) => {
+            // NEW: Function to populate the discipline filter dropdown
+            const populateDisciplineFilter = (clients) => {
+                const disciplines = [...new Set(Object.values(clients).map(client => client.discipline))].sort();
+                dom.disciplineFilter.innerHTML = `<option value="all">All Disciplines</option>`;
+                disciplines.forEach(discipline => {
+                    const option = document.createElement('option');
+                    option.value = discipline;
+                    option.textContent = discipline;
+                    dom.disciplineFilter.appendChild(option);
+                });
+                dom.disciplineFilter.value = state.activeDiscipline;
+            };
+
+            const renderClients = (allClients) => {
                 state.fetched = true;
-                if (!clientsToDisplay || Object.keys(clientsToDisplay).length === 0) {
+
+                // NEW: Filter logic
+                let filteredClients = allClients;
+                if (state.activeDiscipline !== 'all') {
+                    filteredClients = Object.entries(allClients)
+                        .filter(([_, details]) => details.discipline === state.activeDiscipline)
+                        .reduce((obj, [name, details]) => {
+                            obj[name] = details;
+                            return obj;
+                        }, {});
+                }
+
+                if (!filteredClients || Object.keys(filteredClients).length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
-                    const message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări cu formatul "Nume - Disciplina - Sedinta #" pentru ${tabTitle}.`;
+                    let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
+                    if (state.activeDiscipline !== 'all') {
+                        message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
+                    }
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = Object.entries(clientsToDisplay)
+                const clientListHTML = Object.entries(filteredClients)
                     .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
                     .map(([name, details]) => createClientListItemHTML(name, details))
                     .join('');
@@ -562,6 +600,7 @@
 
                 try {
                     state.clients = await api.getEvents(state.activeTab);
+                    populateDisciplineFilter(state.clients); // NEW: Populate filter after fetching
                     renderClients(state.clients);
                 } catch (err) {
                     renderNotification(`Failed to fetch events: ${err.message}`, 'error');
@@ -584,6 +623,7 @@
 
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
+                    populateDisciplineFilter(state.clients); // NEW: Populate filter after searching
                     renderClients(state.clients);
                 } catch (err) {
                     renderNotification(`Search failed: ${err.message}`, 'error');
@@ -710,6 +750,12 @@
                         updateUI();
                         handleFetchEvents();
                     });
+                });
+
+                // NEW: Event listener for discipline filter
+                dom.disciplineFilter.addEventListener('change', (e) => {
+                    state.activeDiscipline = e.target.value;
+                    renderClients(state.clients);
                 });
             }
 
