@@ -65,7 +65,12 @@
 
                 <div>
                     <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">Google Calendar ID</label>
-                    <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="flex items-center space-x-2">
+                        <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="openCalendarBtn" title="Open Calendar in New Tab" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
+                            <i data-lucide="external-link" class="h-5 w-5"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="relative">
@@ -73,7 +78,7 @@
                     <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
                 </div>
 
-                <!-- NEW: Discipline Filter -->
+                <!-- Discipline Filter -->
                 <div>
                     <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Discipline</label>
                     <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -124,7 +129,7 @@
                 isSearching: false,
                 fetched: false,
                 expandedClient: null,
-                activeDiscipline: 'all', // NEW: State for discipline filter
+                activeDiscipline: 'all', 
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -141,7 +146,8 @@
                 tabButtons: document.querySelectorAll('.tab-button'),
                 accessTokenInput: document.getElementById('accessTokenInput'),
                 setTokenBtn: document.getElementById('setTokenBtn'),
-                disciplineFilter: document.getElementById('disciplineFilter'), // NEW: Discipline filter element
+                disciplineFilter: document.getElementById('disciplineFilter'), 
+                openCalendarBtn: document.getElementById('openCalendarBtn'), // NEW
             };
 
             // --- Authorization Logic (Suspended for testing, but kept in code) ---
@@ -419,7 +425,6 @@
                 lucide.createIcons();
             };
             
-            // NEW: Function to populate the discipline filter dropdown
             const populateDisciplineFilter = (clients) => {
                 const disciplines = [...new Set(Object.values(clients).map(client => client.discipline))].sort();
                 dom.disciplineFilter.innerHTML = `<option value="all">All Disciplines</option>`;
@@ -435,7 +440,6 @@
             const renderClients = (allClients) => {
                 state.fetched = true;
 
-                // NEW: Filter logic
                 let filteredClients = allClients;
                 if (state.activeDiscipline !== 'all') {
                     filteredClients = Object.entries(allClients)
@@ -529,7 +533,7 @@
                 const courseOptions = state.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
                 return `
-                    <div class="mb-4 homework-form" data-name="${name}">
+                    <div class="mb-4 homework-form" data-name="${name}" data-discipline="${client.discipline}" data-session-number="${client.sessionNumber}">
                         <h4 class="text-md font-semibold text-gray-200 mb-2">Temă pentru Acasă</h4>
                         <div class="flex items-center space-x-2 mb-2">
                             <label class="text-sm font-medium">Curs:</label>
@@ -568,7 +572,7 @@
 
                                 const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
                                 
-                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric' })} - ${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
+                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
                             }).join('')}
                         </ul>
                     </li>
@@ -600,7 +604,7 @@
 
                 try {
                     state.clients = await api.getEvents(state.activeTab);
-                    populateDisciplineFilter(state.clients); // NEW: Populate filter after fetching
+                    populateDisciplineFilter(state.clients);
                     renderClients(state.clients);
                 } catch (err) {
                     renderNotification(`Failed to fetch events: ${err.message}`, 'error');
@@ -623,7 +627,7 @@
 
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
-                    populateDisciplineFilter(state.clients); // NEW: Populate filter after searching
+                    populateDisciplineFilter(state.clients);
                     renderClients(state.clients);
                 } catch (err) {
                     renderNotification(`Search failed: ${err.message}`, 'error');
@@ -731,6 +735,16 @@
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.fetchEventsBtn.addEventListener('click', handleFetchEvents);
 
+                dom.openCalendarBtn.addEventListener('click', () => {
+                    const calendarId = dom.calendarIdInput.value;
+                    if (calendarId) {
+                        const url = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(calendarId)}`;
+                        window.open(url, '_blank');
+                    } else {
+                        renderNotification('Please enter a Calendar ID first.', 'error');
+                    }
+                });
+
                 let searchTimeout;
                 dom.searchQueryInput.addEventListener('input', (e) => {
                     clearTimeout(searchTimeout);
@@ -752,7 +766,6 @@
                     });
                 });
 
-                // NEW: Event listener for discipline filter
                 dom.disciplineFilter.addEventListener('change', (e) => {
                     state.activeDiscipline = e.target.value;
                     renderClients(state.clients);
@@ -823,6 +836,7 @@
                     const history = await api.fetchHistory(name);
                     const homeworkHTML = createHomeworkHTML(name, client);
                     const historyHTML = createHistoryHTML(history);
+                    
                     container.innerHTML = `
                         <div class="p-6 border-t border-gray-700 space-y-6">
                             <div>
@@ -835,17 +849,18 @@
                         </div>
                     `;
                     lucide.createIcons();
-                    attachDetailEventListeners(name, container);
+                    attachDetailEventListeners(name, container, history);
                 } catch (err) {
                     container.innerHTML = `<div class="p-4 border-t border-gray-700 text-red-500">Failed to load details: ${err.message}</div>`;
                 }
             };
             
-            const attachDetailEventListeners = (name, container) => {
+            const attachDetailEventListeners = (name, container, history) => {
                 container.querySelector('.post-homework-btn')?.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handlePostHomeworkClick(e.currentTarget);
                 });
+
                 container.querySelectorAll('.history-month-header').forEach(header => {
                     header.addEventListener('click', (e) => {
                         e.stopPropagation();
