@@ -335,16 +335,20 @@
                     if (data.error) throw new Error(data.error.message);
                     return data;
                 },
-                // NEW: Function to update event summary
-                async updateEventSummary(eventId, newSummary) {
+                // MODIFIED: Function to update event summary and colorId
+                async updateEventSummary(eventId, newSummary, colorId = null) {
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
+                    const body = { summary: newSummary };
+                    if (colorId !== null) {
+                        body.colorId = colorId;
+                    }
                     const response = await fetch(url, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `Bearer ${state.accessToken}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ summary: newSummary })
+                        body: JSON.stringify(body)
                     });
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
@@ -604,7 +608,7 @@
                 }
             };
 
-            // NEW: Handle Increment Session Click
+            // MODIFIED: Handle Increment Session Click to update color
             const handleIncrementSessionClick = async (button) => {
                 const { eventId, name } = button.dataset;
                 const clientDetails = state.clients[name];
@@ -618,6 +622,14 @@
                 // Implement circular increment: 1 -> 2 -> 3 -> 4 -> 1
                 let newSessionNumber = (currentSessionNumber % 4) + 1; 
                 
+                // Determine colorId based on newSessionNumber
+                let colorToApply = null; // Default to no specific color
+                if (newSessionNumber === 1) {
+                    colorToApply = '10'; // Green (Basil)
+                } else if (newSessionNumber === 4) {
+                    colorToApply = '11'; // Red (Tomato)
+                }
+
                 // Construct the new summary without '#'
                 const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
 
@@ -626,8 +638,9 @@
                 lucide.createIcons();
 
                 try {
-                    await api.updateEventSummary(eventId, newSummary);
-                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}.`, 'success');
+                    // Pass the colorId to the updateEventSummary function
+                    await api.updateEventSummary(eventId, newSummary, colorToApply);
+                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}. Event color updated.`, 'success');
 
                     // Update the state and re-render the clients to reflect the change
                     state.clients[name].sessionNumber = newSessionNumber;
