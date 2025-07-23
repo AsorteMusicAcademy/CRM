@@ -91,7 +91,7 @@
             // =======================================================================
             // ==> PASTE YOUR GOOGLE CLIENT ID HERE <==
             // =======================================================================
-            const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com'; 
+            const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
             const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
             let tokenClient;
 
@@ -334,7 +334,22 @@
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
                     return data;
-                }
+                },
+                // NEW: Function to update event summary
+                async updateEventSummary(eventId, newSummary) {
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
+                    const response = await fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${state.accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ summary: newSummary })
+                    });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+                    return data;
+                },
             };
             
             const renderNotification = (message, type = 'success') => {
@@ -425,6 +440,10 @@
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== 4 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
                                 <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
+                                <!-- NEW: Increment Session Button -->
+                                <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
+                                    <i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Increment Session</span>
+                                </button>
                             </div>
                         </div>
                         <div class="client-details w-full" style="display: ${isExpanded ? 'block' : 'none'};">
@@ -432,27 +451,6 @@
                         </div>
                     </li>
                 `;
-            };
-
-            const renderClientDetails = async (name, container) => {
-                container.innerHTML = `<div class="flex items-center justify-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-600"></i><span class="ml-2">Se încarcă detaliile...</span></div>`;
-                lucide.createIcons();
-                
-                try {
-                    const history = await api.fetchHistory(name);
-                    const client = state.clients[name] || state.searchQuery && (await api.searchEvents(name))[name];
-                    container.innerHTML = `
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            ${createHomeworkHTML(name, client)}
-                            <h4 class="text-md font-semibold text-gray-700 mb-2">Istoric Sedinte (Ultimele 60 de zile)</h4>
-                            ${createHistoryHTML(history)}
-                        </div>
-                    `;
-                    lucide.createIcons();
-                    attachDetailEventListeners(name, container);
-                } catch(err) {
-                    container.innerHTML = `<p class="text-red-500 p-4">Failed to load details: ${err.message}</p>`;
-                }
             };
             
             const createHomeworkHTML = (name, client) => {
@@ -605,6 +603,40 @@
                     lucide.createIcons();
                 }
             };
+
+            // NEW: Handle Increment Session Click
+            const handleIncrementSessionClick = async (button) => {
+                const { eventId, name } = button.dataset;
+                const clientDetails = state.clients[name];
+
+                if (!clientDetails || (state.activeTab !== 'today' && state.activeTab !== 'tomorrow')) {
+                    renderNotification('Session increment is only available for today\'s or tomorrow\'s sessions.', 'error');
+                    return;
+                }
+
+                const currentSessionNumber = clientDetails.sessionNumber;
+                const newSessionNumber = currentSessionNumber + 1;
+                const newSummary = `${name} - ${clientDetails.discipline} - Sedinta #${newSessionNumber}`;
+
+                button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                button.disabled = true;
+                lucide.createIcons();
+
+                try {
+                    await api.updateEventSummary(eventId, newSummary);
+                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}.`, 'success');
+
+                    // Update the state and re-render the clients to reflect the change
+                    state.clients[name].sessionNumber = newSessionNumber;
+                    renderClients(state.clients); // Re-render all clients to update the specific card
+                } catch (err) {
+                    renderNotification(`Failed to increment session for ${name}: ${err.message}`, 'error');
+                } finally {
+                    button.innerHTML = `<i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Increment Session</span>`;
+                    button.disabled = false;
+                    lucide.createIcons();
+                }
+            };
             
             // --- EVENT LISTENERS ---
             // NEW: Main listener attachment function
@@ -673,6 +705,14 @@
                     button.addEventListener('click', (e) => {
                         e.stopPropagation();
                         handleDeclineClick(e.currentTarget);
+                    });
+                });
+
+                // NEW: Attach event listener for increment session button
+                document.querySelectorAll('.increment-session-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleIncrementSessionClick(e.currentTarget);
                     });
                 });
             };
