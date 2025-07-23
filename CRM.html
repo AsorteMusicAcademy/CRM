@@ -180,9 +180,6 @@
                 lucide.createIcons(); // Render icons inside the newly visible main app view
             }
             
-            // --- ALL YOUR EXISTING HELPER, API, AND RENDER FUNCTIONS GO HERE ---
-            // No changes are needed in the functions below, they remain the same.
-            // ... (The code is omitted for brevity, but you should have all of it here)
             const getWhatsAppLink = (phone, text = '') => {
                 if (!phone) return null;
                 let cleanPhoneNumber = phone.replace(/\s/g, '');
@@ -263,6 +260,7 @@
                     if (data.error) throw new Error(data.error.message);
                     return processCalendarItems(data.items);
                 },
+                // FIXED: Added robust date checking to prevent crashes from events with missing dates.
                 async fetchHistory(clientName) {
                     const sixtyDaysAgo = new Date();
                     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -272,10 +270,20 @@
                     if (data.error) throw new Error(data.error.message);
                     
                     const eventsBySummary = new Map();
-                    data.items.forEach(event => {
-                        if (!event.summary) return;
-                        if (!eventsBySummary.has(event.summary)) eventsBySummary.set(event.summary, []);
-                        eventsBySummary.get(event.summary).push({ id: event.id, date: event.start?.dateTime || event.start?.date, summary: event.summary, status: event.status });
+                    (data.items || []).forEach(event => {
+                        const eventDate = event.start?.dateTime || event.start?.date;
+                        // Only process events that have a summary and a date
+                        if (!event.summary || !eventDate) return;
+
+                        if (!eventsBySummary.has(event.summary)) {
+                            eventsBySummary.set(event.summary, []);
+                        }
+                        eventsBySummary.get(event.summary).push({ 
+                            id: event.id, 
+                            date: eventDate, 
+                            summary: event.summary, 
+                            status: event.status 
+                        });
                     });
 
                     const finalHistory = [];
@@ -335,12 +343,11 @@
                     if (data.error) throw new Error(data.error.message);
                     return data;
                 },
-                // FIXED: Function now always includes colorId in the request body.
                 async updateEventSummary(eventId, newSummary, colorId = null) {
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const body = {
                         summary: newSummary,
-                        colorId: colorId // Always include the colorId property
+                        colorId: colorId
                     };
                     const response = await fetch(url, {
                         method: 'PATCH',
@@ -444,7 +451,6 @@
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== 4 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
                                 <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
-                                <!-- NEW: Increment Session Button -->
                                 <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
                                     <i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Increment Session</span>
                                 </button>
@@ -458,7 +464,7 @@
             };
             
             const createHomeworkHTML = (name, client) => {
-                if (!client) return ''; // Don't render if client data is missing
+                if (!client) return '';
                 if (!state.courses) return `<p>Se încarcă cursurile...</p>`;
                 if (state.courses.length === 0) return `<p class="text-red-500">No Google Classroom courses found.</p>`;
                 
@@ -480,7 +486,6 @@
                 `;
             };
 
-            // FIXED: Accordion now starts collapsed and toggles correctly.
             const createHistoryHTML = (history) => {
                 if (Object.keys(history).length === 0) return `<p class="text-sm text-gray-500">Nu s-au găsit ședințe în ultimele 60 de zile.</p>`;
                 return `<ul class="space-y-2">` + Object.entries(history).map(([monthYear, sessions]) => `
@@ -491,9 +496,20 @@
                         </div>
                         <ul class="history-month-list mt-2 pl-4 space-y-1" style="display: none;">
                             ${sessions.map(s => {
+                                const date = new Date(s.date);
+                                // Add safety check for invalid dates before formatting
+                                if (isNaN(date.getTime())) return ''; 
+
                                 const statusClass = s.status === 'cancelled' ? 'bg-red-100 text-red-800' : s.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-50 text-gray-600';
-                                const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? `(Reprogramat pentru ${new Date(s.rescheduledTo).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})` : '';
-                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${new Date(s.date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric' })} - ${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
+                                
+                                const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
+                                const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime()) 
+                                    ? `(Reprogramat pentru ${rescheduledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})`
+                                    : '';
+
+                                const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
+                                
+                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric' })} - ${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
                             }).join('')}
                         </ul>
                     </li>
@@ -513,7 +529,6 @@
             };
 
             const handleFetchEvents = async () => {
-                // MODIFIED: Added check for accessToken
                 if (!state.accessToken || !state.calendarId) {
                     renderNotification('Authentication is required and Calendar ID must be set.', 'error');
                     return;
@@ -538,7 +553,7 @@
 
             const handleSearch = async () => {
                 if (state.searchQuery.trim().length < 3) {
-                    state.clients = {}; // Or restore previous tab view
+                    state.clients = {}; 
                     renderClients({});
                     return;
                 }
@@ -609,7 +624,6 @@
                 }
             };
 
-            // MODIFIED: Handle Increment Session Click to update color
             const handleIncrementSessionClick = async (button) => {
                 const { eventId, name } = button.dataset;
                 const clientDetails = state.clients[name];
@@ -620,12 +634,9 @@
                 }
 
                 let currentSessionNumber = clientDetails.sessionNumber;
-                // Implement circular increment: 1 -> 2 -> 3 -> 4 -> 1
                 let newSessionNumber = (currentSessionNumber % 4) + 1; 
                 
-                // *** CHANGED: Added gray color for sessions 2 & 3 ***
-                // Determine colorId based on newSessionNumber
-                let colorToApply = null; // Default color
+                let colorToApply = null; 
                 if (newSessionNumber === 1) {
                     colorToApply = '10'; // Green (Basil)
                 } else if (newSessionNumber === 2 || newSessionNumber === 3) {
@@ -634,7 +645,6 @@
                     colorToApply = '11'; // Red (Tomato)
                 }
 
-                // Construct the new summary without '#'
                 const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
 
                 button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
@@ -642,13 +652,11 @@
                 lucide.createIcons();
 
                 try {
-                    // Pass the colorId to the updateEventSummary function
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
                     renderNotification(`Session for ${name} incremented to ${newSessionNumber}. Event color updated.`, 'success');
 
-                    // Update the state and re-render the clients to reflect the change
                     state.clients[name].sessionNumber = newSessionNumber;
-                    renderClients(state.clients); // Re-render all clients to update the specific card
+                    renderClients(state.clients); 
                 } catch (err) {
                     renderNotification(`Failed to increment session for ${name}: ${err.message}`, 'error');
                 } finally {
@@ -658,8 +666,6 @@
                 }
             };
             
-            // --- EVENT LISTENERS ---
-            // NEW: Main listener attachment function
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.fetchEventsBtn.addEventListener('click', handleFetchEvents);
@@ -728,7 +734,6 @@
                     });
                 });
 
-                // NEW: Attach event listener for increment session button
                 document.querySelectorAll('.increment-session-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -738,7 +743,7 @@
             };
             
             const renderClientDetails = async (name, container) => {
-                container.innerHTML = `<div class="p-4 border-t border-gray-200"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-gray-500"></i></div>`;
+                container.innerHTML = `<div class="p-4 border-t border-gray-200 flex justify-center"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-gray-500"></i></div>`;
                 lucide.createIcons();
                 try {
                     const client = state.clients[name];
@@ -780,7 +785,6 @@
                 });
             };
 
-            // --- UI UPDATE FUNCTION ---
             const updateUI = () => {
                 dom.tabButtons.forEach(btn => {
                     const isSelected = btn.dataset.tab === state.activeTab;
@@ -792,12 +796,9 @@
                 dom.fetchEventsBtn.disabled = state.isLoading;
             };
 
-            // --- INITIALIZATION ---
-            // Start by initializing the Google Sign-In client when the page loads.
-            // The rest of the app logic will be triggered by the GSI callback.
             window.onload = () => {
                 initializeGsi();
-                lucide.createIcons(); // Render initial icons like search
+                lucide.createIcons();
             };
         });
     </script>
