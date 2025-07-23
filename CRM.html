@@ -473,7 +473,7 @@
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
                                 <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
                                 <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
-                                    <i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Increment Session</span>
+                                    <i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Incrementeaza sedinta</span>
                                 </button>
                             </div>
                         </div>
