@@ -260,7 +260,7 @@
                     if (data.error) throw new Error(data.error.message);
                     return processCalendarItems(data.items);
                 },
-                // FIXED: Rewritten history logic to be more robust and correctly identify cancelled/rescheduled events.
+                // FIXED: Rewritten to look for organizer's "declined" status.
                 async fetchHistory(clientName) {
                     const sixtyDaysAgo = new Date();
                     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -270,30 +270,33 @@
                     if (data.error) throw new Error(data.error.message);
                     
                     const allEvents = (data.items || [])
-                        .map(event => ({
-                            id: event.id,
-                            date: event.start?.dateTime || event.start?.date,
-                            summary: event.summary,
-                            status: event.status
-                        }))
-                        .filter(event => event.summary && event.date); // Ensure we have basic data
+                        .map(event => {
+                            const organizer = event.attendees?.find(a => a.organizer);
+                            const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
+                            
+                            return {
+                                id: event.id,
+                                date: event.start?.dateTime || event.start?.date,
+                                summary: event.summary,
+                                isDeclinedByOrganizer: isDeclinedByOrganizer,
+                                status: event.status // Keep original status for reference
+                            };
+                        })
+                        .filter(event => event.summary && event.date);
 
-                    const confirmedEvents = allEvents.filter(e => e.status === 'confirmed');
-                    const cancelledEvents = allEvents.filter(e => e.status === 'cancelled');
+                    const confirmedEvents = allEvents.filter(e => !e.isDeclinedByOrganizer && e.status === 'confirmed');
+                    const cancelledEvents = allEvents.filter(e => e.isDeclinedByOrganizer);
 
                     const processedCancelledEvents = cancelledEvents.map(cancelledEvent => {
-                        // Find a confirmed event with the same summary that happened after the cancelled one.
                         const correspondingConfirmed = confirmedEvents.find(confirmedEvent => 
                             confirmedEvent.summary === cancelledEvent.summary && 
                             new Date(confirmedEvent.date) > new Date(cancelledEvent.date)
                         );
 
                         if (correspondingConfirmed) {
-                            // If we found one, this was a rescheduled event.
                             return { ...cancelledEvent, status: 'rescheduled', rescheduledTo: correspondingConfirmed.date };
                         } else {
-                            // Otherwise, it was simply cancelled.
-                            return cancelledEvent;
+                            return { ...cancelledEvent, status: 'cancelled' };
                         }
                     });
 
@@ -309,13 +312,34 @@
                         return acc;
                     }, {});
                 },
-                // FIXED: This function now correctly cancels the event by setting its status.
+                // FIXED: Reverted to setting organizer's responseStatus to "declined".
                 async declineEvent(eventId) {
+                    const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
+                    const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const eventData = await getResponse.json();
+                    if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
+                    
+                    const organizerEmail = eventData.organizer?.email;
+                    if (!organizerEmail) {
+                        throw new Error("Could not identify the event organizer.");
+                    }
+
+                    if (!eventData.attendees) {
+                         throw new Error("Event has no attendees list to modify.");
+                    }
+
+                    const updatedAttendees = eventData.attendees.map(attendee => {
+                        if (attendee.email === organizerEmail) {
+                            return { ...attendee, responseStatus: 'declined' };
+                        }
+                        return attendee;
+                    });
+
                     const patchUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const patchResponse = await fetch(patchUrl, {
                         method: 'PATCH',
                         headers: { 'Authorization': `Bearer ${state.accessToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'cancelled' })
+                        body: JSON.stringify({ attendees: updatedAttendees })
                     });
                     const patchData = await patchResponse.json();
                     if (patchData.error) throw new Error(`Failed to update event: ${patchData.error.message}`);
