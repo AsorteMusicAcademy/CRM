@@ -260,7 +260,7 @@
                     if (data.error) throw new Error(data.error.message);
                     return processCalendarItems(data.items);
                 },
-                // FIXED: Added robust date checking to prevent crashes from events with missing dates.
+                // FIXED: Rewritten history logic to be more robust and correctly identify cancelled/rescheduled events.
                 async fetchHistory(clientName) {
                     const sixtyDaysAgo = new Date();
                     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -269,36 +269,38 @@
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
                     
-                    const eventsBySummary = new Map();
-                    (data.items || []).forEach(event => {
-                        const eventDate = event.start?.dateTime || event.start?.date;
-                        // Only process events that have a summary and a date
-                        if (!event.summary || !eventDate) return;
+                    const allEvents = (data.items || [])
+                        .map(event => ({
+                            id: event.id,
+                            date: event.start?.dateTime || event.start?.date,
+                            summary: event.summary,
+                            status: event.status
+                        }))
+                        .filter(event => event.summary && event.date); // Ensure we have basic data
 
-                        if (!eventsBySummary.has(event.summary)) {
-                            eventsBySummary.set(event.summary, []);
+                    const confirmedEvents = allEvents.filter(e => e.status === 'confirmed');
+                    const cancelledEvents = allEvents.filter(e => e.status === 'cancelled');
+
+                    const processedCancelledEvents = cancelledEvents.map(cancelledEvent => {
+                        // Find a confirmed event with the same summary that happened after the cancelled one.
+                        const correspondingConfirmed = confirmedEvents.find(confirmedEvent => 
+                            confirmedEvent.summary === cancelledEvent.summary && 
+                            new Date(confirmedEvent.date) > new Date(cancelledEvent.date)
+                        );
+
+                        if (correspondingConfirmed) {
+                            // If we found one, this was a rescheduled event.
+                            return { ...cancelledEvent, status: 'rescheduled', rescheduledTo: correspondingConfirmed.date };
+                        } else {
+                            // Otherwise, it was simply cancelled.
+                            return cancelledEvent;
                         }
-                        eventsBySummary.get(event.summary).push({ 
-                            id: event.id, 
-                            date: eventDate, 
-                            summary: event.summary, 
-                            status: event.status 
-                        });
                     });
 
-                    const finalHistory = [];
-                    for (const sessions of eventsBySummary.values()) {
-                        const confirmed = sessions.find(s => s.status === 'confirmed');
-                        const cancelled = sessions.filter(s => s.status === 'cancelled');
-                        if (confirmed) {
-                            finalHistory.push(confirmed);
-                            cancelled.forEach(c => finalHistory.push({ ...c, status: 'rescheduled', rescheduledTo: confirmed.date }));
-                        } else {
-                            finalHistory.push(...cancelled);
-                        }
-                    }
+                    const finalHistory = [...confirmedEvents, ...processedCancelledEvents];
                     
                     const history = finalHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
                     return history.reduce((acc, session) => {
                         const monthYear = new Date(session.date).toLocaleString('ro-RO', { month: 'long', year: 'numeric' });
                         const capitalized = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
@@ -307,18 +309,13 @@
                         return acc;
                     }, {});
                 },
+                // FIXED: This function now correctly cancels the event by setting its status.
                 async declineEvent(eventId) {
-                    const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
-                    const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
-                    const eventData = await getResponse.json();
-                    if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
-                    const organizerEmail = eventData.organizer.email;
-                    const updatedAttendees = (eventData.attendees || []).map(a => a.email === organizerEmail ? { ...a, responseStatus: 'declined' } : a);
                     const patchUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const patchResponse = await fetch(patchUrl, {
                         method: 'PATCH',
                         headers: { 'Authorization': `Bearer ${state.accessToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ attendees: updatedAttendees })
+                        body: JSON.stringify({ status: 'cancelled' })
                     });
                     const patchData = await patchResponse.json();
                     if (patchData.error) throw new Error(`Failed to update event: ${patchData.error.message}`);
@@ -497,7 +494,6 @@
                         <ul class="history-month-list mt-2 pl-4 space-y-1" style="display: none;">
                             ${sessions.map(s => {
                                 const date = new Date(s.date);
-                                // Add safety check for invalid dates before formatting
                                 if (isNaN(date.getTime())) return ''; 
 
                                 const statusClass = s.status === 'cancelled' ? 'bg-red-100 text-red-800' : s.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-50 text-gray-600';
