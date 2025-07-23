@@ -614,9 +614,12 @@
                     return;
                 }
 
-                const currentSessionNumber = clientDetails.sessionNumber;
-                const newSessionNumber = currentSessionNumber + 1;
-                const newSummary = `${name} - ${clientDetails.discipline} - Sedinta #${newSessionNumber}`;
+                let currentSessionNumber = clientDetails.sessionNumber;
+                // Implement circular increment: 1 -> 2 -> 3 -> 4 -> 1
+                let newSessionNumber = (currentSessionNumber % 4) + 1; 
+                
+                // Construct the new summary without '#'
+                const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
 
                 button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
                 button.disabled = true;
