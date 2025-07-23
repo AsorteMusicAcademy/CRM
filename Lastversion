@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -413,6 +412,7 @@
                 lucide.createIcons();
             };
             
+            // MODIFIED: This function now sorts by time for today/tomorrow tabs and search results.
             const renderClients = (clientsToDisplay) => {
                 state.fetched = true;
                 if (!clientsToDisplay || Object.keys(clientsToDisplay).length === 0) {
@@ -423,8 +423,23 @@
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = Object.entries(clientsToDisplay)
-                    .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+                
+                let sortedClientEntries = Object.entries(clientsToDisplay);
+
+                // Sort by start time for 'today', 'tomorrow', and search results. Otherwise by name.
+                if (state.searchQuery.trim() || state.activeTab === 'today' || state.activeTab === 'tomorrow') {
+                    sortedClientEntries.sort(([, detailsA], [, detailsB]) => {
+                        if (detailsA.startTime && detailsB.startTime) {
+                            return new Date(detailsA.startTime) - new Date(detailsB.startTime);
+                        }
+                        // Fallback if time is missing for some reason
+                        return 0;
+                    });
+                } else {
+                    sortedClientEntries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                }
+
+                const clientListHTML = sortedClientEntries
                     .map(([name, details]) => createClientListItemHTML(name, details))
                     .join('');
 
