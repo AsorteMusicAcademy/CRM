@@ -579,6 +579,10 @@
                 
                 const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
 
+                // Create the Google Calendar edit link
+                const eventIdentifier = btoa(`${eventId} ${state.calendarId}`).replace(/=/g, '');
+                const editUrl = `https://calendar.google.com/calendar/r/eventedit/${eventIdentifier}`;
+
                 return `
                     <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
                         <div class="flex items-center justify-between flex-wrap cursor-pointer client-header" data-name="${name}">
@@ -586,6 +590,11 @@
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
                                     <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
+                                    ${ (state.activeTab === 'today' || state.activeTab === 'tomorrow') ?
+                                    `<a href="${editUrl}" target="_blank" class="ml-3 p-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600" title="Editează Eveniment în Google Calendar">
+                                        <i data-lucide="calendar-days" class="h-4 w-4"></i>
+                                    </a>` : ''
+                                    }
                                     <span class="chevron-icon-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
                                         <i data-lucide="chevron-down" class="h-5 w-5 ml-2 text-gray-400"></i>
                                     </span>
