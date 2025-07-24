@@ -1086,7 +1086,7 @@
 
             async function handleCancelByInstructor() {
                 if (!state.cancellationContext) return;
-                const { eventId, name, discipline, originalButton } = state.cancellationContext;
+                const { eventId, name, discipline, phone, originalButton } = state.cancellationContext;
                 
                 hideModal();
                 originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
@@ -1094,13 +1094,22 @@
                 lucide.createIcons();
 
                 try {
-                    // New summary without the session part
+                    const clientDetails = state.clients[name];
+                    const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
+                    
                     const newSummary = `${name} - ${discipline}`;
                     await api.updateEventSummary(eventId, newSummary);
                     await api.cancelEvent(eventId);
                     
                     renderNotification(`Event for ${name} cancelled by instructor. Session number removed.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
+
+                    const message = `Salut ${name}! Ne cerem scuze ca a tebuit sa anulam sedinta ta de ${discipline} pe care o aveai programata pentru ${dayText}, la ora ${formattedTime}. Iti multumim pentru intelegere si vrem sa te instiintam ca aceasta sedinta nu va fi luata in calcul la abonamntul curent!`;
+                    const link = getWhatsAppLink(phone, message);
+                    if (link) {
+                        window.open(link, '_blank');
+                    }
                 } catch (err) {
                     renderNotification(`Failed to cancel event: ${err.message}`, 'error');
                     originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
