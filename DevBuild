@@ -103,9 +103,14 @@
                         <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                         <button data-tab="instructors" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                     </div>
-                    <button id="fetchEventsBtn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
-                        Afișează programările pentru astăzi
-                    </button>
+                     <div class="mt-4 space-y-2">
+                        <button id="fetchEventsBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
+                            Afișează programările pentru astăzi
+                        </button>
+                        <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                            Increment All Sessions for Tomorrow
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -210,6 +215,7 @@
                 calendarIdInput: document.getElementById('calendarId'),
                 searchQueryInput: document.getElementById('searchQuery'),
                 fetchEventsBtn: document.getElementById('fetchEventsBtn'),
+                incrementAllBtn: document.getElementById('incrementAllBtn'),
                 notificationArea: document.getElementById('notification-area'),
                 resultsArea: document.getElementById('results-area'),
                 tabControls: document.getElementById('tab-controls'),
@@ -876,10 +882,38 @@
                 }
             };
 
+            const handleIncrementAllTomorrow = async () => {
+                if (state.activeTab !== 'tomorrow') return;
+
+                const tomorrowClients = Object.entries(state.clients);
+                if (tomorrowClients.length === 0) {
+                    renderNotification("No sessions to increment for tomorrow.", "success");
+                    return;
+                }
+
+                dom.incrementAllBtn.disabled = true;
+                dom.incrementAllBtn.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Incrementing...`;
+                lucide.createIcons();
+
+                for (const [name, details] of tomorrowClients) {
+                    // Find the button in the DOM to pass to the handler
+                    const clientLi = document.getElementById(`client-${details.eventId}`);
+                    const button = clientLi?.querySelector('.increment-session-btn');
+                    if (button) {
+                        await handleIncrementSessionClick(button);
+                    }
+                }
+                
+                dom.incrementAllBtn.disabled = false;
+                dom.incrementAllBtn.innerHTML = `Increment All Sessions for Tomorrow`;
+                renderNotification("All sessions for tomorrow have been incremented.", "success");
+            };
+
             // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.fetchEventsBtn.addEventListener('click', handleTabChange);
+                dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -1119,11 +1153,12 @@
                 dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
                 dom.fetchEventsBtn.disabled = state.isLoading;
                 
-                // Show/hide filters based on tab
+                // Show/hide filters and increment all button based on tab
                 const clientFiltersVisible = state.activeTab !== 'instructors';
                 dom.disciplineFilter.style.display = clientFiltersVisible ? 'block' : 'none';
                 dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
                 dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
+                dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
             };
 
             // --- MODAL FUNCTIONS ---
