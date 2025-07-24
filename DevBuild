@@ -86,6 +86,14 @@
                     </select>
                 </div>
 
+                <!-- Last Session Filter -->
+                <div>
+                    <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-gray-300">Show only clients on their last session</span>
+                    </label>
+                </div>
+
                 <div id="tab-controls">
                     <div class="flex justify-center border-b border-gray-700">
                         <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
@@ -130,6 +138,7 @@
                 fetched: false,
                 expandedClient: null,
                 activeDiscipline: 'all', 
+                filterLastSessionOnly: false,
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -147,7 +156,8 @@
                 accessTokenInput: document.getElementById('accessTokenInput'),
                 setTokenBtn: document.getElementById('setTokenBtn'),
                 disciplineFilter: document.getElementById('disciplineFilter'), 
-                openCalendarBtn: document.getElementById('openCalendarBtn'), // NEW
+                lastSessionFilter: document.getElementById('lastSessionFilter'),
+                openCalendarBtn: document.getElementById('openCalendarBtn'),
             };
 
             // --- Authorization Logic (Suspended for testing, but kept in code) ---
@@ -440,29 +450,40 @@
             const renderClients = (allClients) => {
                 state.fetched = true;
 
-                let filteredClients = allClients;
+                let clientEntries = Object.entries(allClients);
+
+                // Apply discipline filter
                 if (state.activeDiscipline !== 'all') {
-                    filteredClients = Object.entries(allClients)
-                        .filter(([_, details]) => details.discipline === state.activeDiscipline)
-                        .reduce((obj, [name, details]) => {
-                            obj[name] = details;
-                            return obj;
-                        }, {});
+                    clientEntries = clientEntries.filter(([_, details]) => details.discipline === state.activeDiscipline);
                 }
 
-                if (!filteredClients || Object.keys(filteredClients).length === 0) {
+                // Apply last session filter
+                if (state.filterLastSessionOnly) {
+                    clientEntries = clientEntries.filter(([_, details]) => details.sessionNumber === 4);
+                }
+
+                // Sort the entries based on the active tab
+                if (state.activeTab === 'today' || state.activeTab === 'tomorrow') {
+                    clientEntries.sort(([, a], [, b]) => new Date(a.startTime) - new Date(b.startTime));
+                } else {
+                    clientEntries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                }
+
+                if (clientEntries.length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
                     if (state.activeDiscipline !== 'all') {
                         message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
+                    }
+                    if(state.filterLastSessionOnly){
+                        message += ` Afișând doar clienții în ultima ședință.`
                     }
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = Object.entries(filteredClients)
-                    .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+                const clientListHTML = clientEntries
                     .map(([name, details]) => createClientListItemHTML(name, details))
                     .join('');
 
@@ -768,6 +789,11 @@
 
                 dom.disciplineFilter.addEventListener('change', (e) => {
                     state.activeDiscipline = e.target.value;
+                    renderClients(state.clients);
+                });
+
+                dom.lastSessionFilter.addEventListener('change', (e) => {
+                    state.filterLastSessionOnly = e.target.checked;
                     renderClients(state.clients);
                 });
             }
