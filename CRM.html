@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Session Tracker</title>
     
+    <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -46,7 +47,7 @@
             </div>
         </div>
 
-        <!-- Main App View (initially hidden) -->
+        <!-- Main App View (hidden by default) -->
         <div id="main-app-view" style="display: none;">
             <!-- Configuration Section -->
             <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
@@ -72,6 +73,14 @@
                     <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <!-- Options will be populated dynamically -->
                     </select>
+                </div>
+
+                <!-- Last Session Filter -->
+                <div>
+                    <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-gray-300">Show only clients on their last session</span>
+                    </label>
                 </div>
 
                 <div id="tab-controls">
@@ -118,6 +127,7 @@
                 fetched: false,
                 expandedClient: null,
                 activeDiscipline: 'all', 
+                filterLastSessionOnly: false,
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -133,6 +143,7 @@
                 tabControls: document.getElementById('tab-controls'),
                 tabButtons: document.querySelectorAll('.tab-button'),
                 disciplineFilter: document.getElementById('disciplineFilter'), 
+                lastSessionFilter: document.getElementById('lastSessionFilter'),
                 openCalendarBtn: document.getElementById('openCalendarBtn'),
             };
 
@@ -147,13 +158,17 @@
                             dom.loginView.style.display = 'none';
                             dom.mainAppView.style.display = 'block';
                             initializeApp();
+                        } else {
+                             renderNotification('Authentication failed. Please try again.', 'error');
                         }
                     },
                 });
 
                 google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
-                    callback: () => {
+                    callback: (response) => {
+                        // This callback handles the sign-in response.
+                        // After the user signs in via the button, we request the access token.
                         requestAccessToken();
                     }
                 });
@@ -165,6 +180,7 @@
             }
 
             function requestAccessToken() {
+                // Prompt the user for authorization for the required scopes.
                 tokenClient.requestAccessToken();
             }
 
@@ -426,29 +442,40 @@
             const renderClients = (allClients) => {
                 state.fetched = true;
 
-                let filteredClients = allClients;
+                let clientEntries = Object.entries(allClients);
+
+                // Apply discipline filter
                 if (state.activeDiscipline !== 'all') {
-                    filteredClients = Object.entries(allClients)
-                        .filter(([_, details]) => details.discipline === state.activeDiscipline)
-                        .reduce((obj, [name, details]) => {
-                            obj[name] = details;
-                            return obj;
-                        }, {});
+                    clientEntries = clientEntries.filter(([_, details]) => details.discipline === state.activeDiscipline);
                 }
 
-                if (!filteredClients || Object.keys(filteredClients).length === 0) {
+                // Apply last session filter
+                if (state.filterLastSessionOnly) {
+                    clientEntries = clientEntries.filter(([_, details]) => details.sessionNumber === 4);
+                }
+
+                // Sort the entries based on the active tab
+                if (state.activeTab === 'today' || state.activeTab === 'tomorrow') {
+                    clientEntries.sort(([, a], [, b]) => new Date(a.startTime) - new Date(b.startTime));
+                } else {
+                    clientEntries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                }
+
+                if (clientEntries.length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
                     if (state.activeDiscipline !== 'all') {
                         message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
+                    }
+                    if(state.filterLastSessionOnly){
+                        message += ` Afișând doar clienții în ultima ședință.`
                     }
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = Object.entries(filteredClients)
-                    .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
+                const clientListHTML = clientEntries
                     .map(([name, details]) => createClientListItemHTML(name, details))
                     .join('');
 
@@ -579,7 +606,7 @@
 
             const handleFetchEvents = async () => {
                 if (!state.accessToken || !state.calendarId) {
-                    renderNotification('Authentication is required and Calendar ID must be set. Use the field above to set your access token.', 'error');
+                    renderNotification('Authentication is required and Calendar ID must be set.', 'error');
                     return;
                 }
                 state.isLoading = true;
@@ -756,6 +783,11 @@
                     state.activeDiscipline = e.target.value;
                     renderClients(state.clients);
                 });
+
+                dom.lastSessionFilter.addEventListener('change', (e) => {
+                    state.filterLastSessionOnly = e.target.checked;
+                    renderClients(state.clients);
+                });
             }
 
             const attachClientEventListeners = () => {
@@ -880,8 +912,15 @@
             };
 
             window.onload = () => {
-                initializeGsi();
                 lucide.createIcons();
+                // Check if Google Identity Services are available
+                if (typeof google !== 'undefined') {
+                    initializeGsi();
+                } else {
+                    // Handle case where GSI script fails to load
+                    console.error("Google Identity Services script not loaded.");
+                    renderNotification("Could not load Google Sign-In. Please refresh the page.", "error");
+                }
             };
         });
     </script>
