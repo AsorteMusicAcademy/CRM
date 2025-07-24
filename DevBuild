@@ -27,7 +27,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         /* Simple debounce status indicator */
-        .notes-status {
+        .notes-status, .sub-status {
             transition: opacity 0.3s ease-in-out;
         }
         /* Modal styles */
@@ -190,6 +190,7 @@
                 accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
+                clientFirebaseData: {}, // New state to hold Firestore data for clients
                 courses: null,
                 instructors: [],
                 activeTab: 'today',
@@ -200,7 +201,7 @@
                 expandedClient: null,
                 activeDiscipline: 'all',
                 filterLastSessionOnly: false,
-                cancellationContext: null, // To store info for the modal
+                cancellationContext: null,
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -236,18 +237,19 @@
 
             // --- FIRESTORE API ---
             const firestoreApi = {
-                async getClientNotes(clientName) {
-                    if (!db || !clientName) return '';
-                    const docRef = doc(db, "clientNotes", clientName);
+                async getClientData(clientName) {
+                    if (!db || !clientName) return { notes: '', subscription: '4' }; // Default to 4 sessions
+                    const docRef = doc(db, "clients", clientName);
                     const docSnap = await getDoc(docRef);
-                    return docSnap.exists() ? docSnap.data().notes : '';
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        // Ensure a default subscription if it's missing
+                        return { name: clientName, ...data, subscription: data.subscription || '4' };
+                    } else {
+                        return { name: clientName, notes: '', subscription: '4' }; // Default for new clients
+                    }
                 },
-                async saveClientNotes(clientName, notes) {
-                    if (!db || !clientName) return;
-                    const docRef = doc(db, "clientNotes", clientName);
-                    await setDoc(docRef, { notes }, { merge: true });
-                },
-                async saveClientInfo(clientName, data) {
+                async saveClientData(clientName, data) {
                     if (!db || !clientName) return;
                     const docRef = doc(db, "clients", clientName);
                     await setDoc(docRef, data, { merge: true });
@@ -486,7 +488,7 @@
                 dom.disciplineFilter.value = state.activeDiscipline;
             };
 
-            const renderClients = (allClients) => {
+            const renderClients = (allClients, clientFirebaseData) => {
                 state.fetched = true;
                 let clientEntries = Object.entries(allClients);
 
@@ -494,7 +496,10 @@
                     clientEntries = clientEntries.filter(([_, details]) => details.discipline === state.activeDiscipline);
                 }
                 if (state.filterLastSessionOnly) {
-                    clientEntries = clientEntries.filter(([_, details]) => details.sessionNumber === 4);
+                    clientEntries = clientEntries.filter(([name, details]) => {
+                        const subType = clientFirebaseData[name]?.subscription || '4';
+                        return details.sessionNumber === parseInt(subType);
+                    });
                 }
 
                 if (state.activeTab === 'today' || state.activeTab === 'tomorrow') {
@@ -513,7 +518,7 @@
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details)).join('');
+                const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details, clientFirebaseData[name])).join('');
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
@@ -527,8 +532,9 @@
                 attachClientEventListeners();
             };
             
-            const createClientListItemHTML = (name, details) => {
+            const createClientListItemHTML = (name, details, clientData) => {
                 const { eventId, discipline, sessionNumber, phone, startTime, lastPayment } = details;
+                const subscriptionType = clientData?.subscription || '4';
                 const isExpanded = state.expandedClient === name;
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                 const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
@@ -548,6 +554,13 @@
                                     </span>
                                 </div>
                                 <p class="text-sm text-gray-400 mt-2">${discipline}</p>
+                                <div class="mt-2 flex items-center space-x-2">
+                                    <select class="subscription-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
+                                        <option value="4" ${subscriptionType === '4' ? 'selected' : ''}>Abonament de 4 sedinte</option>
+                                        <option value="8" ${subscriptionType === '8' ? 'selected' : ''}>Abonament de 8 sedinte</option>
+                                    </select>
+                                    <span class="sub-status text-xs text-green-400 opacity-0">Saved!</span>
+                                </div>
                                 ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-400 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
                                 ${phone ? `<button class="whatsapp-btn flex items-center justify-center mt-2 bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs w-fit"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
                                 ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Last Payment: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
@@ -555,11 +568,11 @@
                             <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-48">
                                 <div class="w-full text-right mb-2">
-                                    <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / 4</span>
-                                    <div class="mt-1 w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / 4) * 100, 100)}%"></div></div>
+                                    <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
+                                    <div class="mt-1 w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / parseInt(subscriptionType)) * 100, 100)}%"></div></div>
                                 </div>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${notificationMessage}" ${!phone || !startTime || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="message-square" class="h-4 w-4 mr-1.5"></i><span>Notificare sedinta</span></button>
-                                <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== 4 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
+                                <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== parseInt(subscriptionType) || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
                                 <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
                                 <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
@@ -709,8 +722,19 @@
 
                 try {
                     state.clients = await api.getEvents(state.activeTab);
+                    
+                    // Fetch Firestore data for all visible clients
+                    const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
+                    const clientFirebaseDataArray = await Promise.all(clientDataPromises);
+                    state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
+                        if (data.name) {
+                            acc[data.name] = data;
+                        }
+                        return acc;
+                    }, {});
+
                     populateDisciplineFilter(state.clients);
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
                     renderNotification(`Failed to fetch events: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
@@ -732,8 +756,18 @@
 
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
+
+                    const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
+                    const clientFirebaseDataArray = await Promise.all(clientDataPromises);
+                    state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
+                        if (data.name) {
+                            acc[data.name] = data;
+                        }
+                        return acc;
+                    }, {});
+
                     populateDisciplineFilter(state.clients);
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
                     renderNotification(`Search failed: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
@@ -781,6 +815,8 @@
             const handleIncrementSessionClick = async (button) => {
                 const { eventId, name } = button.dataset;
                 const clientDetails = state.clients[name];
+                const clientFirebaseData = state.clientFirebaseData[name] || { subscription: '4' };
+                const subscriptionMax = parseInt(clientFirebaseData.subscription);
 
                 if (!clientDetails || (state.activeTab !== 'today' && state.activeTab !== 'tomorrow')) {
                     renderNotification('Session increment is only available for today\'s or tomorrow\'s sessions.', 'error');
@@ -812,12 +848,12 @@
                         lastSessionNumber = clientDetails.sessionNumber;
                     }
 
-                    newSessionNumber = (lastSessionNumber % 4) + 1;
+                    newSessionNumber = (lastSessionNumber % subscriptionMax) + 1;
 
                     let colorToApply = null;
                     if (newSessionNumber === 1) {
                         colorToApply = '10'; // Green (Basil)
-                    } else if (newSessionNumber === 4) {
+                    } else if (newSessionNumber === subscriptionMax) {
                         colorToApply = '11'; // Red (Tomato)
                     } else {
                         colorToApply = '8'; // Gray (Graphite)
@@ -829,7 +865,7 @@
                     renderNotification(`Session for ${name} incremented to ${newSessionNumber}.`, 'success');
 
                     state.clients[name].sessionNumber = newSessionNumber;
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
 
                 } catch (err) {
                     renderNotification(`Failed to increment session for ${name}: ${err.message}`, 'error');
@@ -878,12 +914,12 @@
 
                 dom.disciplineFilter.addEventListener('change', (e) => {
                     state.activeDiscipline = e.target.value;
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 });
 
                 dom.lastSessionFilter.addEventListener('change', (e) => {
                     state.filterLastSessionOnly = e.target.checked;
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 });
 
                 // Modal Listeners
@@ -937,6 +973,29 @@
                 document.querySelectorAll('.increment-session-btn').forEach(button => {
                     button.addEventListener('click', (e) => { e.stopPropagation(); handleIncrementSessionClick(e.currentTarget); });
                 });
+
+                document.querySelectorAll('.subscription-select').forEach(select => {
+                    select.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent the card from expanding on click
+                    });
+                    select.addEventListener('change', async (e) => {
+                        e.stopPropagation();
+                        const clientName = e.target.dataset.name;
+                        const newSubscription = e.target.value;
+                        const statusEl = e.target.nextElementSibling;
+
+                        try {
+                            await firestoreApi.saveClientData(clientName, { subscription: newSubscription });
+                            state.clientFirebaseData[clientName].subscription = newSubscription;
+                            statusEl.classList.remove('opacity-0');
+                            setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+                            // Re-render to update progress bar and buttons
+                            renderClients(state.clients, state.clientFirebaseData);
+                        } catch (err) {
+                            renderNotification(`Failed to save subscription: ${err.message}`, 'error');
+                        }
+                    });
+                });
             };
             
             const renderClientDetails = async (name, container) => {
@@ -944,13 +1003,11 @@
                 lucide.createIcons();
                 try {
                     const client = state.clients[name];
-                    const [history, notes] = await Promise.all([
-                        api.fetchHistory(name),
-                        firestoreApi.getClientNotes(name)
-                    ]);
+                    const clientData = await firestoreApi.getClientData(name);
+                    const history = await api.fetchHistory(name);
                     
                     const historyHTML = createHistoryHTML(history);
-                    const notesHTML = createNotesHTML(name, notes);
+                    const notesHTML = createNotesHTML(name, clientData.notes);
                     const homeworkHTML = createHomeworkHTML(name, client);
                     
                     container.innerHTML = `
@@ -982,7 +1039,7 @@
                         const clientName = e.target.closest('.notes-section').dataset.clientName;
                         notesStatus.style.opacity = '1';
                         try {
-                            await firestoreApi.saveClientNotes(clientName, e.target.value);
+                            await firestoreApi.saveClientData(clientName, { notes: e.target.value });
                             notesStatus.textContent = 'Saved!';
                         } catch (err) {
                             notesStatus.textContent = 'Error!';
@@ -1221,7 +1278,7 @@
                         
                         // Save client info to Firestore
                         if (name && discipline && phone) {
-                            firestoreApi.saveClientInfo(name, {
+                            firestoreApi.saveClientData(name, {
                                 name: name,
                                 discipline: discipline,
                                 phone: phone
