@@ -764,6 +764,9 @@
                     <li class="flex items-center justify-between py-3 space-x-2">
                         <span class="text-gray-300 font-semibold">${inst.name}</span>
                         <input type="text" value="${inst.phone || ''}" data-id="${inst.id}" class="instructor-phone-input flex-grow px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <button class="notify-instructor-btn bg-cyan-600 text-white p-2 rounded-md hover:bg-cyan-700" data-id="${inst.id}" data-name="${inst.name}" data-phone="${inst.phone || ''}" title="Notifică pentru programul de mâine">
+                            <i data-lucide="send" class="h-4 w-4"></i>
+                        </button>
                         <button class="delete-instructor-btn text-red-500 hover:text-red-400" data-id="${inst.id}">
                             <i data-lucide="trash-2" class="h-5 w-5"></i>
                         </button>
@@ -772,6 +775,7 @@
                 lucide.createIcons();
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
+                attachInstructorNotifyListeners();
             };
 
             // --- EVENT HANDLERS ---
@@ -1025,6 +1029,63 @@
                 }
             };
 
+            const handleNotifyInstructor = async (instructorId, instructorName, instructorPhone) => {
+                if (!instructorPhone) {
+                    renderNotification(`Instructorul ${instructorName} nu are un număr de telefon salvat.`, 'error');
+                    return;
+                }
+
+                renderLoader('Se preiau programările pentru mâine...');
+
+                try {
+                    // Fetch tomorrow's events
+                    const tomorrowsClients = await api.getEvents('tomorrow');
+                    
+                    // Fetch all client data from Firestore to get assigned instructors
+                    const clientDataPromises = Object.keys(tomorrowsClients).map(name => firestoreApi.getClientData(name));
+                    const clientFirebaseDataArray = await Promise.all(clientDataPromises);
+                    const clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
+                        if (data.name) {
+                            acc[data.name] = data;
+                        }
+                        return acc;
+                    }, {});
+
+                    // Filter for this specific instructor's clients
+                    const instructorClients = [];
+                    for (const [clientName, details] of Object.entries(tomorrowsClients)) {
+                        if (clientFirebaseData[clientName]?.assignedInstructor === instructorName) {
+                            instructorClients.push({
+                                name: clientName,
+                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
+                            });
+                        }
+                    }
+
+                    // Clear the loader and re-render the instructors view
+                    dom.resultsArea.innerHTML = '';
+                    renderInstructorsView();
+
+                    if (instructorClients.length === 0) {
+                        renderNotification(`Instructorul ${instructorName} nu are clienți programați pentru mâine.`, 'success');
+                        return;
+                    }
+
+                    // Sort by time and create message
+                    instructorClients.sort((a, b) => a.time.localeCompare(b.time));
+                    let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
+                    message += instructorClients.map(client => `- ${client.name} la ${client.time}`).join('\n');
+                    
+                    const link = getWhatsAppLink(instructorPhone, message);
+                    window.open(link, '_blank');
+                    renderNotification(`Raport generat pentru ${instructorName}.`, 'success');
+
+                } catch (err) {
+                    renderNotification(`Eroare la generarea raportului: ${err.message}`, 'error');
+                    renderInstructorsView(); // Re-render on error
+                }
+            };
+
             // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
@@ -1247,6 +1308,7 @@
                 });
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
+                attachInstructorNotifyListeners();
             };
 
             const attachInstructorPhoneInputListeners = () => {
@@ -1282,6 +1344,15 @@
                 });
             };
 
+            const attachInstructorNotifyListeners = () => {
+                document.querySelectorAll('.notify-instructor-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const { id, name, phone } = e.currentTarget.dataset;
+                        handleNotifyInstructor(id, name, phone);
+                    });
+                });
+            };
+
             const updateUI = () => {
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
@@ -1306,7 +1377,7 @@
                 dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
                 dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
-                dom.reportToInstructorsBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
+                dom.reportToInstructorsBtn.style.display = 'none'; // Always hide the old button
             };
 
             // --- MODAL FUNCTIONS ---
