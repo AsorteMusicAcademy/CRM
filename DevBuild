@@ -30,6 +30,13 @@
         .notes-status {
             transition: opacity 0.3s ease-in-out;
         }
+        /* Modal styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -113,6 +120,26 @@
         </div>
     </div>
 
+    <!-- Cancellation Modal -->
+    <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
+            <h3 class="text-2xl font-bold text-white mb-4">Confirm Cancellation</h3>
+            <p class="text-gray-400 mb-6">Who is cancelling this session?</p>
+            <div class="space-y-3">
+                <button id="cancel-by-instructor-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                    Cancelled by Instructor
+                </button>
+                <button id="cancel-by-client-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
+                    Cancelled by Client
+                </button>
+            </div>
+            <button id="close-modal-btn" class="mt-6 w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                Nevermind
+            </button>
+        </div>
+    </div>
+
+
     <!-- Firebase SDKs and App Logic -->
     <script type="module">
         // Firebase Imports
@@ -173,6 +200,7 @@
                 expandedClient: null,
                 activeDiscipline: 'all',
                 filterLastSessionOnly: false,
+                cancellationContext: null, // To store info for the modal
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -190,6 +218,11 @@
                 disciplineFilter: document.getElementById('disciplineFilter'),
                 lastSessionFilter: document.getElementById('lastSessionFilter'),
                 openCalendarBtn: document.getElementById('openCalendarBtn'),
+                cancelModal: document.getElementById('cancel-modal'),
+                modalContent: document.querySelector('.modal-content'),
+                cancelByInstructorBtn: document.getElementById('cancel-by-instructor-btn'),
+                cancelByClientBtn: document.getElementById('cancel-by-client-btn'),
+                closeModalBtn: document.getElementById('close-modal-btn'),
             };
 
             // --- DEBOUNCE UTILITY ---
@@ -216,9 +249,7 @@
                 },
                 async saveClientInfo(clientName, data) {
                     if (!db || !clientName) return;
-                    // Use the client's name as the document ID for simplicity
                     const docRef = doc(db, "clients", clientName);
-                    // Use merge: true to add/update data without overwriting other fields (like notes)
                     await setDoc(docRef, data, { merge: true });
                 },
                 async addInstructor(name) {
@@ -251,7 +282,7 @@
                 }
                 attachAppEventListeners();
                 updateUI();
-                handleTabChange(); // Initial data fetch based on active tab
+                handleTabChange();
                 lucide.createIcons();
             }
             
@@ -288,15 +319,15 @@
                 async findLastPastEvent(clientName) {
                     const now = new Date();
                     now.setHours(0, 0, 0, 0); // Start of today
-                    const ninetyDaysAgo = new Date();
-                    ninetyDaysAgo.setDate(now.getDate() - 90);
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(now.getDate() - 30);
 
                     const params = new URLSearchParams({
-                        q: `"${clientName}"`, // Just search for the client's name
+                        q: `"${clientName}"`,
                         singleEvents: 'true',
                         orderBy: 'startTime',
-                        timeMax: now.toISOString(), // Search up to the beginning of today
-                        timeMin: ninetyDaysAgo.toISOString(),
+                        timeMax: now.toISOString(),
+                        timeMin: thirtyDaysAgo.toISOString(),
                         maxResults: '250'
                     });
 
@@ -305,12 +336,16 @@
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
 
-                    // Filter for events that match the format "Name - Discipline - Sedinta X" and sort to find the most recent one.
                     const sortedEvents = (data.items || [])
                         .filter(event => {
-                            if (!event.summary) return false;
+                            if (!event.summary || event.status === 'cancelled') return false;
                             const parts = event.summary.split(' - ').map(p => p.trim());
-                            return event.status !== 'cancelled' && parts[0] === clientName && parts.length >= 3 && parts[2].toLowerCase().includes('sedinta');
+                            if (parts.length < 3 || parts[0] !== clientName || !parts[2].toLowerCase().includes('sedinta')) {
+                                return false;
+                            }
+                            const sessionPart = parts[2];
+                            const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                            return !isNaN(parsedNumber); // Only keep events where a number can be parsed
                         })
                         .sort((a, b) => new Date(b.start.dateTime || b.start.date) - new Date(a.start.dateTime || a.start.date));
 
@@ -328,13 +363,7 @@
                         .map(event => {
                             const organizer = event.attendees?.find(a => a.organizer);
                             const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
-                            return {
-                                id: event.id,
-                                date: event.start?.dateTime || event.start?.date,
-                                summary: event.summary,
-                                isDeclinedByOrganizer: isDeclinedByOrganizer,
-                                status: event.status
-                            };
+                            return { id: event.id, date: event.start?.dateTime || event.start?.date, summary: event.summary, isDeclinedByOrganizer, status: event.status };
                         })
                         .filter(event => event.summary && event.date);
 
@@ -359,7 +388,7 @@
                         return acc;
                     }, {});
                 },
-                async declineEvent(eventId) {
+                async cancelEvent(eventId) {
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const eventData = await getResponse.json();
@@ -714,26 +743,10 @@
                 }
             };
             
-            const handleDeclineClick = async (button) => {
+            const handleDeclineClick = (button) => {
                 const { eventId, name, discipline, phone } = button.dataset;
-                button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
-                button.disabled = true;
-                lucide.createIcons();
-
-                try {
-                    await api.declineEvent(eventId);
-                    renderNotification(`Event for ${name} has been declined.`, 'success');
-                    document.getElementById(`client-${eventId}`).remove();
-                    const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
-                    const link = getWhatsAppLink(phone, message);
-                    if (link) window.open(link, '_blank');
-                } catch (err) {
-                    renderNotification(`Failed to decline event: ${err.message}`, 'error');
-                    button.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
-                    lucide.createIcons();
-                } finally {
-                    button.disabled = false;
-                }
+                state.cancellationContext = { eventId, name, discipline, phone, originalButton: button };
+                showModal();
             };
 
             const handlePostHomeworkClick = async (button) => {
@@ -780,12 +793,11 @@
 
                 try {
                     let newSessionNumber;
+                    let lastSessionNumber = 0;
 
                     if (state.activeTab === 'tomorrow') {
-                        // New logic for 'tomorrow' tab: find last session and increment
                         renderNotification('Searching for last past session...', 'success');
                         const lastEvent = await api.findLastPastEvent(name);
-                        let lastSessionNumber = 0;
                         if (lastEvent && lastEvent.summary) {
                             const parts = lastEvent.summary.split(' - ').map(p => p.trim());
                             if (parts.length >= 3) {
@@ -796,12 +808,11 @@
                                 }
                             }
                         }
-                        newSessionNumber = lastSessionNumber + 1;
-                    } else {
-                        // Existing logic for 'today' tab: cycle 1-4
-                        let currentSessionNumber = clientDetails.sessionNumber;
-                        newSessionNumber = (currentSessionNumber % 4) + 1;
+                    } else { // 'today' tab
+                        lastSessionNumber = clientDetails.sessionNumber;
                     }
+
+                    newSessionNumber = (lastSessionNumber % 4) + 1;
 
                     let colorToApply = null;
                     if (newSessionNumber === 1) {
@@ -874,6 +885,14 @@
                     state.filterLastSessionOnly = e.target.checked;
                     renderClients(state.clients);
                 });
+
+                // Modal Listeners
+                dom.closeModalBtn.addEventListener('click', hideModal);
+                dom.cancelModal.addEventListener('click', (e) => {
+                    if (e.target === dom.cancelModal) hideModal();
+                });
+                dom.cancelByInstructorBtn.addEventListener('click', handleCancelByInstructor);
+                dom.cancelByClientBtn.addEventListener('click', handleCancelByClient);
             }
 
             const attachClientEventListeners = () => {
@@ -1049,6 +1068,71 @@
                 dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
                 dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
             };
+
+            // --- MODAL FUNCTIONS ---
+            const showModal = () => {
+                dom.cancelModal.classList.remove('hidden', 'opacity-0');
+                dom.modalContent.classList.remove('scale-95');
+            };
+
+            const hideModal = () => {
+                dom.cancelModal.classList.add('opacity-0');
+                dom.modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    dom.cancelModal.classList.add('hidden');
+                    state.cancellationContext = null; // Clear context after closing
+                }, 300);
+            };
+
+            async function handleCancelByInstructor() {
+                if (!state.cancellationContext) return;
+                const { eventId, name, discipline, originalButton } = state.cancellationContext;
+                
+                hideModal();
+                originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                originalButton.disabled = true;
+                lucide.createIcons();
+
+                try {
+                    // New summary without the session part
+                    const newSummary = `${name} - ${discipline}`;
+                    await api.updateEventSummary(eventId, newSummary);
+                    await api.cancelEvent(eventId);
+                    
+                    renderNotification(`Event for ${name} cancelled by instructor. Session number removed.`, 'success');
+                    document.getElementById(`client-${eventId}`)?.remove();
+                } catch (err) {
+                    renderNotification(`Failed to cancel event: ${err.message}`, 'error');
+                    originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
+                    lucide.createIcons();
+                    originalButton.disabled = false;
+                }
+            }
+
+            async function handleCancelByClient() {
+                if (!state.cancellationContext) return;
+                const { eventId, name, phone, discipline, originalButton } = state.cancellationContext;
+
+                hideModal();
+                originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                originalButton.disabled = true;
+                lucide.createIcons();
+
+                try {
+                    await api.cancelEvent(eventId);
+                    renderNotification(`Event for ${name} cancelled by client.`, 'success');
+                    document.getElementById(`client-${eventId}`)?.remove();
+                    const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
+                    const link = getWhatsAppLink(phone, message);
+                    if (link) window.open(link, '_blank');
+                } catch (err) {
+                    renderNotification(`Failed to cancel event: ${err.message}`, 'error');
+                    originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
+                    lucide.createIcons();
+                    originalButton.disabled = false;
+                }
+            }
+
 
             // --- INITIALIZATION ---
             window.onload = () => {
