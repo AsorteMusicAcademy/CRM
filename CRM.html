@@ -134,6 +134,9 @@
                                 <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
                                     Incrementează Toate Sesiunile pentru Mâine
                                 </button>
+                                <button id="reportToInstructorsBtn" class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                                    Raportează Instructorilor pe WhatsApp
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -176,7 +179,7 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -244,6 +247,7 @@
                 searchQueryInput: document.getElementById('searchQuery'),
                 fetchEventsBtn: document.getElementById('fetchEventsBtn'),
                 incrementAllBtn: document.getElementById('incrementAllBtn'),
+                reportToInstructorsBtn: document.getElementById('reportToInstructorsBtn'),
                 notificationArea: document.getElementById('notification-area'),
                 resultsArea: document.getElementById('results-area'),
                 tabControls: document.getElementById('tab-controls'),
@@ -285,9 +289,14 @@
                     const docRef = doc(db, "clients", clientName);
                     await setDoc(docRef, data, { merge: true });
                 },
-                async addInstructor(name) {
+                async addInstructor(name, phone) {
                     if (!db || !name) return;
-                    await addDoc(collection(db, "instructors"), { name });
+                    await addDoc(collection(db, "instructors"), { name, phone });
+                },
+                async updateInstructor(id, data) {
+                    if (!db || !id) return;
+                    const docRef = doc(db, "instructors", id);
+                    await updateDoc(docRef, data);
                 },
                 async deleteInstructor(id) {
                     if (!db || !id) return;
@@ -355,7 +364,7 @@
                     const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
-                    return processCalendarItems(data.items);
+                    return await processCalendarItems(data.items);
                 },
                 async searchEvents(query) {
                     const params = new URLSearchParams({ q: `${query} " - Sedinta "`, singleEvents: 'true', orderBy: 'startTime', maxResults: '2500' });
@@ -363,7 +372,7 @@
                     const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
-                    return processCalendarItems(data.items);
+                    return await processCalendarItems(data.items);
                 },
                 async findLastPastEvent(clientName) {
                     const now = new Date();
@@ -439,7 +448,7 @@
                 },
                 async cancelEvent(eventId) {
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
-                    const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const getResponse = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const eventData = await getResponse.json();
                     if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
                     
@@ -733,7 +742,8 @@
                         </div>
                         <div class="p-6 space-y-4">
                             <div class="flex space-x-2">
-                                <input type="text" id="newInstructorInput" placeholder="Adaugă nume instructor nou" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="newInstructorName" placeholder="Nume instructor nou" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="newInstructorPhone" placeholder="Telefon (ex: +407...)" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
                                     <i data-lucide="plus" class="h-5 w-5"></i>
                                 </button>
@@ -747,23 +757,21 @@
                 lucide.createIcons();
                 attachInstructorEventListeners();
                 
-                // Start listening for instructor updates from Firestore
-                firestoreApi.getInstructors((instructors) => {
-                    state.instructors = instructors;
-                    const list = document.getElementById('instructorList');
-                    if (!list) return;
-                    list.innerHTML = instructors.map(inst => `
-                        <li class="flex items-center justify-between py-3">
-                            <span class="text-gray-300">${inst.name}</span>
-                            <button class="delete-instructor-btn text-red-500 hover:text-red-400" data-id="${inst.id}">
-                                <i data-lucide="trash-2" class="h-5 w-5"></i>
-                            </button>
-                        </li>
-                    `).join('');
-                    lucide.createIcons();
-                    // Re-attach listeners for the delete buttons after re-rendering
-                    attachInstructorDeleteListeners();
-                });
+                // Render the current list of instructors
+                const list = document.getElementById('instructorList');
+                if (!list) return;
+                list.innerHTML = state.instructors.map(inst => `
+                    <li class="flex items-center justify-between py-3 space-x-2">
+                        <span class="text-gray-300 font-semibold">${inst.name}</span>
+                        <input type="text" value="${inst.phone || ''}" data-id="${inst.id}" class="instructor-phone-input flex-grow px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <button class="delete-instructor-btn text-red-500 hover:text-red-400" data-id="${inst.id}">
+                            <i data-lucide="trash-2" class="h-5 w-5"></i>
+                        </button>
+                    </li>
+                `).join('');
+                lucide.createIcons();
+                attachInstructorDeleteListeners();
+                attachInstructorPhoneInputListeners();
             };
 
             // --- EVENT HANDLERS ---
@@ -966,11 +974,63 @@
                 renderNotification("Toate sesiunile pentru mâine au fost incrementate.", "success");
             };
 
+            const handleReportToInstructors = () => {
+                if (state.activeTab !== 'tomorrow') return;
+
+                const clientsByInstructor = {};
+
+                for (const [clientName, details] of Object.entries(state.clients)) {
+                    const clientData = state.clientFirebaseData[clientName];
+                    const instructorName = clientData?.assignedInstructor;
+
+                    if (instructorName) {
+                        if (!clientsByInstructor[instructorName]) {
+                            clientsByInstructor[instructorName] = [];
+                        }
+                        clientsByInstructor[instructorName].push({
+                            name: clientName,
+                            time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
+                        });
+                    }
+                }
+
+                const instructorsWithoutPhone = [];
+                let reportsSent = 0;
+
+                for (const [instructorName, clientList] of Object.entries(clientsByInstructor)) {
+                    const instructor = state.instructors.find(inst => inst.name === instructorName);
+
+                    if (instructor && instructor.phone) {
+                        clientList.sort((a, b) => a.time.localeCompare(b.time));
+
+                        let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
+                        message += clientList.map(client => `- ${client.name} la ${client.time}`).join('\n');
+                        
+                        const link = getWhatsAppLink(instructor.phone, message);
+                        window.open(link, '_blank');
+                        reportsSent++;
+                    } else {
+                        instructorsWithoutPhone.push(instructorName);
+                    }
+                }
+
+                if (reportsSent > 0) {
+                    renderNotification(`${reportsSent} rapoarte au fost generate.`, 'success');
+                }
+                if (instructorsWithoutPhone.length > 0) {
+                    renderNotification(`Nu s-a putut trimite raportul pentru: ${instructorsWithoutPhone.join(', ')} (lipsește numărul de telefon).`, 'error');
+                }
+                if(reportsSent === 0 && instructorsWithoutPhone.length === 0) {
+                    renderNotification('Niciun client alocat instructorilor pentru mâine.', 'success');
+                }
+            };
+
             // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.fetchEventsBtn.addEventListener('click', handleTabChange);
                 dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
+                dom.reportToInstructorsBtn.addEventListener('click', handleReportToInstructors);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -1170,19 +1230,39 @@
 
             const attachInstructorEventListeners = () => {
                 document.getElementById('addInstructorBtn')?.addEventListener('click', async () => {
-                    const input = document.getElementById('newInstructorInput');
-                    const name = input.value.trim();
+                    const nameInput = document.getElementById('newInstructorName');
+                    const phoneInput = document.getElementById('newInstructorPhone');
+                    const name = nameInput.value.trim();
+                    const phone = phoneInput.value.trim();
                     if (name) {
                         try {
-                            await firestoreApi.addInstructor(name);
+                            await firestoreApi.addInstructor(name, phone);
                             renderNotification(`Instructorul "${name}" a fost adăugat.`, 'success');
-                            input.value = '';
+                            nameInput.value = '';
+                            phoneInput.value = '';
                         } catch (err) {
                             renderNotification(`Eroare la adăugarea instructorului: ${err.message}`, 'error');
                         }
                     }
                 });
                 attachInstructorDeleteListeners();
+                attachInstructorPhoneInputListeners();
+            };
+
+            const attachInstructorPhoneInputListeners = () => {
+                document.querySelectorAll('.instructor-phone-input').forEach(input => {
+                    const savePhone = debounce(async (e) => {
+                        const id = e.target.dataset.id;
+                        const phone = e.target.value.trim();
+                        try {
+                            await firestoreApi.updateInstructor(id, { phone });
+                            renderNotification('Numărul de telefon a fost actualizat.', 'success');
+                        } catch (err) {
+                            renderNotification(`Eroare la actualizarea numărului de telefon: ${err.message}`, 'error');
+                        }
+                    }, 1000);
+                    input.addEventListener('input', savePhone);
+                });
             };
 
             const attachInstructorDeleteListeners = () => {
@@ -1191,7 +1271,7 @@
                     const newButton = button.cloneNode(true);
                     button.parentNode.replaceChild(newButton, button);
                     newButton.addEventListener('click', async (e) => {
-                        const id = e.currentTarget.dataset.id;
+                        const id = e.currentTarget.closest('button').dataset.id;
                         try {
                            await firestoreApi.deleteInstructor(id);
                            renderNotification('Instructor eliminat.', 'success');
@@ -1226,6 +1306,7 @@
                 dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
                 dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
+                dom.reportToInstructorsBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
             };
 
             // --- MODAL FUNCTIONS ---
@@ -1420,55 +1501,66 @@
                 return daysDifference > 30;
             };
 
-            const processCalendarItems = (items) => {
+            const processCalendarItems = async (items) => {
                 const processedClients = {};
                 if (!items) return processedClients;
-                items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'))
-                    .forEach(event => {
-                        if (!event.summary) return;
-                        const parts = event.summary.split(' - ').map(p => p.trim());
-                        
-                        // We need at least a name and discipline
-                        if (parts.length < 2) return; 
 
-                        const name = parts[0];
-                        const discipline = parts[1];
-                        let sessionNumber = 0; // Default value if not specified or parsable
+                // Get all existing client data from Firestore in one go
+                const clientsCollection = collection(db, "clients");
+                const snapshot = await getDocs(clientsCollection);
+                const existingClientsMap = new Map();
+                snapshot.forEach(doc => {
+                    existingClientsMap.set(doc.id, doc.data());
+                });
 
-                        // Try to parse session number if it exists
-                        if (parts.length >= 3) {
-                            const sessionPart = parts[2];
-                            const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-                            if (!isNaN(parsedNumber)) {
-                                sessionNumber = parsedNumber;
-                            }
+                const filteredItems = items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'));
+
+                for (const event of filteredItems) {
+                    if (!event.summary) continue;
+                    const parts = event.summary.split(' - ').map(p => p.trim());
+                    
+                    if (parts.length < 2) continue; 
+
+                    const name = parts[0];
+                    const discipline = parts[1];
+                    let sessionNumber = 0;
+
+                    if (parts.length >= 3) {
+                        const sessionPart = parts[2];
+                        const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                        if (!isNaN(parsedNumber)) {
+                            sessionNumber = parsedNumber;
                         }
+                    }
 
-                        let phone = null, lastPayment = null;
-                        if (event.description) {
-                            const phoneMatch = event.description.match(/\+?\d[\d\s-()]{8,15}/);
-                            if (phoneMatch) phone = phoneMatch[0];
-                            const paymentMatch = event.description.match(/Last Payment: (.*)/);
-                            if (paymentMatch) lastPayment = paymentMatch[1];
-                        }
-                        const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
-                        
-                        // Save client info to Firestore
-                        if (name && discipline && phone) {
+                    let phone = null, lastPayment = null;
+                    if (event.description) {
+                        const phoneMatch = event.description.match(/\+?\d[\d\s-()]{8,15}/);
+                        if (phoneMatch) phone = phoneMatch[0];
+                        const paymentMatch = event.description.match(/Last Payment: (.*)/);
+                        if (paymentMatch) lastPayment = paymentMatch[1];
+                    }
+                    const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
+                    
+                    if (name && discipline && phone) {
+                        const existingData = existingClientsMap.get(name);
+                        if (!existingData || existingData.discipline !== discipline || existingData.phone !== phone) {
+                            console.log(`Syncing data for ${name}: New or changed.`);
                             firestoreApi.saveClientData(name, {
                                 name: name,
                                 discipline: discipline,
                                 phone: phone
                             }).catch(err => console.error("Failed to save client info to Firestore:", err));
                         }
+                    }
 
-                        processedClients[name] = {
-                            eventId: event.id, discipline, sessionNumber, studentEmail,
-                            startTime: event.start?.dateTime,
-                            phone: phone || processedClients[name]?.phone,
-                            lastPayment: lastPayment || processedClients[name]?.lastPayment,
-                        };
-                    });
+                    processedClients[name] = {
+                        eventId: event.id, discipline, sessionNumber, studentEmail,
+                        startTime: event.start?.dateTime,
+                        phone: phone || processedClients[name]?.phone,
+                        lastPayment: lastPayment || processedClients[name]?.lastPayment,
+                    };
+                }
                 return processedClients;
             };
 
