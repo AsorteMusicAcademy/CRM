@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Session Tracker</title>
     
-    <!-- Google Identity Services (GIS) Library (kept for when you re-enable login) -->
+    <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,6 +26,10 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Simple debounce status indicator */
+        .notes-status {
+            transition: opacity 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -38,16 +42,7 @@
             <p class="text-lg text-gray-400 mt-2">Manage client sessions from Google Calendar & Classroom</p>
         </header>
 
-        <!-- Login View (hidden for testing) -->
-        <div id="login-view" class="max-w-2xl mx-auto text-center" style="display: none;">
-            <div class="bg-gray-800 p-8 rounded-xl shadow-md">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Please Sign In</h2>
-                <p class="text-gray-400 mb-6">This application requires access to your Google account to manage Calendar and Classroom data.</p>
-                <div id="google-signin-button" class="flex justify-center"></div>
-            </div>
-        </div>
-
-        <!-- Main App View (shown by default for testing) -->
+        <!-- Main App View -->
         <div id="main-app-view">
             <!-- Configuration Section -->
             <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
@@ -99,6 +94,7 @@
                         <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                         <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                         <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                        <button data-tab="instructors" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                     </div>
                     <button id="fetchEventsBtn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
                         Afișează programările pentru astăzi
@@ -112,40 +108,76 @@
             <!-- Results Area -->
             <div id="results-area" class="max-w-4xl mx-auto">
                 <!-- Loading spinner will be injected here -->
-                <!-- Client list will be injected here -->
+                <!-- Client/Instructor list will be injected here -->
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Logic -->
-    <script>
+    <!-- Firebase SDKs and App Logic -->
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
+            authDomain: "asorte-crm.firebaseapp.com",
+            projectId: "asorte-crm",
+            storageBucket: "asorte-crm.appspot.com", // Corrected storage bucket name
+            messagingSenderId: "848279125018",
+            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
+        };
+
+        // --- Firebase Initialization ---
+        let app, auth, db, userId;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            renderNotification("Firebase initialization failed. Please check your configuration.", "error");
+        }
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                console.log("User is signed in with UID:", userId);
+            } else {
+                signInAnonymously(auth).catch(error => {
+                    console.error("Anonymous sign-in failed:", error);
+                });
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Google Sign-In Configuration (Suspended for testing) ---
+            // --- Google Sign-In Configuration ---
             const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
             const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
-            let tokenClient;
-
+            
             // --- STATE MANAGEMENT ---
             let state = {
-                accessToken: null, // Will be set manually for testing
+                accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
                 courses: null,
+                instructors: [],
                 activeTab: 'today',
                 searchQuery: '',
                 isLoading: false,
                 isSearching: false,
                 fetched: false,
                 expandedClient: null,
-                activeDiscipline: 'all', 
+                activeDiscipline: 'all',
                 filterLastSessionOnly: false,
             };
 
             // --- DOM ELEMENT REFERENCES ---
             const dom = {
-                loginView: document.getElementById('login-view'),
                 mainAppView: document.getElementById('main-app-view'),
-                googleSigninButton: document.getElementById('google-signin-button'),
                 calendarIdInput: document.getElementById('calendarId'),
                 searchQueryInput: document.getElementById('searchQuery'),
                 fetchEventsBtn: document.getElementById('fetchEventsBtn'),
@@ -155,42 +187,60 @@
                 tabButtons: document.querySelectorAll('.tab-button'),
                 accessTokenInput: document.getElementById('accessTokenInput'),
                 setTokenBtn: document.getElementById('setTokenBtn'),
-                disciplineFilter: document.getElementById('disciplineFilter'), 
+                disciplineFilter: document.getElementById('disciplineFilter'),
                 lastSessionFilter: document.getElementById('lastSessionFilter'),
                 openCalendarBtn: document.getElementById('openCalendarBtn'),
             };
 
-            // --- Authorization Logic (Suspended for testing, but kept in code) ---
-            function initializeGsi() {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: SCOPES,
-                    callback: (tokenResponse) => {
-                        if (tokenResponse && tokenResponse.access_token) {
-                            state.accessToken = tokenResponse.access_token;
-                            dom.loginView.style.display = 'none';
-                            dom.mainAppView.style.display = 'block';
-                            initializeApp();
-                        }
-                    },
-                });
+            // --- DEBOUNCE UTILITY ---
+            const debounce = (func, delay) => {
+                let timeout;
+                return (...args) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            };
 
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: () => {
-                        requestAccessToken();
-                    }
-                });
-
-                google.accounts.id.renderButton(
-                    dom.googleSigninButton,
-                    { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular' }
-                );
-            }
-
-            function requestAccessToken() {
-                tokenClient.requestAccessToken();
-            }
+            // --- FIRESTORE API ---
+            const firestoreApi = {
+                async getClientNotes(clientName) {
+                    if (!db || !clientName) return '';
+                    const docRef = doc(db, "clientNotes", clientName);
+                    const docSnap = await getDoc(docRef);
+                    return docSnap.exists() ? docSnap.data().notes : '';
+                },
+                async saveClientNotes(clientName, notes) {
+                    if (!db || !clientName) return;
+                    const docRef = doc(db, "clientNotes", clientName);
+                    await setDoc(docRef, { notes }, { merge: true });
+                },
+                async saveClientInfo(clientName, data) {
+                    if (!db || !clientName) return;
+                    // Use the client's name as the document ID for simplicity
+                    const docRef = doc(db, "clients", clientName);
+                    // Use merge: true to add/update data without overwriting other fields (like notes)
+                    await setDoc(docRef, data, { merge: true });
+                },
+                async addInstructor(name) {
+                    if (!db || !name) return;
+                    await addDoc(collection(db, "instructors"), { name });
+                },
+                async deleteInstructor(id) {
+                    if (!db || !id) return;
+                    await deleteDoc(doc(db, "instructors", id));
+                },
+                getInstructors(callback) {
+                    if (!db) return () => {};
+                    const q = collection(db, "instructors");
+                    return onSnapshot(q, (querySnapshot) => {
+                        const instructors = [];
+                        querySnapshot.forEach((doc) => {
+                            instructors.push({ id: doc.id, ...doc.data() });
+                        });
+                        callback(instructors);
+                    });
+                }
+            };
 
             // --- Main App Initialization ---
             function initializeApp() {
@@ -201,61 +251,11 @@
                 }
                 attachAppEventListeners();
                 updateUI();
-                handleFetchEvents();
+                handleTabChange(); // Initial data fetch based on active tab
                 lucide.createIcons();
             }
             
-            const getWhatsAppLink = (phone, text = '') => {
-                if (!phone) return null;
-                let cleanPhoneNumber = phone.replace(/\s/g, '');
-                if (cleanPhoneNumber.startsWith('0')) cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
-                else if (!cleanPhoneNumber.startsWith('40')) cleanPhoneNumber = '40' + cleanPhoneNumber;
-                let link = `https://wa.me/${cleanPhoneNumber}`;
-                if (text) link += `?text=${encodeURIComponent(text)}`;
-                return link;
-            };
-
-            const isPaymentOverdue = (paymentDateStr) => {
-                if (!paymentDateStr) return false;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const paymentDate = new Date(paymentDateStr.split(' - ')[0]);
-                const timeDifference = today.getTime() - paymentDate.getTime();
-                const daysDifference = timeDifference / (1000 * 3600 * 24);
-                return daysDifference > 30;
-            };
-
-            const processCalendarItems = (items) => {
-                const processedClients = {};
-                if (!items) return processedClients;
-                items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'))
-                    .forEach(event => {
-                        if (!event.summary) return;
-                        const parts = event.summary.split(' - ');
-                        if (parts.length !== 3) return;
-                        const [name, discipline, sessionPart] = parts.map(p => p.trim());
-                        const sessionNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-                        if (isNaN(sessionNumber)) return;
-
-                        let phone = null, lastPayment = null;
-                        if (event.description) {
-                            const phoneMatch = event.description.match(/(\d{10}|\d{4}\s\d{3}\s\d{3})/);
-                            if (phoneMatch) phone = phoneMatch[0];
-                            const paymentMatch = event.description.match(/Last Payment: (.*)/);
-                            if (paymentMatch) lastPayment = paymentMatch[1];
-                        }
-                        const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
-                        
-                        processedClients[name] = {
-                            eventId: event.id, discipline, sessionNumber, studentEmail,
-                            startTime: event.start?.dateTime,
-                            phone: phone || processedClients[name]?.phone,
-                            lastPayment: lastPayment || processedClients[name]?.lastPayment,
-                        };
-                    });
-                return processedClients;
-            };
-
+            // --- Google Calendar & Classroom API ---
             const api = {
                 async getEvents(day) {
                     const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '2500' });
@@ -297,7 +297,6 @@
                         .map(event => {
                             const organizer = event.attendees?.find(a => a.organizer);
                             const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
-                            
                             return {
                                 id: event.id,
                                 date: event.start?.dateTime || event.start?.date,
@@ -316,19 +315,12 @@
                             confirmedEvent.summary === cancelledEvent.summary && 
                             new Date(confirmedEvent.date) > new Date(cancelledEvent.date)
                         );
-
-                        if (correspondingConfirmed) {
-                            return { ...cancelledEvent, status: 'rescheduled', rescheduledTo: correspondingConfirmed.date };
-                        } else {
-                            return { ...cancelledEvent, status: 'cancelled' };
-                        }
+                        return { ...cancelledEvent, status: correspondingConfirmed ? 'rescheduled' : 'cancelled', rescheduledTo: correspondingConfirmed?.date };
                     });
 
-                    const finalHistory = [...confirmedEvents, ...processedCancelledEvents];
+                    const finalHistory = [...confirmedEvents, ...processedCancelledEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
                     
-                    const history = finalHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-                    
-                    return history.reduce((acc, session) => {
+                    return finalHistory.reduce((acc, session) => {
                         const monthYear = new Date(session.date).toLocaleString('ro-RO', { month: 'long', year: 'numeric' });
                         const capitalized = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
                         if (!acc[capitalized]) acc[capitalized] = [];
@@ -343,20 +335,12 @@
                     if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
                     
                     const organizerEmail = eventData.organizer?.email;
-                    if (!organizerEmail) {
-                        throw new Error("Could not identify the event organizer.");
-                    }
+                    if (!organizerEmail) throw new Error("Could not identify the event organizer.");
+                    if (!eventData.attendees) throw new Error("Event has no attendees list to modify.");
 
-                    if (!eventData.attendees) {
-                         throw new Error("Event has no attendees list to modify.");
-                    }
-
-                    const updatedAttendees = eventData.attendees.map(attendee => {
-                        if (attendee.email === organizerEmail) {
-                            return { ...attendee, responseStatus: 'declined' };
-                        }
-                        return attendee;
-                    });
+                    const updatedAttendees = eventData.attendees.map(attendee => 
+                        attendee.email === organizerEmail ? { ...attendee, responseStatus: 'declined' } : attendee
+                    );
 
                     const patchUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const patchResponse = await fetch(patchUrl, {
@@ -389,16 +373,10 @@
                 },
                 async updateEventSummary(eventId, newSummary, colorId = null) {
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
-                    const body = {
-                        summary: newSummary,
-                        colorId: colorId
-                    };
+                    const body = { summary: newSummary, ...(colorId && { colorId }) };
                     const response = await fetch(url, {
                         method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${state.accessToken}`,
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Authorization': `Bearer ${state.accessToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify(body)
                     });
                     const data = await response.json();
@@ -407,6 +385,7 @@
                 },
             };
             
+            // --- RENDER & UI FUNCTIONS ---
             const renderNotification = (message, type = 'success') => {
                 const colors = {
                     error: { bg: 'bg-red-900/50', border: 'border-red-700', text: 'text-red-300', icon: 'shield-alert' },
@@ -449,20 +428,15 @@
 
             const renderClients = (allClients) => {
                 state.fetched = true;
-
                 let clientEntries = Object.entries(allClients);
 
-                // Apply discipline filter
                 if (state.activeDiscipline !== 'all') {
                     clientEntries = clientEntries.filter(([_, details]) => details.discipline === state.activeDiscipline);
                 }
-
-                // Apply last session filter
                 if (state.filterLastSessionOnly) {
                     clientEntries = clientEntries.filter(([_, details]) => details.sessionNumber === 4);
                 }
 
-                // Sort the entries based on the active tab
                 if (state.activeTab === 'today' || state.activeTab === 'tomorrow') {
                     clientEntries.sort(([, a], [, b]) => new Date(a.startTime) - new Date(b.startTime));
                 } else {
@@ -472,20 +446,14 @@
                 if (clientEntries.length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
-                    if (state.activeDiscipline !== 'all') {
-                        message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
-                    }
-                    if(state.filterLastSessionOnly){
-                        message += ` Afișând doar clienții în ultima ședință.`
-                    }
+                    if (state.activeDiscipline !== 'all') message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
+                    if(state.filterLastSessionOnly) message += ` Afișând doar clienții în ultima ședință.`
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = clientEntries
-                    .map(([name, details]) => createClientListItemHTML(name, details))
-                    .join('');
+                const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details)).join('');
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
@@ -545,7 +513,7 @@
                     </li>
                 `;
             };
-            
+
             const createHomeworkHTML = (name, client) => {
                 if (!client) return '';
                 if (!state.courses) return `<p>Se încarcă cursurile...</p>`;
@@ -569,6 +537,18 @@
                 `;
             };
 
+            const createNotesHTML = (clientName, notes) => {
+                return `
+                    <div class="notes-section" data-client-name="${clientName}">
+                        <div class="flex justify-between items-center mb-2">
+                             <h4 class="text-md font-semibold text-gray-200">Notes</h4>
+                             <span class="notes-status text-xs text-gray-500 opacity-0">Saving...</span>
+                        </div>
+                        <textarea class="notes-textarea w-full p-2 border border-gray-600 bg-gray-700 rounded-md" rows="4" placeholder="Add persistent notes for this client...">${notes}</textarea>
+                    </div>
+                `;
+            };
+            
             const createHistoryHTML = (history) => {
                 if (Object.keys(history).length === 0) return `<p class="text-sm text-gray-400">Nu s-au găsit ședințe în ultimele 60 de zile.</p>`;
                 return `<ul class="space-y-2">` + Object.entries(history).map(([monthYear, sessions]) => `
@@ -583,16 +563,12 @@
                             ${sessions.map(s => {
                                 const date = new Date(s.date);
                                 if (isNaN(date.getTime())) return ''; 
-
                                 const statusClass = s.status === 'cancelled' ? 'bg-red-900/50 text-red-300' : s.status === 'rescheduled' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-gray-600/50 text-gray-300';
-                                
                                 const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
                                 const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime()) 
                                     ? `(Reprogramat pentru ${rescheduledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})`
                                     : '';
-
                                 const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
-                                
                                 return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
                             }).join('')}
                         </ul>
@@ -609,10 +585,58 @@
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
+                 if (state.activeTab === 'instructors') return 'Instructori';
                 return 'Sumar Toți Clienții';
             };
 
-            const handleFetchEvents = async () => {
+            const renderInstructorsView = () => {
+                dom.resultsArea.innerHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                            <h2 class="text-2xl font-bold text-gray-200">Manage Instructors</h2>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="flex space-x-2">
+                                <input type="text" id="newInstructorInput" placeholder="Add new instructor name" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                    <i data-lucide="plus" class="h-5 w-5"></i>
+                                </button>
+                            </div>
+                            <ul id="instructorList" class="divide-y divide-gray-600">
+                                <!-- Instructors will be rendered here -->
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                attachInstructorEventListeners();
+                
+                // Start listening for instructor updates from Firestore
+                firestoreApi.getInstructors((instructors) => {
+                    state.instructors = instructors;
+                    const list = document.getElementById('instructorList');
+                    if (!list) return;
+                    list.innerHTML = instructors.map(inst => `
+                        <li class="flex items-center justify-between py-3">
+                            <span class="text-gray-300">${inst.name}</span>
+                            <button class="delete-instructor-btn text-red-500 hover:text-red-400" data-id="${inst.id}">
+                                <i data-lucide="trash-2" class="h-5 w-5"></i>
+                            </button>
+                        </li>
+                    `).join('');
+                    lucide.createIcons();
+                    // Re-attach listeners for the delete buttons after re-rendering
+                    attachInstructorDeleteListeners();
+                });
+            };
+
+            // --- EVENT HANDLERS ---
+            const handleTabChange = async () => {
+                if (state.activeTab === 'instructors') {
+                    renderInstructorsView();
+                    return;
+                }
+                
                 if (!state.accessToken || !state.calendarId) {
                     renderNotification('Authentication is required and Calendar ID must be set. Use the field above to set your access token.', 'error');
                     return;
@@ -680,7 +704,7 @@
                     button.disabled = false;
                 }
             };
-            
+
             const handlePostHomeworkClick = async (button) => {
                 const form = button.closest('.homework-form');
                 const { name } = form.dataset;
@@ -709,7 +733,7 @@
                     lucide.createIcons();
                 }
             };
-
+            
             const handleIncrementSessionClick = async (button) => {
                 const { eventId, name } = button.dataset;
                 const clientDetails = state.clients[name];
@@ -719,17 +743,12 @@
                     return;
                 }
 
-                let currentSessionNumber = clientDetails.sessionNumber;
-                let newSessionNumber = (currentSessionNumber % 4) + 1; 
+                let newSessionNumber = (clientDetails.sessionNumber % 4) + 1; 
                 
                 let colorToApply = null; 
-                if (newSessionNumber === 1) {
-                    colorToApply = '10'; // Green (Basil)
-                } else if (newSessionNumber === 2 || newSessionNumber === 3) {
-                    colorToApply = '8'; // Gray (Graphite)
-                } else if (newSessionNumber === 4) {
-                    colorToApply = '11'; // Red (Tomato)
-                }
+                if (newSessionNumber === 1) colorToApply = '10'; // Green (Basil)
+                else if (newSessionNumber === 4) colorToApply = '11'; // Red (Tomato)
+                else colorToApply = '8'; // Gray (Graphite)
 
                 const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
 
@@ -740,7 +759,6 @@
                 try {
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
                     renderNotification(`Session for ${name} incremented to ${newSessionNumber}. Event color updated.`, 'success');
-
                     state.clients[name].sessionNumber = newSessionNumber;
                     renderClients(state.clients); 
                 } catch (err) {
@@ -751,10 +769,11 @@
                     lucide.createIcons();
                 }
             };
-            
+
+            // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
-                dom.fetchEventsBtn.addEventListener('click', handleFetchEvents);
+                dom.fetchEventsBtn.addEventListener('click', handleTabChange);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -775,7 +794,7 @@
                         searchTimeout = setTimeout(handleSearch, 500);
                     } else {
                         dom.tabControls.style.display = 'block';
-                        dom.resultsArea.innerHTML = '';
+                        handleTabChange(); // Re-fetch tab content when search is cleared
                     }
                 });
 
@@ -783,7 +802,7 @@
                     button.addEventListener('click', () => {
                         state.activeTab = button.dataset.tab;
                         updateUI();
-                        handleFetchEvents();
+                        handleTabChange();
                     });
                 });
 
@@ -809,19 +828,13 @@
                             const oldHeader = Array.from(document.querySelectorAll('.client-header')).find(h => h.dataset.name === state.expandedClient);
                             if (oldHeader) {
                                 oldHeader.parentElement.querySelector('.client-details').style.display = 'none';
-                                const oldIconWrapper = oldHeader.querySelector('.chevron-icon-wrapper');
-                                if (oldIconWrapper) {
-                                    oldIconWrapper.classList.remove('rotate-180');
-                                }
+                                oldHeader.querySelector('.chevron-icon-wrapper')?.classList.remove('rotate-180');
                             }
                         }
                         
                         state.expandedClient = isOpening ? name : null;
                         detailsContainer.style.display = isOpening ? 'block' : 'none';
-                        const iconWrapper = header.querySelector('.chevron-icon-wrapper');
-                        if (iconWrapper) {
-                            iconWrapper.classList.toggle('rotate-180', isOpening);
-                        }
+                        header.querySelector('.chevron-icon-wrapper')?.classList.toggle('rotate-180', isOpening);
                         
                         if (isOpening) {
                             renderClientDetails(name, detailsContainer);
@@ -840,17 +853,11 @@
                 });
                 
                 document.querySelectorAll('.decline-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        handleDeclineClick(e.currentTarget);
-                    });
+                    button.addEventListener('click', (e) => { e.stopPropagation(); handleDeclineClick(e.currentTarget); });
                 });
 
                 document.querySelectorAll('.increment-session-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        handleIncrementSessionClick(e.currentTarget);
-                    });
+                    button.addEventListener('click', (e) => { e.stopPropagation(); handleIncrementSessionClick(e.currentTarget); });
                 });
             };
             
@@ -859,29 +866,55 @@
                 lucide.createIcons();
                 try {
                     const client = state.clients[name];
-                    const history = await api.fetchHistory(name);
-                    const homeworkHTML = createHomeworkHTML(name, client);
+                    const [history, notes] = await Promise.all([
+                        api.fetchHistory(name),
+                        firestoreApi.getClientNotes(name)
+                    ]);
+                    
                     const historyHTML = createHistoryHTML(history);
+                    const notesHTML = createNotesHTML(name, notes);
+                    const homeworkHTML = createHomeworkHTML(name, client);
                     
                     container.innerHTML = `
                         <div class="p-6 border-t border-gray-700 space-y-6">
                             <div>
-                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
-                                ${historyHTML}
+                                ${notesHTML}
+                            </div>
+                             <div>
+                                ${homeworkHTML}
                             </div>
                             <div>
-                                ${homeworkHTML}
+                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
+                                ${historyHTML}
                             </div>
                         </div>
                     `;
                     lucide.createIcons();
-                    attachDetailEventListeners(name, container, history);
+                    attachDetailEventListeners(container);
                 } catch (err) {
                     container.innerHTML = `<div class="p-4 border-t border-gray-700 text-red-500">Failed to load details: ${err.message}</div>`;
                 }
             };
             
-            const attachDetailEventListeners = (name, container, history) => {
+            const attachDetailEventListeners = (container) => {
+                const notesTextarea = container.querySelector('.notes-textarea');
+                const notesStatus = container.querySelector('.notes-status');
+                if (notesTextarea && notesStatus) {
+                    const saveNotes = debounce(async (e) => {
+                        const clientName = e.target.closest('.notes-section').dataset.clientName;
+                        notesStatus.style.opacity = '1';
+                        try {
+                            await firestoreApi.saveClientNotes(clientName, e.target.value);
+                            notesStatus.textContent = 'Saved!';
+                        } catch (err) {
+                            notesStatus.textContent = 'Error!';
+                            console.error("Failed to save notes:", err);
+                        }
+                        setTimeout(() => { notesStatus.style.opacity = '0'; }, 2000);
+                    }, 1000);
+                    notesTextarea.addEventListener('input', saveNotes);
+                }
+
                 container.querySelector('.post-homework-btn')?.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handlePostHomeworkClick(e.currentTarget);
@@ -894,8 +927,40 @@
                         const iconWrapper = header.querySelector('.history-chevron-wrapper');
                         const isVisible = list.style.display !== 'none';
                         list.style.display = isVisible ? 'none' : 'block';
-                        if (iconWrapper) {
-                            iconWrapper.classList.toggle('rotate-180', !isVisible);
+                        iconWrapper?.classList.toggle('rotate-180', !isVisible);
+                    });
+                });
+            };
+
+            const attachInstructorEventListeners = () => {
+                document.getElementById('addInstructorBtn')?.addEventListener('click', async () => {
+                    const input = document.getElementById('newInstructorInput');
+                    const name = input.value.trim();
+                    if (name) {
+                        try {
+                            await firestoreApi.addInstructor(name);
+                            renderNotification(`Instructor "${name}" added.`, 'success');
+                            input.value = '';
+                        } catch (err) {
+                            renderNotification(`Failed to add instructor: ${err.message}`, 'error');
+                        }
+                    }
+                });
+                attachInstructorDeleteListeners();
+            };
+
+            const attachInstructorDeleteListeners = () => {
+                 document.querySelectorAll('.delete-instructor-btn').forEach(button => {
+                    // Prevent multiple listeners by replacing the node
+                    const newButton = button.cloneNode(true);
+                    button.parentNode.replaceChild(newButton, button);
+                    newButton.addEventListener('click', async (e) => {
+                        const id = e.currentTarget.dataset.id;
+                        try {
+                           await firestoreApi.deleteInstructor(id);
+                           renderNotification('Instructor deleted.', 'success');
+                        } catch (err) {
+                            renderNotification(`Failed to delete instructor: ${err.message}`, 'error');
                         }
                     });
                 });
@@ -907,6 +972,7 @@
                     if (tab === 'today') btn.textContent = 'Astăzi';
                     if (tab === 'tomorrow') btn.textContent = 'Mâine';
                     if (tab === 'all') btn.textContent = 'Toți Clienții';
+                    if (tab === 'instructors') btn.textContent = 'Instructori';
 
                     const isSelected = tab === state.activeTab;
                     const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
@@ -914,14 +980,21 @@
                     btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
                 
-                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
-                dom.fetchEventsBtn.textContent = `Afișează programările pentru ${tabTitle}`;
+                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii' }[state.activeTab];
+                dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
                 dom.fetchEventsBtn.disabled = state.isLoading;
+                
+                // Show/hide filters based on tab
+                const clientFiltersVisible = state.activeTab !== 'instructors';
+                dom.disciplineFilter.style.display = clientFiltersVisible ? 'block' : 'none';
+                dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
+                dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
             };
 
+            // --- INITIALIZATION ---
             window.onload = () => {
                 lucide.createIcons();
-                updateUI(); // Call updateUI to set initial tab styles
+                updateUI(); 
 
                 dom.setTokenBtn.addEventListener('click', () => {
                     const token = dom.accessTokenInput.value;
@@ -939,6 +1012,68 @@
                     }
                 });
             };
+            
+            // --- Helper Functions from original code ---
+            const getWhatsAppLink = (phone, text = '') => {
+                if (!phone) return null;
+                let cleanPhoneNumber = phone.replace(/\s/g, '');
+                if (cleanPhoneNumber.startsWith('0')) cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
+                else if (!cleanPhoneNumber.startsWith('40')) cleanPhoneNumber = '40' + cleanPhoneNumber;
+                let link = `https://wa.me/${cleanPhoneNumber}`;
+                if (text) link += `?text=${encodeURIComponent(text)}`;
+                return link;
+            };
+
+            const isPaymentOverdue = (paymentDateStr) => {
+                if (!paymentDateStr) return false;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const paymentDate = new Date(paymentDateStr.split(' - ')[0]);
+                const timeDifference = today.getTime() - paymentDate.getTime();
+                const daysDifference = timeDifference / (1000 * 3600 * 24);
+                return daysDifference > 30;
+            };
+
+            const processCalendarItems = (items) => {
+                const processedClients = {};
+                if (!items) return processedClients;
+                items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'))
+                    .forEach(event => {
+                        if (!event.summary) return;
+                        const parts = event.summary.split(' - ');
+                        if (parts.length !== 3) return;
+                        const [name, discipline, sessionPart] = parts.map(p => p.trim());
+                        const sessionNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                        if (isNaN(sessionNumber)) return;
+
+                        let phone = null, lastPayment = null;
+                        if (event.description) {
+                            const phoneMatch = event.description.match(/(\d{10}|\d{4}\s\d{3}\s\d{3})/);
+                            if (phoneMatch) phone = phoneMatch[0];
+                            const paymentMatch = event.description.match(/Last Payment: (.*)/);
+                            if (paymentMatch) lastPayment = paymentMatch[1];
+                        }
+                        const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
+                        
+                        // Save client info to Firestore
+                        if (name && discipline && phone) {
+                            firestoreApi.saveClientInfo(name, {
+                                name: name,
+                                discipline: discipline,
+                                phone: phone
+                            }).catch(err => console.error("Failed to save client info to Firestore:", err));
+                        }
+
+                        processedClients[name] = {
+                            eventId: event.id, discipline, sessionNumber, studentEmail,
+                            startTime: event.start?.dateTime,
+                            phone: phone || processedClients[name]?.phone,
+                            lastPayment: lastPayment || processedClients[name]?.lastPayment,
+                        };
+                    });
+                return processedClients;
+            };
+
         });
     </script>
 </body>
