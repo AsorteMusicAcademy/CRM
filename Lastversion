@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Session Tracker</title>
     
-    <!-- ADDED: Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,9 +13,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        /* Base styles */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f9fafb;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
@@ -27,45 +27,58 @@
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-900 text-gray-200">
 
     <!-- Container for the entire widget. -->
     <div id="client-tracker-widget" class="container mx-auto p-4 sm:p-6 lg:p-8">
         
-        <header class="text-center mb-8">
-            <h1 class="text-4xl sm:text-5xl font-bold text-gray-800">Client Session Tracker</h1>
-            <p class="text-lg text-gray-500 mt-2">Manage client sessions from Google Calendar & Classroom</p>
+        <header class="relative text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-100">Client Session Tracker</h1>
+            <p class="text-lg text-gray-400 mt-2">Manage client sessions from Google Calendar & Classroom</p>
         </header>
 
-        <!-- MODIFIED: Login View (shown first) -->
+        <!-- Login View -->
         <div id="login-view" class="max-w-2xl mx-auto text-center">
-            <div class="bg-white p-8 rounded-xl shadow-md">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-700">Please Sign In</h2>
-                <p class="text-gray-600 mb-6">This application requires access to your Google account to manage Calendar and Classroom data.</p>
-                <!-- Google Sign-In button will be rendered here by the script -->
+            <div class="bg-gray-800 p-8 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Please Sign In</h2>
+                <p class="text-gray-400 mb-6">This application requires access to your Google account to manage Calendar and Classroom data.</p>
                 <div id="google-signin-button" class="flex justify-center"></div>
             </div>
         </div>
 
-        <!-- MODIFIED: Main App View (initially hidden) -->
+        <!-- Main App View (initially hidden) -->
         <div id="main-app-view" style="display: none;">
-            <!-- Configuration Section (Access token field removed) -->
-            <div class="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-md space-y-4 mb-8">
+            <!-- Configuration Section -->
+            <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
+                
                 <div>
-                    <label for="calendarId" class="block text-sm font-medium text-gray-700 mb-1">Google Calendar ID</label>
-                    <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">Google Calendar ID</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="openCalendarBtn" title="Open Calendar in New Tab" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
+                            <i data-lucide="external-link" class="h-5 w-5"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
-                    <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
+                    <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
+                </div>
+
+                <!-- Discipline Filter -->
+                <div>
+                    <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Discipline</label>
+                    <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <!-- Options will be populated dynamically -->
+                    </select>
                 </div>
 
                 <div id="tab-controls">
-                    <div class="flex justify-center border-b border-gray-200">
-                        <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 border-b-2 border-blue-600 text-blue-600 bg-blue-50">Astăzi</button>
-                        <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 text-gray-500 hover:text-gray-700 hover:bg-gray-100">Mâine</button>
-                        <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 text-gray-500 hover:text-gray-700 hover:bg-gray-100">Toți Clienții</button>
+                    <div class="flex justify-center border-b border-gray-700">
+                        <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                        <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                        <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                     </div>
                     <button id="fetchEventsBtn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
                         Afișează programările pentru astăzi
@@ -87,17 +100,14 @@
     <!-- JavaScript Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- NEW: Google Sign-In Configuration ---
-            // =======================================================================
-            // ==> PASTE YOUR GOOGLE CLIENT ID HERE <==
-            // =======================================================================
+            // --- Google Sign-In Configuration ---
             const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
             const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
             let tokenClient;
 
             // --- STATE MANAGEMENT ---
             let state = {
-                accessToken: null, // Will be set after login
+                accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
                 courses: null,
@@ -107,9 +117,10 @@
                 isSearching: false,
                 fetched: false,
                 expandedClient: null,
+                activeDiscipline: 'all', 
             };
 
-            // --- DOM ELEMENT REFERENCES (MODIFIED) ---
+            // --- DOM ELEMENT REFERENCES ---
             const dom = {
                 loginView: document.getElementById('login-view'),
                 mainAppView: document.getElementById('main-app-view'),
@@ -121,9 +132,11 @@
                 resultsArea: document.getElementById('results-area'),
                 tabControls: document.getElementById('tab-controls'),
                 tabButtons: document.querySelectorAll('.tab-button'),
+                disciplineFilter: document.getElementById('disciplineFilter'), 
+                openCalendarBtn: document.getElementById('openCalendarBtn'),
             };
 
-            // --- NEW: Authorization Logic ---
+            // --- Authorization Logic ---
             function initializeGsi() {
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: GOOGLE_CLIENT_ID,
@@ -131,22 +144,16 @@
                     callback: (tokenResponse) => {
                         if (tokenResponse && tokenResponse.access_token) {
                             state.accessToken = tokenResponse.access_token;
-                            
-                            // Hide login view, show the main app
                             dom.loginView.style.display = 'none';
                             dom.mainAppView.style.display = 'block';
-
-                            // Now that we have the token, initialize the main app logic
                             initializeApp();
                         }
                     },
                 });
 
-                // Render the Google Sign-In button
                 google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
                     callback: () => {
-                        // When the user is identified, request the access token with the necessary scopes
                         requestAccessToken();
                     }
                 });
@@ -158,26 +165,20 @@
             }
 
             function requestAccessToken() {
-                // This prompts the user for consent and gets the token.
                 tokenClient.requestAccessToken();
             }
 
-            // --- NEW: Main App Initialization ---
+            // --- Main App Initialization ---
             function initializeApp() {
-                // Fetch Classroom courses as soon as we have the token
                 if (state.accessToken && !state.courses) {
                     api.fetchCourses()
                         .then(courses => { state.courses = courses; })
                         .catch(err => renderNotification(`Failed to fetch courses: ${err.message}`, 'error'));
                 }
-
-                // Attach all application event listeners
                 attachAppEventListeners();
-
-                // Set up the initial UI state for the main app
                 updateUI();
-                handleFetchEvents(); // Automatically fetch today's events on load
-                lucide.createIcons(); // Render icons inside the newly visible main app view
+                handleFetchEvents();
+                lucide.createIcons();
             }
             
             const getWhatsAppLink = (phone, text = '') => {
@@ -260,7 +261,6 @@
                     if (data.error) throw new Error(data.error.message);
                     return processCalendarItems(data.items);
                 },
-                // FIXED: Rewritten to look for organizer's "declined" status.
                 async fetchHistory(clientName) {
                     const sixtyDaysAgo = new Date();
                     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -279,7 +279,7 @@
                                 date: event.start?.dateTime || event.start?.date,
                                 summary: event.summary,
                                 isDeclinedByOrganizer: isDeclinedByOrganizer,
-                                status: event.status // Keep original status for reference
+                                status: event.status
                             };
                         })
                         .filter(event => event.summary && event.date);
@@ -312,7 +312,6 @@
                         return acc;
                     }, {});
                 },
-                // FIXED: Reverted to setting organizer's responseStatus to "declined".
                 async declineEvent(eventId) {
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
@@ -386,8 +385,8 @@
             
             const renderNotification = (message, type = 'success') => {
                 const colors = {
-                    error: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-700', icon: 'shield-alert' },
-                    success: { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-700', icon: 'info' },
+                    error: { bg: 'bg-red-900/50', border: 'border-red-700', text: 'text-red-300', icon: 'shield-alert' },
+                    success: { bg: 'bg-green-900/50', border: 'border-green-700', text: 'text-green-300', icon: 'info' },
                 };
                 const selected = colors[type];
                 dom.notificationArea.innerHTML = `
@@ -399,7 +398,7 @@
                                 <p class="text-sm">${message}</p>
                             </div>
                         </div>
-                        <button onclick="document.getElementById('notification-area').innerHTML = ''" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800">
+                        <button onclick="document.getElementById('notification-area').innerHTML = ''" class="absolute top-2 right-2 text-gray-400 hover:text-white">
                             <i data-lucide="x-circle" class="h-5 w-5"></i>
                         </button>
                     </div>
@@ -408,47 +407,57 @@
             };
 
             const renderLoader = (message) => {
-                dom.resultsArea.innerHTML = `<div class="flex items-center justify-center p-10"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-blue-600"></i><span class="ml-3 text-lg">${message}</span></div>`;
+                dom.resultsArea.innerHTML = `<div class="flex items-center justify-center p-10"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-blue-400"></i><span class="ml-3 text-lg">${message}</span></div>`;
                 lucide.createIcons();
             };
             
-            // MODIFIED: This function now sorts by time for today/tomorrow tabs and search results.
-            const renderClients = (clientsToDisplay) => {
+            const populateDisciplineFilter = (clients) => {
+                const disciplines = [...new Set(Object.values(clients).map(client => client.discipline))].sort();
+                dom.disciplineFilter.innerHTML = `<option value="all">All Disciplines</option>`;
+                disciplines.forEach(discipline => {
+                    const option = document.createElement('option');
+                    option.value = discipline;
+                    option.textContent = discipline;
+                    dom.disciplineFilter.appendChild(option);
+                });
+                dom.disciplineFilter.value = state.activeDiscipline;
+            };
+
+            const renderClients = (allClients) => {
                 state.fetched = true;
-                if (!clientsToDisplay || Object.keys(clientsToDisplay).length === 0) {
+
+                let filteredClients = allClients;
+                if (state.activeDiscipline !== 'all') {
+                    filteredClients = Object.entries(allClients)
+                        .filter(([_, details]) => details.discipline === state.activeDiscipline)
+                        .reduce((obj, [name, details]) => {
+                            obj[name] = details;
+                            return obj;
+                        }, {});
+                }
+
+                if (!filteredClients || Object.keys(filteredClients).length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
-                    const message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări cu formatul "Nume - Disciplina - Sedinta #" pentru ${tabTitle}.`;
-                    dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-500">${message}</p></div>`;
+                    let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
+                    if (state.activeDiscipline !== 'all') {
+                        message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
+                    }
+                    dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
-                
-                let sortedClientEntries = Object.entries(clientsToDisplay);
-
-                // Sort by start time for 'today', 'tomorrow', and search results. Otherwise by name.
-                if (state.searchQuery.trim() || state.activeTab === 'today' || state.activeTab === 'tomorrow') {
-                    sortedClientEntries.sort(([, detailsA], [, detailsB]) => {
-                        if (detailsA.startTime && detailsB.startTime) {
-                            return new Date(detailsA.startTime) - new Date(detailsB.startTime);
-                        }
-                        // Fallback if time is missing for some reason
-                        return 0;
-                    });
-                } else {
-                    sortedClientEntries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
-                }
-
-                const clientListHTML = sortedClientEntries
+                const clientListHTML = Object.entries(filteredClients)
+                    .sort(([nameA], [nameB]) => nameA.localeCompare(nameB))
                     .map(([name, details]) => createClientListItemHTML(name, details))
                     .join('');
 
                 dom.resultsArea.innerHTML = `
-                    <div class="bg-white shadow-xl rounded-2xl overflow-hidden fade-in">
-                        <div class="px-6 py-4 bg-gray-100 border-b border-gray-200">
-                            <h2 class="text-2xl font-bold text-gray-700">${displayTitle}</h2>
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                            <h2 class="text-2xl font-bold text-gray-200">${displayTitle}</h2>
                         </div>
-                        <ul class="divide-y divide-gray-200">${clientListHTML}</ul>
+                        <ul class="divide-y divide-gray-600">${clientListHTML}</ul>
                     </div>
                 `;
                 lucide.createIcons();
@@ -465,24 +474,26 @@
                 const newSubMessage = `Salut ${name}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
 
                 return `
-                    <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-50 transition-colors duration-200">
+                    <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
                         <div class="flex items-center justify-between flex-wrap cursor-pointer client-header" data-name="${name}">
                             <!-- Client Info -->
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
-                                    <span class="text-2xl font-semibold text-gray-900 bg-gray-100 px-3 py-1 rounded-lg">${name}</span>
-                                    <i data-lucide="chevron-down" class="h-5 w-5 ml-2 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}"></i>
+                                    <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
+                                    <span class="chevron-icon-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                        <i data-lucide="chevron-down" class="h-5 w-5 ml-2 text-gray-400"></i>
+                                    </span>
                                 </div>
-                                <p class="text-sm text-gray-500 mt-2">${discipline}</p>
-                                ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-600 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
-                                ${phone ? `<button class="whatsapp-btn flex items-center justify-center mt-2 bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs w-fit" data-phone="${phone}"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
-                                ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-600 font-semibold' : 'text-gray-600'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Last Payment: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
+                                <p class="text-sm text-gray-400 mt-2">${discipline}</p>
+                                ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-400 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
+                                ${phone ? `<button class="whatsapp-btn flex items-center justify-center mt-2 bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs w-fit"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
+                                ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Last Payment: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
                             </div>
                             <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-48">
                                 <div class="w-full text-right mb-2">
-                                    <span class="text-xs font-medium text-gray-600">Sedinta ${sessionNumber} / 4</span>
-                                    <div class="mt-1 w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / 4) * 100, 100)}%"></div></div>
+                                    <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / 4</span>
+                                    <div class="mt-1 w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / 4) * 100, 100)}%"></div></div>
                                 </div>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${notificationMessage}" ${!phone || !startTime || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="message-square" class="h-4 w-4 mr-1.5"></i><span>Notificare sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== 4 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
@@ -508,13 +519,13 @@
                 const courseOptions = state.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
                 return `
-                    <div class="mb-4 homework-form" data-name="${name}">
-                        <h4 class="text-md font-semibold text-gray-700 mb-2">Temă pentru Acasă</h4>
+                    <div class="mb-4 homework-form" data-name="${name}" data-discipline="${client.discipline}" data-session-number="${client.sessionNumber}">
+                        <h4 class="text-md font-semibold text-gray-200 mb-2">Temă pentru Acasă</h4>
                         <div class="flex items-center space-x-2 mb-2">
                             <label class="text-sm font-medium">Curs:</label>
-                            <select class="course-select block w-full rounded-md border-gray-300 shadow-sm sm:text-sm">${courseOptions}</select>
+                            <select class="course-select block w-full rounded-md border-gray-600 bg-gray-700 shadow-sm sm:text-sm">${courseOptions}</select>
                         </div>
-                        <textarea rows="4" class="homework-text w-full p-2 border border-gray-300 rounded-md" placeholder="Scrie tema aici..."></textarea>
+                        <textarea rows="4" class="homework-text w-full p-2 border border-gray-600 bg-gray-700 rounded-md" placeholder="Scrie tema aici..."></textarea>
                         <button class="post-homework-btn mt-2 flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-discipline="${client.discipline}" data-student-email="${client.studentEmail || ''}" ${!client.studentEmail ? 'disabled' : ''}>
                             <i data-lucide="book" class="h-4 w-4 mr-1.5"></i><span>Postează Tema</span>
                         </button>
@@ -524,19 +535,21 @@
             };
 
             const createHistoryHTML = (history) => {
-                if (Object.keys(history).length === 0) return `<p class="text-sm text-gray-500">Nu s-au găsit ședințe în ultimele 60 de zile.</p>`;
+                if (Object.keys(history).length === 0) return `<p class="text-sm text-gray-400">Nu s-au găsit ședințe în ultimele 60 de zile.</p>`;
                 return `<ul class="space-y-2">` + Object.entries(history).map(([monthYear, sessions]) => `
                     <li>
-                        <div class="history-month-header flex items-center justify-between p-2 bg-gray-100 rounded-md cursor-pointer">
-                            <span class="font-semibold text-gray-800">${monthYear}</span>
-                            <i data-lucide="chevron-down" class="h-5 w-5 text-gray-600 transition-transform duration-300"></i>
+                        <div class="history-month-header flex items-center justify-between p-2 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer">
+                            <span class="font-semibold text-gray-100">${monthYear}</span>
+                            <span class="history-chevron-wrapper inline-block transition-transform duration-300">
+                                <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400"></i>
+                            </span>
                         </div>
                         <ul class="history-month-list mt-2 pl-4 space-y-1" style="display: none;">
                             ${sessions.map(s => {
                                 const date = new Date(s.date);
                                 if (isNaN(date.getTime())) return ''; 
 
-                                const statusClass = s.status === 'cancelled' ? 'bg-red-100 text-red-800' : s.status === 'rescheduled' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-50 text-gray-600';
+                                const statusClass = s.status === 'cancelled' ? 'bg-red-900/50 text-red-300' : s.status === 'rescheduled' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-gray-600/50 text-gray-300';
                                 
                                 const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
                                 const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime()) 
@@ -545,7 +558,7 @@
 
                                 const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
                                 
-                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric' })} - ${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
+                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
                             }).join('')}
                         </ul>
                     </li>
@@ -566,7 +579,7 @@
 
             const handleFetchEvents = async () => {
                 if (!state.accessToken || !state.calendarId) {
-                    renderNotification('Authentication is required and Calendar ID must be set.', 'error');
+                    renderNotification('Authentication is required and Calendar ID must be set. Use the field above to set your access token.', 'error');
                     return;
                 }
                 state.isLoading = true;
@@ -577,6 +590,7 @@
 
                 try {
                     state.clients = await api.getEvents(state.activeTab);
+                    populateDisciplineFilter(state.clients);
                     renderClients(state.clients);
                 } catch (err) {
                     renderNotification(`Failed to fetch events: ${err.message}`, 'error');
@@ -599,6 +613,7 @@
 
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
+                    populateDisciplineFilter(state.clients);
                     renderClients(state.clients);
                 } catch (err) {
                     renderNotification(`Search failed: ${err.message}`, 'error');
@@ -706,6 +721,16 @@
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.fetchEventsBtn.addEventListener('click', handleFetchEvents);
 
+                dom.openCalendarBtn.addEventListener('click', () => {
+                    const calendarId = dom.calendarIdInput.value;
+                    if (calendarId) {
+                        const url = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(calendarId)}`;
+                        window.open(url, '_blank');
+                    } else {
+                        renderNotification('Please enter a Calendar ID first.', 'error');
+                    }
+                });
+
                 let searchTimeout;
                 dom.searchQueryInput.addEventListener('input', (e) => {
                     clearTimeout(searchTimeout);
@@ -726,6 +751,11 @@
                         handleFetchEvents();
                     });
                 });
+
+                dom.disciplineFilter.addEventListener('change', (e) => {
+                    state.activeDiscipline = e.target.value;
+                    renderClients(state.clients);
+                });
             }
 
             const attachClientEventListeners = () => {
@@ -739,13 +769,19 @@
                             const oldHeader = Array.from(document.querySelectorAll('.client-header')).find(h => h.dataset.name === state.expandedClient);
                             if (oldHeader) {
                                 oldHeader.parentElement.querySelector('.client-details').style.display = 'none';
-                                oldHeader.querySelector('[data-lucide="chevron-down"]').classList.remove('rotate-180');
+                                const oldIconWrapper = oldHeader.querySelector('.chevron-icon-wrapper');
+                                if (oldIconWrapper) {
+                                    oldIconWrapper.classList.remove('rotate-180');
+                                }
                             }
                         }
                         
                         state.expandedClient = isOpening ? name : null;
                         detailsContainer.style.display = isOpening ? 'block' : 'none';
-                        header.querySelector('[data-lucide="chevron-down"]').classList.toggle('rotate-180', isOpening);
+                        const iconWrapper = header.querySelector('.chevron-icon-wrapper');
+                        if (iconWrapper) {
+                            iconWrapper.classList.toggle('rotate-180', isOpening);
+                        }
                         
                         if (isOpening) {
                             renderClientDetails(name, detailsContainer);
@@ -779,17 +815,18 @@
             };
             
             const renderClientDetails = async (name, container) => {
-                container.innerHTML = `<div class="p-4 border-t border-gray-200 flex justify-center"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-gray-500"></i></div>`;
+                container.innerHTML = `<div class="p-4 border-t border-gray-700 flex justify-center"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-gray-500"></i></div>`;
                 lucide.createIcons();
                 try {
                     const client = state.clients[name];
                     const history = await api.fetchHistory(name);
                     const homeworkHTML = createHomeworkHTML(name, client);
                     const historyHTML = createHistoryHTML(history);
+                    
                     container.innerHTML = `
-                        <div class="p-6 border-t border-gray-200 space-y-6">
+                        <div class="p-6 border-t border-gray-700 space-y-6">
                             <div>
-                                <h4 class="text-md font-semibold text-gray-700 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
+                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
                                 ${historyHTML}
                             </div>
                             <div>
@@ -798,33 +835,43 @@
                         </div>
                     `;
                     lucide.createIcons();
-                    attachDetailEventListeners(name, container);
+                    attachDetailEventListeners(name, container, history);
                 } catch (err) {
-                    container.innerHTML = `<div class="p-4 border-t border-gray-200 text-red-500">Failed to load details: ${err.message}</div>`;
+                    container.innerHTML = `<div class="p-4 border-t border-gray-700 text-red-500">Failed to load details: ${err.message}</div>`;
                 }
             };
             
-            const attachDetailEventListeners = (name, container) => {
+            const attachDetailEventListeners = (name, container, history) => {
                 container.querySelector('.post-homework-btn')?.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handlePostHomeworkClick(e.currentTarget);
                 });
+
                 container.querySelectorAll('.history-month-header').forEach(header => {
                     header.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const list = header.nextElementSibling;
-                        const icon = header.querySelector('i');
+                        const iconWrapper = header.querySelector('.history-chevron-wrapper');
                         const isVisible = list.style.display !== 'none';
                         list.style.display = isVisible ? 'none' : 'block';
-                        icon.classList.toggle('rotate-180', !isVisible);
+                        if (iconWrapper) {
+                            iconWrapper.classList.toggle('rotate-180', !isVisible);
+                        }
                     });
                 });
             };
 
             const updateUI = () => {
                 dom.tabButtons.forEach(btn => {
-                    const isSelected = btn.dataset.tab === state.activeTab;
-                    btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`;
+                    const tab = btn.dataset.tab;
+                    if (tab === 'today') btn.textContent = 'Astăzi';
+                    if (tab === 'tomorrow') btn.textContent = 'Mâine';
+                    if (tab === 'all') btn.textContent = 'Toți Clienții';
+
+                    const isSelected = tab === state.activeTab;
+                    const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
+                    const unselectedClasses = 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50';
+                    btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
                 
                 const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
