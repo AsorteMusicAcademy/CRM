@@ -244,15 +244,14 @@
             // --- FIRESTORE API ---
             const firestoreApi = {
                 async getClientData(clientName) {
-                    if (!db || !clientName) return { notes: '', subscription: '4' }; // Default to 4 sessions
+                    if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
                     const docRef = doc(db, "clients", clientName);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        // Ensure a default subscription if it's missing
-                        return { name: clientName, ...data, subscription: data.subscription || '4' };
+                        return { name: clientName, ...data, subscription: data.subscription || '4', assignedInstructor: data.assignedInstructor || '' };
                     } else {
-                        return { name: clientName, notes: '', subscription: '4' }; // Default for new clients
+                        return { name: clientName, notes: '', subscription: '4', assignedInstructor: '' };
                     }
                 },
                 async saveClientData(clientName, data) {
@@ -288,6 +287,10 @@
                         .then(courses => { state.courses = courses; })
                         .catch(err => renderNotification(`Failed to fetch courses: ${err.message}`, 'error'));
                 }
+                // Fetch instructors once and store them in state
+                firestoreApi.getInstructors(instructors => {
+                    state.instructors = instructors;
+                });
                 attachAppEventListeners();
                 updateUI();
                 handleTabChange();
@@ -541,12 +544,15 @@
             const createClientListItemHTML = (name, details, clientData) => {
                 const { eventId, discipline, sessionNumber, phone, startTime, lastPayment } = details;
                 const subscriptionType = clientData?.subscription || '4';
+                const assignedInstructor = clientData?.assignedInstructor || '';
                 const isExpanded = state.expandedClient === name;
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                 const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
                 const notificationMessage = `Salut ${name}! Sunt Tudor de la Asorte Music Academy si te contactez pentru a te intreba daca iti confirmi prezenta pentru cursul de ${discipline} pe care il ai programat pentru ${dayText}, la ora ${formattedTime}. Iti multumim si te așteptăm cu drag!`;
                 const lastSessionMessage = `Salut ${name}! Îți reamintim cu drag că sesiunea ${dayText === 'astăzi' ? 'de astăzi' : 'de mâine'} este ultima din abonamentul tău. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
                 const newSubMessage = `Salut ${name}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
+                
+                const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
 
                 return `
                     <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
@@ -560,10 +566,14 @@
                                     </span>
                                 </div>
                                 <p class="text-sm text-gray-400 mt-2">${discipline}</p>
-                                <div class="mt-2 flex items-center space-x-2">
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
                                     <select class="subscription-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
                                         <option value="4" ${subscriptionType === '4' ? 'selected' : ''}>Abonament de 4 sedinte</option>
                                         <option value="8" ${subscriptionType === '8' ? 'selected' : ''}>Abonament de 8 sedinte</option>
+                                    </select>
+                                    <select class="instructor-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
+                                        <option value="">Unassigned</option>
+                                        ${instructorOptions}
                                     </select>
                                     <span class="sub-status text-xs text-green-400 opacity-0">Saved!</span>
                                 </div>
@@ -1008,25 +1018,31 @@
                     button.addEventListener('click', (e) => { e.stopPropagation(); handleIncrementSessionClick(e.currentTarget); });
                 });
 
-                document.querySelectorAll('.subscription-select').forEach(select => {
+                document.querySelectorAll('.subscription-select, .instructor-select').forEach(select => {
                     select.addEventListener('click', (e) => {
                         e.stopPropagation(); // Prevent the card from expanding on click
                     });
                     select.addEventListener('change', async (e) => {
                         e.stopPropagation();
                         const clientName = e.target.dataset.name;
-                        const newSubscription = e.target.value;
-                        const statusEl = e.target.nextElementSibling;
+                        const statusEl = e.target.parentElement.querySelector('.sub-status');
+                        let dataToSave = {};
+
+                        if(e.target.classList.contains('subscription-select')) {
+                            dataToSave = { subscription: e.target.value };
+                            state.clientFirebaseData[clientName].subscription = e.target.value;
+                        } else {
+                            dataToSave = { assignedInstructor: e.target.value };
+                            state.clientFirebaseData[clientName].assignedInstructor = e.target.value;
+                        }
 
                         try {
-                            await firestoreApi.saveClientData(clientName, { subscription: newSubscription });
-                            state.clientFirebaseData[clientName].subscription = newSubscription;
+                            await firestoreApi.saveClientData(clientName, dataToSave);
                             statusEl.classList.remove('opacity-0');
                             setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
-                            // Re-render to update progress bar and buttons
                             renderClients(state.clients, state.clientFirebaseData);
                         } catch (err) {
-                            renderNotification(`Failed to save subscription: ${err.message}`, 'error');
+                            renderNotification(`Failed to save data: ${err.message}`, 'error');
                         }
                     });
                 });
