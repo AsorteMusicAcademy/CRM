@@ -285,6 +285,37 @@
                     if (data.error) throw new Error(data.error.message);
                     return processCalendarItems(data.items);
                 },
+                async findLastPastEvent(clientName) {
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0); // Start of today
+                    const ninetyDaysAgo = new Date();
+                    ninetyDaysAgo.setDate(now.getDate() - 90);
+
+                    const params = new URLSearchParams({
+                        q: `"${clientName}"`, // Just search for the client's name
+                        singleEvents: 'true',
+                        orderBy: 'startTime',
+                        timeMax: now.toISOString(), // Search up to the beginning of today
+                        timeMin: ninetyDaysAgo.toISOString(),
+                        maxResults: '250'
+                    });
+
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events?${params.toString()}`;
+                    const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+
+                    // Filter for events that match the format "Name - Discipline - Sedinta X" and sort to find the most recent one.
+                    const sortedEvents = (data.items || [])
+                        .filter(event => {
+                            if (!event.summary) return false;
+                            const parts = event.summary.split(' - ').map(p => p.trim());
+                            return event.status !== 'cancelled' && parts[0] === clientName && parts.length >= 3 && parts[2].toLowerCase().includes('sedinta');
+                        })
+                        .sort((a, b) => new Date(b.start.dateTime || b.start.date) - new Date(a.start.dateTime || a.start.date));
+
+                    return sortedEvents.length > 0 ? sortedEvents[0] : null;
+                },
                 async fetchHistory(clientName) {
                     const sixtyDaysAgo = new Date();
                     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -743,24 +774,52 @@
                     return;
                 }
 
-                let newSessionNumber = (clientDetails.sessionNumber % 4) + 1; 
-                
-                let colorToApply = null; 
-                if (newSessionNumber === 1) colorToApply = '10'; // Green (Basil)
-                else if (newSessionNumber === 4) colorToApply = '11'; // Red (Tomato)
-                else colorToApply = '8'; // Gray (Graphite)
-
-                const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
-
                 button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
                 button.disabled = true;
                 lucide.createIcons();
 
                 try {
+                    let newSessionNumber;
+
+                    if (state.activeTab === 'tomorrow') {
+                        // New logic for 'tomorrow' tab: find last session and increment
+                        renderNotification('Searching for last past session...', 'success');
+                        const lastEvent = await api.findLastPastEvent(name);
+                        let lastSessionNumber = 0;
+                        if (lastEvent && lastEvent.summary) {
+                            const parts = lastEvent.summary.split(' - ').map(p => p.trim());
+                            if (parts.length >= 3) {
+                                const sessionPart = parts[2];
+                                const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                                if (!isNaN(parsedNumber)) {
+                                    lastSessionNumber = parsedNumber;
+                                }
+                            }
+                        }
+                        newSessionNumber = lastSessionNumber + 1;
+                    } else {
+                        // Existing logic for 'today' tab: cycle 1-4
+                        let currentSessionNumber = clientDetails.sessionNumber;
+                        newSessionNumber = (currentSessionNumber % 4) + 1;
+                    }
+
+                    let colorToApply = null;
+                    if (newSessionNumber === 1) {
+                        colorToApply = '10'; // Green (Basil)
+                    } else if (newSessionNumber === 4) {
+                        colorToApply = '11'; // Red (Tomato)
+                    } else {
+                        colorToApply = '8'; // Gray (Graphite)
+                    }
+
+                    const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
+
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
-                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}. Event color updated.`, 'success');
+                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}.`, 'success');
+
                     state.clients[name].sessionNumber = newSessionNumber;
-                    renderClients(state.clients); 
+                    renderClients(state.clients);
+
                 } catch (err) {
                     renderNotification(`Failed to increment session for ${name}: ${err.message}`, 'error');
                 } finally {
@@ -1040,11 +1099,23 @@
                 items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'))
                     .forEach(event => {
                         if (!event.summary) return;
-                        const parts = event.summary.split(' - ');
-                        if (parts.length !== 3) return;
-                        const [name, discipline, sessionPart] = parts.map(p => p.trim());
-                        const sessionNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-                        if (isNaN(sessionNumber)) return;
+                        const parts = event.summary.split(' - ').map(p => p.trim());
+                        
+                        // We need at least a name and discipline
+                        if (parts.length < 2) return; 
+
+                        const name = parts[0];
+                        const discipline = parts[1];
+                        let sessionNumber = 0; // Default value if not specified or parsable
+
+                        // Try to parse session number if it exists
+                        if (parts.length >= 3) {
+                            const sessionPart = parts[2];
+                            const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                            if (!isNaN(parsedNumber)) {
+                                sessionNumber = parsedNumber;
+                            }
+                        }
 
                         let phone = null, lastPayment = null;
                         if (event.description) {
