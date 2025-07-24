@@ -26,6 +26,17 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Simple debounce status indicator */
+        .notes-status, .sub-status {
+            transition: opacity 0.3s ease-in-out;
+        }
+        /* Modal styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -38,60 +49,72 @@
             <p class="text-lg text-gray-400 mt-2">Manage client sessions from Google Calendar & Classroom</p>
         </header>
 
-        <!-- Login View -->
-        <div id="login-view" class="max-w-2xl mx-auto text-center">
-            <div class="bg-gray-800 p-8 rounded-xl shadow-md">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Please Sign In</h2>
-                <p class="text-gray-400 mb-6">This application requires access to your Google account to manage Calendar and Classroom data.</p>
-                <div id="google-signin-button" class="flex justify-center"></div>
-            </div>
-        </div>
-
-        <!-- Main App View (hidden by default) -->
-        <div id="main-app-view" style="display: none;">
+        <!-- Main App View -->
+        <div id="main-app-view">
             <!-- Configuration Section -->
-            <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
+            <div id="config-section" class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
                 
-                <div>
-                    <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">Google Calendar ID</label>
-                    <div class="flex items-center space-x-2">
-                        <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button id="openCalendarBtn" title="Open Calendar in New Tab" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
-                            <i data-lucide="external-link" class="h-5 w-5"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="relative">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
-                    <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
-                </div>
-
-                <!-- Discipline Filter -->
-                <div>
-                    <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Discipline</label>
-                    <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                </div>
-
-                <!-- Last Session Filter -->
-                <div>
-                    <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
-                        <span class="text-sm font-medium text-gray-300">Show only clients on their last session</span>
-                    </label>
-                </div>
-
-                <div id="tab-controls">
-                    <div class="flex justify-center border-b border-gray-700">
-                        <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                        <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                        <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                    </div>
-                    <button id="fetchEventsBtn" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
-                        Afișează programările pentru astăzi
+                <!-- Authorization Section -->
+                <div id="auth-section">
+                    <p class="text-center text-gray-400 mb-4">Please sign in and authorize the application to access your Google Calendar and Classroom data.</p>
+                    <button id="authBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
+                        <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24px" height="24px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                        Sign In & Authorize with Google
                     </button>
+                </div>
+                
+                <hr id="config-hr" class="border-gray-600" style="display: none;"/>
+
+                <div id="main-config-controls" style="display: none;">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">Google Calendar ID</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="openCalendarBtn" title="Open Calendar in New Tab" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
+                                    <i data-lucide="external-link" class="h-5 w-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="relative">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
+                            <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
+                        </div>
+
+                        <!-- Discipline Filter -->
+                        <div>
+                            <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Discipline</label>
+                            <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Last Session Filter -->
+                        <div>
+                            <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-300">Show only clients on their last session</span>
+                            </label>
+                        </div>
+
+                        <div id="tab-controls">
+                            <div class="flex justify-center border-b border-gray-700">
+                                <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                                <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                                <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                                <button data-tab="instructors" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                            </div>
+                             <div class="mt-4 space-y-2">
+                                <button id="fetchEventsBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
+                                    Afișează programările pentru astăzi
+                                </button>
+                                <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                                    Increment All Sessions for Tomorrow
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -101,153 +124,183 @@
             <!-- Results Area -->
             <div id="results-area" class="max-w-4xl mx-auto">
                 <!-- Loading spinner will be injected here -->
-                <!-- Client list will be injected here -->
+                <!-- Client/Instructor list will be injected here -->
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Logic -->
-    <script>
+    <!-- Cancellation Modal -->
+    <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
+            <h3 class="text-2xl font-bold text-white mb-4">Confirm Cancellation</h3>
+            <p class="text-gray-400 mb-6">Who is cancelling this session?</p>
+            <div class="space-y-3">
+                <button id="cancel-by-instructor-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                    Cancelled by Instructor
+                </button>
+                <button id="cancel-by-client-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
+                    Cancelled by Client
+                </button>
+            </div>
+            <button id="close-modal-btn" class="mt-6 w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                Nevermind
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDKs and App Logic -->
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
+            authDomain: "asorte-crm.firebaseapp.com",
+            projectId: "asorte-crm",
+            storageBucket: "asorte-crm.appspot.com",
+            messagingSenderId: "848279125018",
+            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
+        };
+
+        // --- Firebase Initialization ---
+        let app, auth, db, userId;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            renderNotification("Firebase initialization failed. Please check your configuration.", "error");
+        }
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                console.log("User is signed in with UID:", userId);
+            } else {
+                signInAnonymously(auth).catch(error => {
+                    console.error("Anonymous sign-in failed:", error);
+                });
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             // --- Google Sign-In Configuration ---
             const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
             const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
-            let tokenClient;
-
+            
             // --- STATE MANAGEMENT ---
             let state = {
                 accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
+                clientFirebaseData: {}, // New state to hold Firestore data for clients
                 courses: null,
+                instructors: [],
                 activeTab: 'today',
                 searchQuery: '',
                 isLoading: false,
                 isSearching: false,
                 fetched: false,
                 expandedClient: null,
-                activeDiscipline: 'all', 
+                activeDiscipline: 'all',
                 filterLastSessionOnly: false,
+                cancellationContext: null,
             };
 
             // --- DOM ELEMENT REFERENCES ---
             const dom = {
-                loginView: document.getElementById('login-view'),
                 mainAppView: document.getElementById('main-app-view'),
-                googleSigninButton: document.getElementById('google-signin-button'),
+                authBtn: document.getElementById('authBtn'),
                 calendarIdInput: document.getElementById('calendarId'),
                 searchQueryInput: document.getElementById('searchQuery'),
                 fetchEventsBtn: document.getElementById('fetchEventsBtn'),
+                incrementAllBtn: document.getElementById('incrementAllBtn'),
                 notificationArea: document.getElementById('notification-area'),
                 resultsArea: document.getElementById('results-area'),
                 tabControls: document.getElementById('tab-controls'),
                 tabButtons: document.querySelectorAll('.tab-button'),
-                disciplineFilter: document.getElementById('disciplineFilter'), 
+                disciplineFilter: document.getElementById('disciplineFilter'),
                 lastSessionFilter: document.getElementById('lastSessionFilter'),
                 openCalendarBtn: document.getElementById('openCalendarBtn'),
+                cancelModal: document.getElementById('cancel-modal'),
+                modalContent: document.querySelector('.modal-content'),
+                cancelByInstructorBtn: document.getElementById('cancel-by-instructor-btn'),
+                cancelByClientBtn: document.getElementById('cancel-by-client-btn'),
+                closeModalBtn: document.getElementById('close-modal-btn'),
             };
 
-            // --- Authorization Logic ---
-            function initializeGsi() {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: SCOPES,
-                    callback: (tokenResponse) => {
-                        if (tokenResponse && tokenResponse.access_token) {
-                            state.accessToken = tokenResponse.access_token;
-                            dom.loginView.style.display = 'none';
-                            dom.mainAppView.style.display = 'block';
-                            initializeApp();
-                        } else {
-                             renderNotification('Authentication failed. Please try again.', 'error');
-                        }
-                    },
-                });
+            // --- DEBOUNCE UTILITY ---
+            const debounce = (func, delay) => {
+                let timeout;
+                return (...args) => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            };
 
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: (response) => {
-                        // This callback handles the sign-in response.
-                        // After the user signs in via the button, we request the access token.
-                        requestAccessToken();
+            // --- FIRESTORE API ---
+            const firestoreApi = {
+                async getClientData(clientName) {
+                    if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
+                    const docRef = doc(db, "clients", clientName);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        return { name: clientName, ...data, subscription: data.subscription || '4', assignedInstructor: data.assignedInstructor || '' };
+                    } else {
+                        return { name: clientName, notes: '', subscription: '4', assignedInstructor: '' };
                     }
-                });
-
-                google.accounts.id.renderButton(
-                    dom.googleSigninButton,
-                    { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular' }
-                );
-            }
-
-            function requestAccessToken() {
-                // Prompt the user for authorization for the required scopes.
-                tokenClient.requestAccessToken();
-            }
+                },
+                async saveClientData(clientName, data) {
+                    if (!db || !clientName) return;
+                    const docRef = doc(db, "clients", clientName);
+                    await setDoc(docRef, data, { merge: true });
+                },
+                async addInstructor(name) {
+                    if (!db || !name) return;
+                    await addDoc(collection(db, "instructors"), { name });
+                },
+                async deleteInstructor(id) {
+                    if (!db || !id) return;
+                    await deleteDoc(doc(db, "instructors", id));
+                },
+                getInstructors(callback) {
+                    if (!db) return () => {};
+                    const q = collection(db, "instructors");
+                    return onSnapshot(q, (querySnapshot) => {
+                        const instructors = [];
+                        querySnapshot.forEach((doc) => {
+                            instructors.push({ id: doc.id, ...doc.data() });
+                        });
+                        callback(instructors);
+                    });
+                }
+            };
 
             // --- Main App Initialization ---
-            function initializeApp() {
+            function initializeAppLogic() {
                 if (state.accessToken && !state.courses) {
                     api.fetchCourses()
                         .then(courses => { state.courses = courses; })
                         .catch(err => renderNotification(`Failed to fetch courses: ${err.message}`, 'error'));
                 }
+                // Fetch instructors once and store them in state
+                firestoreApi.getInstructors(instructors => {
+                    state.instructors = instructors;
+                });
                 attachAppEventListeners();
                 updateUI();
-                handleFetchEvents();
+                handleTabChange();
                 lucide.createIcons();
             }
             
-            const getWhatsAppLink = (phone, text = '') => {
-                if (!phone) return null;
-                let cleanPhoneNumber = phone.replace(/\s/g, '');
-                if (cleanPhoneNumber.startsWith('0')) cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
-                else if (!cleanPhoneNumber.startsWith('40')) cleanPhoneNumber = '40' + cleanPhoneNumber;
-                let link = `https://wa.me/${cleanPhoneNumber}`;
-                if (text) link += `?text=${encodeURIComponent(text)}`;
-                return link;
-            };
-
-            const isPaymentOverdue = (paymentDateStr) => {
-                if (!paymentDateStr) return false;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const paymentDate = new Date(paymentDateStr.split(' - ')[0]);
-                const timeDifference = today.getTime() - paymentDate.getTime();
-                const daysDifference = timeDifference / (1000 * 3600 * 24);
-                return daysDifference > 30;
-            };
-
-            const processCalendarItems = (items) => {
-                const processedClients = {};
-                if (!items) return processedClients;
-                items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'))
-                    .forEach(event => {
-                        if (!event.summary) return;
-                        const parts = event.summary.split(' - ');
-                        if (parts.length !== 3) return;
-                        const [name, discipline, sessionPart] = parts.map(p => p.trim());
-                        const sessionNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-                        if (isNaN(sessionNumber)) return;
-
-                        let phone = null, lastPayment = null;
-                        if (event.description) {
-                            const phoneMatch = event.description.match(/(\d{10}|\d{4}\s\d{3}\s\d{3})/);
-                            if (phoneMatch) phone = phoneMatch[0];
-                            const paymentMatch = event.description.match(/Last Payment: (.*)/);
-                            if (paymentMatch) lastPayment = paymentMatch[1];
-                        }
-                        const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
-                        
-                        processedClients[name] = {
-                            eventId: event.id, discipline, sessionNumber, studentEmail,
-                            startTime: event.start?.dateTime,
-                            phone: phone || processedClients[name]?.phone,
-                            lastPayment: lastPayment || processedClients[name]?.lastPayment,
-                        };
-                    });
-                return processedClients;
-            };
-
+            // --- Google Calendar & Classroom API ---
             const api = {
                 async getEvents(day) {
                     const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '2500' });
@@ -277,6 +330,41 @@
                     if (data.error) throw new Error(data.error.message);
                     return processCalendarItems(data.items);
                 },
+                async findLastPastEvent(clientName) {
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0); // Start of today
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+                    const params = new URLSearchParams({
+                        q: `"${clientName}"`,
+                        singleEvents: 'true',
+                        orderBy: 'startTime',
+                        timeMax: now.toISOString(),
+                        timeMin: thirtyDaysAgo.toISOString(),
+                        maxResults: '250'
+                    });
+
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events?${params.toString()}`;
+                    const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+
+                    const sortedEvents = (data.items || [])
+                        .filter(event => {
+                            if (!event.summary || event.status === 'cancelled') return false;
+                            const parts = event.summary.split(' - ').map(p => p.trim());
+                            if (parts.length < 3 || parts[0] !== clientName || !parts[2].toLowerCase().includes('sedinta')) {
+                                return false;
+                            }
+                            const sessionPart = parts[2];
+                            const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                            return !isNaN(parsedNumber); // Only keep events where a number can be parsed
+                        })
+                        .sort((a, b) => new Date(b.start.dateTime || b.start.date) - new Date(a.start.dateTime || a.start.date));
+
+                    return sortedEvents.length > 0 ? sortedEvents[0] : null;
+                },
                 async fetchHistory(clientName) {
                     const sixtyDaysAgo = new Date();
                     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -289,14 +377,7 @@
                         .map(event => {
                             const organizer = event.attendees?.find(a => a.organizer);
                             const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
-                            
-                            return {
-                                id: event.id,
-                                date: event.start?.dateTime || event.start?.date,
-                                summary: event.summary,
-                                isDeclinedByOrganizer: isDeclinedByOrganizer,
-                                status: event.status
-                            };
+                            return { id: event.id, date: event.start?.dateTime || event.start?.date, summary: event.summary, isDeclinedByOrganizer, status: event.status };
                         })
                         .filter(event => event.summary && event.date);
 
@@ -308,19 +389,12 @@
                             confirmedEvent.summary === cancelledEvent.summary && 
                             new Date(confirmedEvent.date) > new Date(cancelledEvent.date)
                         );
-
-                        if (correspondingConfirmed) {
-                            return { ...cancelledEvent, status: 'rescheduled', rescheduledTo: correspondingConfirmed.date };
-                        } else {
-                            return { ...cancelledEvent, status: 'cancelled' };
-                        }
+                        return { ...cancelledEvent, status: correspondingConfirmed ? 'rescheduled' : 'cancelled', rescheduledTo: correspondingConfirmed?.date };
                     });
 
-                    const finalHistory = [...confirmedEvents, ...processedCancelledEvents];
+                    const finalHistory = [...confirmedEvents, ...processedCancelledEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
                     
-                    const history = finalHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-                    
-                    return history.reduce((acc, session) => {
+                    return finalHistory.reduce((acc, session) => {
                         const monthYear = new Date(session.date).toLocaleString('ro-RO', { month: 'long', year: 'numeric' });
                         const capitalized = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
                         if (!acc[capitalized]) acc[capitalized] = [];
@@ -328,27 +402,19 @@
                         return acc;
                     }, {});
                 },
-                async declineEvent(eventId) {
+                async cancelEvent(eventId) {
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const eventData = await getResponse.json();
                     if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
                     
                     const organizerEmail = eventData.organizer?.email;
-                    if (!organizerEmail) {
-                        throw new Error("Could not identify the event organizer.");
-                    }
+                    if (!organizerEmail) throw new Error("Could not identify the event organizer.");
+                    if (!eventData.attendees) throw new Error("Event has no attendees list to modify.");
 
-                    if (!eventData.attendees) {
-                         throw new Error("Event has no attendees list to modify.");
-                    }
-
-                    const updatedAttendees = eventData.attendees.map(attendee => {
-                        if (attendee.email === organizerEmail) {
-                            return { ...attendee, responseStatus: 'declined' };
-                        }
-                        return attendee;
-                    });
+                    const updatedAttendees = eventData.attendees.map(attendee => 
+                        attendee.email === organizerEmail ? { ...attendee, responseStatus: 'declined' } : attendee
+                    );
 
                     const patchUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const patchResponse = await fetch(patchUrl, {
@@ -381,16 +447,10 @@
                 },
                 async updateEventSummary(eventId, newSummary, colorId = null) {
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
-                    const body = {
-                        summary: newSummary,
-                        colorId: colorId
-                    };
+                    const body = { summary: newSummary, ...(colorId && { colorId }) };
                     const response = await fetch(url, {
                         method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${state.accessToken}`,
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Authorization': `Bearer ${state.accessToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify(body)
                     });
                     const data = await response.json();
@@ -399,6 +459,7 @@
                 },
             };
             
+            // --- RENDER & UI FUNCTIONS ---
             const renderNotification = (message, type = 'success') => {
                 const colors = {
                     error: { bg: 'bg-red-900/50', border: 'border-red-700', text: 'text-red-300', icon: 'shield-alert' },
@@ -439,22 +500,20 @@
                 dom.disciplineFilter.value = state.activeDiscipline;
             };
 
-            const renderClients = (allClients) => {
+            const renderClients = (allClients, clientFirebaseData) => {
                 state.fetched = true;
-
                 let clientEntries = Object.entries(allClients);
 
-                // Apply discipline filter
                 if (state.activeDiscipline !== 'all') {
                     clientEntries = clientEntries.filter(([_, details]) => details.discipline === state.activeDiscipline);
                 }
-
-                // Apply last session filter
                 if (state.filterLastSessionOnly) {
-                    clientEntries = clientEntries.filter(([_, details]) => details.sessionNumber === 4);
+                    clientEntries = clientEntries.filter(([name, details]) => {
+                        const subType = clientFirebaseData[name]?.subscription || '4';
+                        return details.sessionNumber === parseInt(subType);
+                    });
                 }
 
-                // Sort the entries based on the active tab
                 if (state.activeTab === 'today' || state.activeTab === 'tomorrow') {
                     clientEntries.sort(([, a], [, b]) => new Date(a.startTime) - new Date(b.startTime));
                 } else {
@@ -464,20 +523,14 @@
                 if (clientEntries.length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
-                    if (state.activeDiscipline !== 'all') {
-                        message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
-                    }
-                    if(state.filterLastSessionOnly){
-                        message += ` Afișând doar clienții în ultima ședință.`
-                    }
+                    if (state.activeDiscipline !== 'all') message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
+                    if(state.filterLastSessionOnly) message += ` Afișând doar clienții în ultima ședință.`
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = clientEntries
-                    .map(([name, details]) => createClientListItemHTML(name, details))
-                    .join('');
+                const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details, clientFirebaseData[name])).join('');
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
@@ -491,14 +544,18 @@
                 attachClientEventListeners();
             };
             
-            const createClientListItemHTML = (name, details) => {
+            const createClientListItemHTML = (name, details, clientData) => {
                 const { eventId, discipline, sessionNumber, phone, startTime, lastPayment } = details;
+                const subscriptionType = clientData?.subscription || '4';
+                const assignedInstructor = clientData?.assignedInstructor || '';
                 const isExpanded = state.expandedClient === name;
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                 const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
                 const notificationMessage = `Salut ${name}! Sunt Tudor de la Asorte Music Academy si te contactez pentru a te intreba daca iti confirmi prezenta pentru cursul de ${discipline} pe care il ai programat pentru ${dayText}, la ora ${formattedTime}. Iti multumim si te așteptăm cu drag!`;
                 const lastSessionMessage = `Salut ${name}! Îți reamintim cu drag că sesiunea ${dayText === 'astăzi' ? 'de astăzi' : 'de mâine'} este ultima din abonamentul tău. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
                 const newSubMessage = `Salut ${name}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
+                
+                const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
 
                 return `
                     <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
@@ -512,6 +569,17 @@
                                     </span>
                                 </div>
                                 <p class="text-sm text-gray-400 mt-2">${discipline}</p>
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <select class="subscription-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
+                                        <option value="4" ${subscriptionType === '4' ? 'selected' : ''}>Abonament de 4 sedinte</option>
+                                        <option value="8" ${subscriptionType === '8' ? 'selected' : ''}>Abonament de 8 sedinte</option>
+                                    </select>
+                                    <select class="instructor-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
+                                        <option value="">Unassigned</option>
+                                        ${instructorOptions}
+                                    </select>
+                                    <span class="sub-status text-xs text-green-400 opacity-0">Saved!</span>
+                                </div>
                                 ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-400 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
                                 ${phone ? `<button class="whatsapp-btn flex items-center justify-center mt-2 bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs w-fit"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
                                 ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Last Payment: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
@@ -519,11 +587,11 @@
                             <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-48">
                                 <div class="w-full text-right mb-2">
-                                    <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / 4</span>
-                                    <div class="mt-1 w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / 4) * 100, 100)}%"></div></div>
+                                    <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
+                                    <div class="mt-1 w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / parseInt(subscriptionType)) * 100, 100)}%"></div></div>
                                 </div>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${notificationMessage}" ${!phone || !startTime || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="message-square" class="h-4 w-4 mr-1.5"></i><span>Notificare sedinta</span></button>
-                                <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== 4 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
+                                <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== parseInt(subscriptionType) || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
                                 <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
                                 <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
@@ -537,7 +605,7 @@
                     </li>
                 `;
             };
-            
+
             const createHomeworkHTML = (name, client) => {
                 if (!client) return '';
                 if (!state.courses) return `<p>Se încarcă cursurile...</p>`;
@@ -561,6 +629,18 @@
                 `;
             };
 
+            const createNotesHTML = (clientName, notes) => {
+                return `
+                    <div class="notes-section" data-client-name="${clientName}">
+                        <div class="flex justify-between items-center mb-2">
+                             <h4 class="text-md font-semibold text-gray-200">Notes</h4>
+                             <span class="notes-status text-xs text-gray-500 opacity-0">Saving...</span>
+                        </div>
+                        <textarea class="notes-textarea w-full p-2 border border-gray-600 bg-gray-700 rounded-md" rows="4" placeholder="Add persistent notes for this client...">${notes}</textarea>
+                    </div>
+                `;
+            };
+            
             const createHistoryHTML = (history) => {
                 if (Object.keys(history).length === 0) return `<p class="text-sm text-gray-400">Nu s-au găsit ședințe în ultimele 60 de zile.</p>`;
                 return `<ul class="space-y-2">` + Object.entries(history).map(([monthYear, sessions]) => `
@@ -575,16 +655,12 @@
                             ${sessions.map(s => {
                                 const date = new Date(s.date);
                                 if (isNaN(date.getTime())) return ''; 
-
                                 const statusClass = s.status === 'cancelled' ? 'bg-red-900/50 text-red-300' : s.status === 'rescheduled' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-gray-600/50 text-gray-300';
-                                
                                 const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
                                 const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime()) 
                                     ? `(Reprogramat pentru ${rescheduledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})`
                                     : '';
-
                                 const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
-                                
                                 return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
                             }).join('')}
                         </ul>
@@ -601,12 +677,60 @@
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
+                 if (state.activeTab === 'instructors') return 'Instructori';
                 return 'Sumar Toți Clienții';
             };
 
-            const handleFetchEvents = async () => {
+            const renderInstructorsView = () => {
+                dom.resultsArea.innerHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                            <h2 class="text-2xl font-bold text-gray-200">Manage Instructors</h2>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="flex space-x-2">
+                                <input type="text" id="newInstructorInput" placeholder="Add new instructor name" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                    <i data-lucide="plus" class="h-5 w-5"></i>
+                                </button>
+                            </div>
+                            <ul id="instructorList" class="divide-y divide-gray-600">
+                                <!-- Instructors will be rendered here -->
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                attachInstructorEventListeners();
+                
+                // Start listening for instructor updates from Firestore
+                firestoreApi.getInstructors((instructors) => {
+                    state.instructors = instructors;
+                    const list = document.getElementById('instructorList');
+                    if (!list) return;
+                    list.innerHTML = instructors.map(inst => `
+                        <li class="flex items-center justify-between py-3">
+                            <span class="text-gray-300">${inst.name}</span>
+                            <button class="delete-instructor-btn text-red-500 hover:text-red-400" data-id="${inst.id}">
+                                <i data-lucide="trash-2" class="h-5 w-5"></i>
+                            </button>
+                        </li>
+                    `).join('');
+                    lucide.createIcons();
+                    // Re-attach listeners for the delete buttons after re-rendering
+                    attachInstructorDeleteListeners();
+                });
+            };
+
+            // --- EVENT HANDLERS ---
+            const handleTabChange = async () => {
+                if (state.activeTab === 'instructors') {
+                    renderInstructorsView();
+                    return;
+                }
+                
                 if (!state.accessToken || !state.calendarId) {
-                    renderNotification('Authentication is required and Calendar ID must be set.', 'error');
+                    renderNotification('Authentication is required and Calendar ID must be set. Use the field above to set your access token.', 'error');
                     return;
                 }
                 state.isLoading = true;
@@ -617,8 +741,19 @@
 
                 try {
                     state.clients = await api.getEvents(state.activeTab);
+                    
+                    // Fetch Firestore data for all visible clients
+                    const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
+                    const clientFirebaseDataArray = await Promise.all(clientDataPromises);
+                    state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
+                        if (data.name) {
+                            acc[data.name] = data;
+                        }
+                        return acc;
+                    }, {});
+
                     populateDisciplineFilter(state.clients);
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
                     renderNotification(`Failed to fetch events: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
@@ -640,8 +775,18 @@
 
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
+
+                    const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
+                    const clientFirebaseDataArray = await Promise.all(clientDataPromises);
+                    state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
+                        if (data.name) {
+                            acc[data.name] = data;
+                        }
+                        return acc;
+                    }, {});
+
                     populateDisciplineFilter(state.clients);
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
                     renderNotification(`Search failed: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
@@ -651,28 +796,12 @@
                 }
             };
             
-            const handleDeclineClick = async (button) => {
+            const handleDeclineClick = (button) => {
                 const { eventId, name, discipline, phone } = button.dataset;
-                button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
-                button.disabled = true;
-                lucide.createIcons();
-
-                try {
-                    await api.declineEvent(eventId);
-                    renderNotification(`Event for ${name} has been declined.`, 'success');
-                    document.getElementById(`client-${eventId}`).remove();
-                    const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
-                    const link = getWhatsAppLink(phone, message);
-                    if (link) window.open(link, '_blank');
-                } catch (err) {
-                    renderNotification(`Failed to decline event: ${err.message}`, 'error');
-                    button.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
-                    lucide.createIcons();
-                } finally {
-                    button.disabled = false;
-                }
+                state.cancellationContext = { eventId, name, discipline, phone, originalButton: button };
+                showModal();
             };
-            
+
             const handlePostHomeworkClick = async (button) => {
                 const form = button.closest('.homework-form');
                 const { name } = form.dataset;
@@ -701,40 +830,62 @@
                     lucide.createIcons();
                 }
             };
-
+            
             const handleIncrementSessionClick = async (button) => {
                 const { eventId, name } = button.dataset;
                 const clientDetails = state.clients[name];
+                const clientFirebaseData = state.clientFirebaseData[name] || { subscription: '4' };
+                const subscriptionMax = parseInt(clientFirebaseData.subscription);
 
                 if (!clientDetails || (state.activeTab !== 'today' && state.activeTab !== 'tomorrow')) {
                     renderNotification('Session increment is only available for today\'s or tomorrow\'s sessions.', 'error');
                     return;
                 }
 
-                let currentSessionNumber = clientDetails.sessionNumber;
-                let newSessionNumber = (currentSessionNumber % 4) + 1; 
-                
-                let colorToApply = null; 
-                if (newSessionNumber === 1) {
-                    colorToApply = '10'; // Green (Basil)
-                } else if (newSessionNumber === 2 || newSessionNumber === 3) {
-                    colorToApply = '8'; // Gray (Graphite)
-                } else if (newSessionNumber === 4) {
-                    colorToApply = '11'; // Red (Tomato)
-                }
-
-                const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
-
                 button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
                 button.disabled = true;
                 lucide.createIcons();
 
                 try {
+                    let newSessionNumber;
+                    let lastSessionNumber = 0;
+
+                    if (state.activeTab === 'tomorrow') {
+                        renderNotification('Searching for last past session...', 'success');
+                        const lastEvent = await api.findLastPastEvent(name);
+                        if (lastEvent && lastEvent.summary) {
+                            const parts = lastEvent.summary.split(' - ').map(p => p.trim());
+                            if (parts.length >= 3) {
+                                const sessionPart = parts[2];
+                                const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                                if (!isNaN(parsedNumber)) {
+                                    lastSessionNumber = parsedNumber;
+                                }
+                            }
+                        }
+                    } else { // 'today' tab
+                        lastSessionNumber = clientDetails.sessionNumber;
+                    }
+
+                    newSessionNumber = (lastSessionNumber % subscriptionMax) + 1;
+
+                    let colorToApply = null;
+                    if (newSessionNumber === 1) {
+                        colorToApply = '10'; // Green (Basil)
+                    } else if (newSessionNumber === subscriptionMax) {
+                        colorToApply = '11'; // Red (Tomato)
+                    } else {
+                        colorToApply = '8'; // Gray (Graphite)
+                    }
+
+                    const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
+
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
-                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}. Event color updated.`, 'success');
+                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}.`, 'success');
 
                     state.clients[name].sessionNumber = newSessionNumber;
-                    renderClients(state.clients); 
+                    renderClients(state.clients, state.clientFirebaseData);
+
                 } catch (err) {
                     renderNotification(`Failed to increment session for ${name}: ${err.message}`, 'error');
                 } finally {
@@ -743,10 +894,39 @@
                     lucide.createIcons();
                 }
             };
-            
+
+            const handleIncrementAllTomorrow = async () => {
+                if (state.activeTab !== 'tomorrow') return;
+
+                const tomorrowClients = Object.entries(state.clients);
+                if (tomorrowClients.length === 0) {
+                    renderNotification("No sessions to increment for tomorrow.", "success");
+                    return;
+                }
+
+                dom.incrementAllBtn.disabled = true;
+                dom.incrementAllBtn.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Incrementing...`;
+                lucide.createIcons();
+
+                for (const [name, details] of tomorrowClients) {
+                    // Find the button in the DOM to pass to the handler
+                    const clientLi = document.getElementById(`client-${details.eventId}`);
+                    const button = clientLi?.querySelector('.increment-session-btn');
+                    if (button) {
+                        await handleIncrementSessionClick(button);
+                    }
+                }
+                
+                dom.incrementAllBtn.disabled = false;
+                dom.incrementAllBtn.innerHTML = `Increment All Sessions for Tomorrow`;
+                renderNotification("All sessions for tomorrow have been incremented.", "success");
+            };
+
+            // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
-                dom.fetchEventsBtn.addEventListener('click', handleFetchEvents);
+                dom.fetchEventsBtn.addEventListener('click', handleTabChange);
+                dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -767,7 +947,7 @@
                         searchTimeout = setTimeout(handleSearch, 500);
                     } else {
                         dom.tabControls.style.display = 'block';
-                        dom.resultsArea.innerHTML = '';
+                        handleTabChange(); // Re-fetch tab content when search is cleared
                     }
                 });
 
@@ -775,19 +955,27 @@
                     button.addEventListener('click', () => {
                         state.activeTab = button.dataset.tab;
                         updateUI();
-                        handleFetchEvents();
+                        handleTabChange();
                     });
                 });
 
                 dom.disciplineFilter.addEventListener('change', (e) => {
                     state.activeDiscipline = e.target.value;
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 });
 
                 dom.lastSessionFilter.addEventListener('change', (e) => {
                     state.filterLastSessionOnly = e.target.checked;
-                    renderClients(state.clients);
+                    renderClients(state.clients, state.clientFirebaseData);
                 });
+
+                // Modal Listeners
+                dom.closeModalBtn.addEventListener('click', hideModal);
+                dom.cancelModal.addEventListener('click', (e) => {
+                    if (e.target === dom.cancelModal) hideModal();
+                });
+                dom.cancelByInstructorBtn.addEventListener('click', handleCancelByInstructor);
+                dom.cancelByClientBtn.addEventListener('click', handleCancelByClient);
             }
 
             const attachClientEventListeners = () => {
@@ -801,19 +989,13 @@
                             const oldHeader = Array.from(document.querySelectorAll('.client-header')).find(h => h.dataset.name === state.expandedClient);
                             if (oldHeader) {
                                 oldHeader.parentElement.querySelector('.client-details').style.display = 'none';
-                                const oldIconWrapper = oldHeader.querySelector('.chevron-icon-wrapper');
-                                if (oldIconWrapper) {
-                                    oldIconWrapper.classList.remove('rotate-180');
-                                }
+                                oldHeader.querySelector('.chevron-icon-wrapper')?.classList.remove('rotate-180');
                             }
                         }
                         
                         state.expandedClient = isOpening ? name : null;
                         detailsContainer.style.display = isOpening ? 'block' : 'none';
-                        const iconWrapper = header.querySelector('.chevron-icon-wrapper');
-                        if (iconWrapper) {
-                            iconWrapper.classList.toggle('rotate-180', isOpening);
-                        }
+                        header.querySelector('.chevron-icon-wrapper')?.classList.toggle('rotate-180', isOpening);
                         
                         if (isOpening) {
                             renderClientDetails(name, detailsContainer);
@@ -832,16 +1014,39 @@
                 });
                 
                 document.querySelectorAll('.decline-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        handleDeclineClick(e.currentTarget);
-                    });
+                    button.addEventListener('click', (e) => { e.stopPropagation(); handleDeclineClick(e.currentTarget); });
                 });
 
                 document.querySelectorAll('.increment-session-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
+                    button.addEventListener('click', (e) => { e.stopPropagation(); handleIncrementSessionClick(e.currentTarget); });
+                });
+
+                document.querySelectorAll('.subscription-select, .instructor-select').forEach(select => {
+                    select.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent the card from expanding on click
+                    });
+                    select.addEventListener('change', async (e) => {
                         e.stopPropagation();
-                        handleIncrementSessionClick(e.currentTarget);
+                        const clientName = e.target.dataset.name;
+                        const statusEl = e.target.parentElement.querySelector('.sub-status');
+                        let dataToSave = {};
+
+                        if(e.target.classList.contains('subscription-select')) {
+                            dataToSave = { subscription: e.target.value };
+                            state.clientFirebaseData[clientName].subscription = e.target.value;
+                        } else {
+                            dataToSave = { assignedInstructor: e.target.value };
+                            state.clientFirebaseData[clientName].assignedInstructor = e.target.value;
+                        }
+
+                        try {
+                            await firestoreApi.saveClientData(clientName, dataToSave);
+                            statusEl.classList.remove('opacity-0');
+                            setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+                            renderClients(state.clients, state.clientFirebaseData);
+                        } catch (err) {
+                            renderNotification(`Failed to save data: ${err.message}`, 'error');
+                        }
                     });
                 });
             };
@@ -851,29 +1056,53 @@
                 lucide.createIcons();
                 try {
                     const client = state.clients[name];
+                    const clientData = await firestoreApi.getClientData(name);
                     const history = await api.fetchHistory(name);
-                    const homeworkHTML = createHomeworkHTML(name, client);
+                    
                     const historyHTML = createHistoryHTML(history);
+                    const notesHTML = createNotesHTML(name, clientData.notes);
+                    const homeworkHTML = createHomeworkHTML(name, client);
                     
                     container.innerHTML = `
                         <div class="p-6 border-t border-gray-700 space-y-6">
                             <div>
-                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
-                                ${historyHTML}
+                                ${notesHTML}
+                            </div>
+                             <div>
+                                ${homeworkHTML}
                             </div>
                             <div>
-                                ${homeworkHTML}
+                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
+                                ${historyHTML}
                             </div>
                         </div>
                     `;
                     lucide.createIcons();
-                    attachDetailEventListeners(name, container, history);
+                    attachDetailEventListeners(container);
                 } catch (err) {
                     container.innerHTML = `<div class="p-4 border-t border-gray-700 text-red-500">Failed to load details: ${err.message}</div>`;
                 }
             };
             
-            const attachDetailEventListeners = (name, container, history) => {
+            const attachDetailEventListeners = (container) => {
+                const notesTextarea = container.querySelector('.notes-textarea');
+                const notesStatus = container.querySelector('.notes-status');
+                if (notesTextarea && notesStatus) {
+                    const saveNotes = debounce(async (e) => {
+                        const clientName = e.target.closest('.notes-section').dataset.clientName;
+                        notesStatus.style.opacity = '1';
+                        try {
+                            await firestoreApi.saveClientData(clientName, { notes: e.target.value });
+                            notesStatus.textContent = 'Saved!';
+                        } catch (err) {
+                            notesStatus.textContent = 'Error!';
+                            console.error("Failed to save notes:", err);
+                        }
+                        setTimeout(() => { notesStatus.style.opacity = '0'; }, 2000);
+                    }, 1000);
+                    notesTextarea.addEventListener('input', saveNotes);
+                }
+
                 container.querySelector('.post-homework-btn')?.addEventListener('click', (e) => {
                     e.stopPropagation();
                     handlePostHomeworkClick(e.currentTarget);
@@ -886,8 +1115,40 @@
                         const iconWrapper = header.querySelector('.history-chevron-wrapper');
                         const isVisible = list.style.display !== 'none';
                         list.style.display = isVisible ? 'none' : 'block';
-                        if (iconWrapper) {
-                            iconWrapper.classList.toggle('rotate-180', !isVisible);
+                        iconWrapper?.classList.toggle('rotate-180', !isVisible);
+                    });
+                });
+            };
+
+            const attachInstructorEventListeners = () => {
+                document.getElementById('addInstructorBtn')?.addEventListener('click', async () => {
+                    const input = document.getElementById('newInstructorInput');
+                    const name = input.value.trim();
+                    if (name) {
+                        try {
+                            await firestoreApi.addInstructor(name);
+                            renderNotification(`Instructor "${name}" added.`, 'success');
+                            input.value = '';
+                        } catch (err) {
+                            renderNotification(`Failed to add instructor: ${err.message}`, 'error');
+                        }
+                    }
+                });
+                attachInstructorDeleteListeners();
+            };
+
+            const attachInstructorDeleteListeners = () => {
+                 document.querySelectorAll('.delete-instructor-btn').forEach(button => {
+                    // Prevent multiple listeners by replacing the node
+                    const newButton = button.cloneNode(true);
+                    button.parentNode.replaceChild(newButton, button);
+                    newButton.addEventListener('click', async (e) => {
+                        const id = e.currentTarget.dataset.id;
+                        try {
+                           await firestoreApi.deleteInstructor(id);
+                           renderNotification('Instructor deleted.', 'success');
+                        } catch (err) {
+                            renderNotification(`Failed to delete instructor: ${err.message}`, 'error');
                         }
                     });
                 });
@@ -899,6 +1160,7 @@
                     if (tab === 'today') btn.textContent = 'Astăzi';
                     if (tab === 'tomorrow') btn.textContent = 'Mâine';
                     if (tab === 'all') btn.textContent = 'Toți Clienții';
+                    if (tab === 'instructors') btn.textContent = 'Instructori';
 
                     const isSelected = tab === state.activeTab;
                     const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
@@ -906,22 +1168,208 @@
                     btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
                 
-                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
-                dom.fetchEventsBtn.textContent = `Afișează programările pentru ${tabTitle}`;
+                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii' }[state.activeTab];
+                dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
                 dom.fetchEventsBtn.disabled = state.isLoading;
+                
+                // Show/hide filters and increment all button based on tab
+                const clientFiltersVisible = state.activeTab !== 'instructors';
+                dom.disciplineFilter.style.display = clientFiltersVisible ? 'block' : 'none';
+                dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
+                dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
+                dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
             };
+
+            // --- MODAL FUNCTIONS ---
+            const showModal = () => {
+                dom.cancelModal.classList.remove('hidden', 'opacity-0');
+                dom.modalContent.classList.remove('scale-95');
+            };
+
+            const hideModal = () => {
+                dom.cancelModal.classList.add('opacity-0');
+                dom.modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    dom.cancelModal.classList.add('hidden');
+                    state.cancellationContext = null; // Clear context after closing
+                }, 300);
+            };
+
+            async function handleCancelByInstructor() {
+                if (!state.cancellationContext) return;
+                const { eventId, name, discipline, phone, originalButton } = state.cancellationContext;
+                
+                hideModal();
+                originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                originalButton.disabled = true;
+                lucide.createIcons();
+
+                try {
+                    const clientDetails = state.clients[name];
+                    const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
+                    
+                    const newSummary = `${name} - ${discipline}`;
+                    await api.updateEventSummary(eventId, newSummary);
+                    await api.cancelEvent(eventId);
+                    
+                    renderNotification(`Event for ${name} cancelled by instructor. Session number removed.`, 'success');
+                    document.getElementById(`client-${eventId}`)?.remove();
+
+                    const message = `Salut ${name}! Ne cerem scuze ca a tebuit sa anulam sedinta ta de ${discipline} pe care o aveai programata pentru ${dayText}, la ora ${formattedTime}. Iti multumim pentru intelegere si vrem sa te instiintam ca aceasta sedinta nu va fi luata in calcul la abonamntul curent!`;
+                    const link = getWhatsAppLink(phone, message);
+                    if (link) {
+                        window.open(link, '_blank');
+                    }
+                } catch (err) {
+                    renderNotification(`Failed to cancel event: ${err.message}`, 'error');
+                    originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
+                    lucide.createIcons();
+                    originalButton.disabled = false;
+                }
+            }
+
+            async function handleCancelByClient() {
+                if (!state.cancellationContext) return;
+                const { eventId, name, phone, discipline, originalButton } = state.cancellationContext;
+
+                hideModal();
+                originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                originalButton.disabled = true;
+                lucide.createIcons();
+
+                try {
+                    await api.cancelEvent(eventId);
+                    renderNotification(`Event for ${name} cancelled by client.`, 'success');
+                    document.getElementById(`client-${eventId}`)?.remove();
+                    const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
+                    const link = getWhatsAppLink(phone, message);
+                    if (link) window.open(link, '_blank');
+                } catch (err) {
+                    renderNotification(`Failed to cancel event: ${err.message}`, 'error');
+                    originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
+                    lucide.createIcons();
+                    originalButton.disabled = false;
+                }
+            }
+
+            // --- AUTH & INITIALIZATION ---
+            let tokenClient;
+
+            function handleAuthClick() {
+                if (tokenClient) {
+                    tokenClient.requestAccessToken();
+                } else {
+                    renderNotification('Google Auth client not initialized. Please wait or refresh.', 'error');
+                }
+            }
 
             window.onload = () => {
                 lucide.createIcons();
-                // Check if Google Identity Services are available
-                if (typeof google !== 'undefined') {
-                    initializeGsi();
-                } else {
-                    // Handle case where GSI script fails to load
-                    console.error("Google Identity Services script not loaded.");
-                    renderNotification("Could not load Google Sign-In. Please refresh the page.", "error");
+                updateUI();
+                
+                dom.authBtn.addEventListener('click', handleAuthClick);
+
+                // Initialize the Google OAuth client
+                try {
+                    tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: GOOGLE_CLIENT_ID,
+                        scope: SCOPES,
+                        callback: async (tokenResponse) => {
+                            if (tokenResponse.error) {
+                                renderNotification(`Authorization error: ${tokenResponse.error_description || tokenResponse.error}`, 'error');
+                                return;
+                            }
+                            state.accessToken = tokenResponse.access_token;
+                            renderNotification('Authorization successful. Initializing app...', 'success');
+                            
+                            // Hide auth section and show main app controls
+                            document.getElementById('auth-section').style.display = 'none';
+                            document.getElementById('config-hr').style.display = 'block';
+                            document.getElementById('main-config-controls').style.display = 'block';
+                            
+                            initializeAppLogic();
+                        },
+                    });
+                } catch (error) {
+                     console.error("Google Auth initialization failed:", error);
+                     renderNotification("Could not load Google Sign-In library. Please check your connection and refresh.", "error");
                 }
             };
+            
+            // --- Helper Functions from original code ---
+            const getWhatsAppLink = (phone, text = '') => {
+                if (!phone) return null;
+                let cleanPhoneNumber = phone.replace(/\s/g, '');
+                if (cleanPhoneNumber.startsWith('0')) cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
+                else if (!cleanPhoneNumber.startsWith('40')) cleanPhoneNumber = '40' + cleanPhoneNumber;
+                let link = `https://wa.me/${cleanPhoneNumber}`;
+                if (text) link += `?text=${encodeURIComponent(text)}`;
+                return link;
+            };
+
+            const isPaymentOverdue = (paymentDateStr) => {
+                if (!paymentDateStr) return false;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const paymentDate = new Date(paymentDateStr.split(' - ')[0]);
+                const timeDifference = today.getTime() - paymentDate.getTime();
+                const daysDifference = timeDifference / (1000 * 3600 * 24);
+                return daysDifference > 30;
+            };
+
+            const processCalendarItems = (items) => {
+                const processedClients = {};
+                if (!items) return processedClients;
+                items.filter(event => event.status !== 'cancelled' && !(event.organizer && event.attendees && event.attendees.find(a => a.email === event.organizer.email)?.responseStatus === 'declined'))
+                    .forEach(event => {
+                        if (!event.summary) return;
+                        const parts = event.summary.split(' - ').map(p => p.trim());
+                        
+                        // We need at least a name and discipline
+                        if (parts.length < 2) return; 
+
+                        const name = parts[0];
+                        const discipline = parts[1];
+                        let sessionNumber = 0; // Default value if not specified or parsable
+
+                        // Try to parse session number if it exists
+                        if (parts.length >= 3) {
+                            const sessionPart = parts[2];
+                            const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
+                            if (!isNaN(parsedNumber)) {
+                                sessionNumber = parsedNumber;
+                            }
+                        }
+
+                        let phone = null, lastPayment = null;
+                        if (event.description) {
+                            const phoneMatch = event.description.match(/(\d{10}|\d{4}\s\d{3}\s\d{3})/);
+                            if (phoneMatch) phone = phoneMatch[0];
+                            const paymentMatch = event.description.match(/Last Payment: (.*)/);
+                            if (paymentMatch) lastPayment = paymentMatch[1];
+                        }
+                        const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
+                        
+                        // Save client info to Firestore
+                        if (name && discipline && phone) {
+                            firestoreApi.saveClientData(name, {
+                                name: name,
+                                discipline: discipline,
+                                phone: phone
+                            }).catch(err => console.error("Failed to save client info to Firestore:", err));
+                        }
+
+                        processedClients[name] = {
+                            eventId: event.id, discipline, sessionNumber, studentEmail,
+                            startTime: event.start?.dateTime,
+                            phone: phone || processedClients[name]?.phone,
+                            lastPayment: lastPayment || processedClients[name]?.lastPayment,
+                        };
+                    });
+                return processedClients;
+            };
+
         });
     </script>
 </body>
