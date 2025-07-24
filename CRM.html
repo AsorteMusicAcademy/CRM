@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="ro" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Session Tracker</title>
+    <title>Gestionare Sesiuni Clienți</title>
     
     <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -45,8 +45,8 @@
     <div id="client-tracker-widget" class="container mx-auto p-4 sm:p-6 lg:p-8">
         
         <header class="relative text-center mb-8">
-            <h1 class="text-4xl sm:text-5xl font-bold text-gray-100">Client Session Tracker</h1>
-            <p class="text-lg text-gray-400 mt-2">Manage client sessions from Google Calendar & Classroom</p>
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-100">Gestionare Sesiuni Clienți</h1>
+            <p class="text-lg text-gray-400 mt-2">Gestionează sesiunile clienților din Google Calendar & Classroom</p>
         </header>
 
         <!-- Main App View -->
@@ -57,29 +57,29 @@
                 <!-- Authorization Section -->
                 <div id="auth-section">
                     <!-- Google Sign-In Button -->
-                    <p class="text-center text-gray-400 mb-4">Please sign in and authorize the application to access your Google Calendar and Classroom data.</p>
+                    <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația pentru a accesa datele din Google Calendar și Classroom.</p>
                     <button id="authBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
                         <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24px" height="24px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
-                        Sign In & Authorize with Google
+                        Autentificare și Autorizare cu Google
                     </button>
 
                     <div class="relative flex py-5 items-center">
                         <div class="flex-grow border-t border-gray-600"></div>
-                        <span class="flex-shrink mx-4 text-gray-400">OR</span>
+                        <span class="flex-shrink mx-4 text-gray-400">SAU</span>
                         <div class="flex-grow border-t border-gray-600"></div>
                     </div>
 
                     <div class="text-center mb-4">
-                        <a href="#" id="testing-mode-toggle" class="text-sm text-blue-400 hover:underline cursor-pointer">Enter Testing Mode</a>
+                        <a href="#" id="testing-mode-toggle" class="text-sm text-blue-400 hover:underline cursor-pointer">Intră în Modul de Testare</a>
                     </div>
 
                     <!-- Manual Access Token Input for Testing -->
                     <div id="manual-auth-section" style="display: none;">
-                        <p class="text-center text-gray-400 mb-4">For testing, paste an OAuth 2.0 access token from the <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
+                        <p class="text-center text-gray-400 mb-4">Pentru testare, introdu un token de acces OAuth 2.0 de pe <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
                         <div class="flex items-center space-x-2">
-                            <input type="password" id="manualAccessToken" placeholder="Paste Access Token Here" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="password" id="manualAccessToken" placeholder="Introdu Token-ul de Acces Aici" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <button id="submitTokenBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
-                                Submit
+                                Trimite
                             </button>
                         </div>
                     </div>
@@ -90,10 +90,10 @@
                 <div id="main-config-controls" style="display: none;">
                     <div class="space-y-4">
                         <div>
-                            <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">Google Calendar ID</label>
+                            <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">ID Google Calendar</label>
                             <div class="flex items-center space-x-2">
-                                <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="e.g., primary or user@example.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <button id="openCalendarBtn" title="Open Calendar in New Tab" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
+                                <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="ex: primary sau user@exemplu.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="openCalendarBtn" title="Deschide Calendarul într-un Tab Nou" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
                                     <i data-lucide="external-link" class="h-5 w-5"></i>
                                 </button>
                             </div>
@@ -106,7 +106,7 @@
 
                         <!-- Discipline Filter -->
                         <div>
-                            <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filter by Discipline</label>
+                            <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
                             <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <!-- Options will be populated dynamically -->
                             </select>
@@ -116,7 +116,7 @@
                         <div>
                             <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
                                 <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-300">Show only clients on their last session</span>
+                                <span class="text-sm font-medium text-gray-300">Afișează doar clienții în ultima ședință</span>
                             </label>
                         </div>
 
@@ -132,7 +132,7 @@
                                     Afișează programările pentru astăzi
                                 </button>
                                 <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
-                                    Increment All Sessions for Tomorrow
+                                    Incrementează Toate Sesiunile pentru Mâine
                                 </button>
                             </div>
                         </div>
@@ -154,18 +154,18 @@
     <!-- Cancellation Modal -->
     <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
-            <h3 class="text-2xl font-bold text-white mb-4">Confirm Cancellation</h3>
-            <p class="text-gray-400 mb-6">Who is cancelling this session?</p>
+            <h3 class="text-2xl font-bold text-white mb-4">Confirmă Anularea</h3>
+            <p class="text-gray-400 mb-6">Cine anulează această sesiune?</p>
             <div class="space-y-3">
                 <button id="cancel-by-instructor-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
-                    Cancelled by Instructor
+                    Anulată de Instructor
                 </button>
                 <button id="cancel-by-client-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
-                    Cancelled by Client
+                    Anulată de Client
                 </button>
             </div>
             <button id="close-modal-btn" class="mt-6 w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                Nevermind
+                Renunță
             </button>
         </div>
     </div>
@@ -310,7 +310,7 @@
                 if (state.accessToken && !state.courses) {
                     api.fetchCourses()
                         .then(courses => { state.courses = courses; })
-                        .catch(err => renderNotification(`Failed to fetch courses: ${err.message}`, 'error'));
+                        .catch(err => renderNotification(`Eroare la preluarea cursurilor: ${err.message}`, 'error'));
                 }
                 // Fetch instructors once and store them in state
                 firestoreApi.getInstructors(instructors => {
@@ -512,7 +512,7 @@
             
             const populateDisciplineFilter = (clients) => {
                 const disciplines = [...new Set(Object.values(clients).map(client => client.discipline))].sort();
-                dom.disciplineFilter.innerHTML = `<option value="all">All Disciplines</option>`;
+                dom.disciplineFilter.innerHTML = `<option value="all">Toate Disciplinele</option>`;
                 disciplines.forEach(discipline => {
                     const option = document.createElement('option');
                     option.value = discipline;
@@ -597,14 +597,14 @@
                                         <option value="8" ${subscriptionType === '8' ? 'selected' : ''}>Abonament de 8 sedinte</option>
                                     </select>
                                     <select class="instructor-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
-                                        <option value="">Unassigned</option>
+                                        <option value="">Nealocat</option>
                                         ${instructorOptions}
                                     </select>
-                                    <span class="sub-status text-xs text-green-400 opacity-0">Saved!</span>
+                                    <span class="sub-status text-xs text-green-400 opacity-0">Salvat!</span>
                                 </div>
                                 ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-400 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
                                 ${phone ? `<button class="whatsapp-btn flex items-center justify-center mt-2 bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs w-fit"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
-                                ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Last Payment: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
+                                ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
                             </div>
                             <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-48">
@@ -631,7 +631,7 @@
             const createHomeworkHTML = (name, client) => {
                 if (!client) return '';
                 if (!state.courses) return `<p>Se încarcă cursurile...</p>`;
-                if (state.courses.length === 0) return `<p class="text-red-500">No Google Classroom courses found.</p>`;
+                if (state.courses.length === 0) return `<p class="text-red-500">Nu s-au găsit cursuri Google Classroom.</p>`;
                 
                 const courseOptions = state.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
@@ -655,10 +655,10 @@
                 return `
                     <div class="notes-section" data-client-name="${clientName}">
                         <div class="flex justify-between items-center mb-2">
-                             <h4 class="text-md font-semibold text-gray-200">Notes</h4>
-                             <span class="notes-status text-xs text-gray-500 opacity-0">Saving...</span>
+                             <h4 class="text-md font-semibold text-gray-200">Notițe</h4>
+                             <span class="notes-status text-xs text-gray-500 opacity-0">Se salvează...</span>
                         </div>
-                        <textarea class="notes-textarea w-full p-2 border border-gray-600 bg-gray-700 rounded-md" rows="4" placeholder="Add persistent notes for this client...">${notes}</textarea>
+                        <textarea class="notes-textarea w-full p-2 border border-gray-600 bg-gray-700 rounded-md" rows="4" placeholder="Adaugă notițe permanente pentru acest client...">${notes}</textarea>
                     </div>
                 `;
             };
@@ -699,7 +699,7 @@
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
-                 if (state.activeTab === 'instructors') return 'Instructori';
+                 if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
                 return 'Sumar Toți Clienții';
             };
 
@@ -707,11 +707,11 @@
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
                         <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
-                            <h2 class="text-2xl font-bold text-gray-200">Manage Instructors</h2>
+                            <h2 class="text-2xl font-bold text-gray-200">Gestionează Instructorii</h2>
                         </div>
                         <div class="p-6 space-y-4">
                             <div class="flex space-x-2">
-                                <input type="text" id="newInstructorInput" placeholder="Add new instructor name" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <input type="text" id="newInstructorInput" placeholder="Adaugă nume instructor nou" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
                                     <i data-lucide="plus" class="h-5 w-5"></i>
                                 </button>
@@ -752,7 +752,7 @@
                 }
                 
                 if (!state.accessToken || !state.calendarId) {
-                    renderNotification('Authentication is required and Calendar ID must be set. Use the field above to set your access token.', 'error');
+                    renderNotification('Autentificarea este necesară și ID-ul de Calendar trebuie setat.', 'error');
                     return;
                 }
                 state.isLoading = true;
@@ -777,7 +777,7 @@
                     populateDisciplineFilter(state.clients);
                     renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
-                    renderNotification(`Failed to fetch events: ${err.message}`, 'error');
+                    renderNotification(`Eroare la preluarea evenimentelor: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
                 } finally {
                     state.isLoading = false;
@@ -810,7 +810,7 @@
                     populateDisciplineFilter(state.clients);
                     renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
-                    renderNotification(`Search failed: ${err.message}`, 'error');
+                    renderNotification(`Căutarea a eșuat: ${err.message}`, 'error');
                     dom.resultsArea.innerHTML = '';
                 } finally {
                     state.isSearching = false;
@@ -832,7 +832,7 @@
                 const homework = form.querySelector('.homework-text').value;
 
                 if (!homework || !studentEmail || !courseId) {
-                    renderNotification("Please select a course, ensure student has an email, and write homework.", "error");
+                    renderNotification("Te rugăm să selectezi un curs, să te asiguri că studentul are un e-mail și să scrii tema.", "error");
                     return;
                 }
                 
@@ -842,10 +842,10 @@
 
                 try {
                     await api.postHomework({ courseId, studentEmail, discipline, homework });
-                    renderNotification(`Homework posted for ${name}`, 'success');
+                    renderNotification(`Tema a fost postată pentru ${name}`, 'success');
                     form.querySelector('.homework-text').value = '';
                 } catch (err) {
-                    renderNotification(`Failed to post homework: ${err.message}`, 'error');
+                    renderNotification(`Eroare la postarea temei: ${err.message}`, 'error');
                 } finally {
                     button.innerHTML = `<i data-lucide="book" class="h-4 w-4 mr-1.5"></i><span>Postează Tema</span>`;
                     button.disabled = false;
@@ -860,7 +860,7 @@
                 const subscriptionMax = parseInt(clientFirebaseData.subscription);
 
                 if (!clientDetails || (state.activeTab !== 'today' && state.activeTab !== 'tomorrow')) {
-                    renderNotification('Session increment is only available for today\'s or tomorrow\'s sessions.', 'error');
+                    renderNotification('Incrementarea sesiunilor este disponibilă doar pentru sesiunile de astăzi sau de mâine.', 'error');
                     return;
                 }
 
@@ -873,7 +873,7 @@
                     let lastSessionNumber = 0;
 
                     if (state.activeTab === 'tomorrow') {
-                        renderNotification('Searching for last past session...', 'success');
+                        renderNotification('Se caută ultima sesiune trecută...', 'success');
                         const lastEvent = await api.findLastPastEvent(name);
                         if (lastEvent && lastEvent.summary) {
                             const parts = lastEvent.summary.split(' - ').map(p => p.trim());
@@ -903,15 +903,15 @@
                     const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
 
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
-                    renderNotification(`Session for ${name} incremented to ${newSessionNumber}.`, 'success');
+                    renderNotification(`Sesiunea pentru ${name} a fost incrementată la ${newSessionNumber}.`, 'success');
 
                     state.clients[name].sessionNumber = newSessionNumber;
                     renderClients(state.clients, state.clientFirebaseData);
 
                 } catch (err) {
-                    renderNotification(`Failed to increment session for ${name}: ${err.message}`, 'error');
+                    renderNotification(`Eroare la incrementarea sesiunii pentru ${name}: ${err.message}`, 'error');
                 } finally {
-                    button.innerHTML = `<i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Increment Session</span>`;
+                    button.innerHTML = `<i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Incrementeaza sedinta</span>`;
                     button.disabled = false;
                     lucide.createIcons();
                 }
@@ -922,12 +922,12 @@
 
                 const tomorrowClients = Object.entries(state.clients);
                 if (tomorrowClients.length === 0) {
-                    renderNotification("No sessions to increment for tomorrow.", "success");
+                    renderNotification("Nicio sesiune de incrementat pentru mâine.", "success");
                     return;
                 }
 
                 dom.incrementAllBtn.disabled = true;
-                dom.incrementAllBtn.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Incrementing...`;
+                dom.incrementAllBtn.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se incrementează...`;
                 lucide.createIcons();
 
                 for (const [name, details] of tomorrowClients) {
@@ -940,8 +940,8 @@
                 }
                 
                 dom.incrementAllBtn.disabled = false;
-                dom.incrementAllBtn.innerHTML = `Increment All Sessions for Tomorrow`;
-                renderNotification("All sessions for tomorrow have been incremented.", "success");
+                dom.incrementAllBtn.innerHTML = `Incrementează Toate Sesiunile pentru Mâine`;
+                renderNotification("Toate sesiunile pentru mâine au fost incrementate.", "success");
             };
 
             // --- EVENT LISTENERS ---
@@ -956,7 +956,7 @@
                         const url = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(calendarId)}`;
                         window.open(url, '_blank');
                     } else {
-                        renderNotification('Please enter a Calendar ID first.', 'error');
+                        renderNotification('Te rugăm să introduci mai întâi un ID de Calendar.', 'error');
                     }
                 });
 
@@ -1031,7 +1031,7 @@
                         const { phone, message } = e.currentTarget.dataset;
                         const link = getWhatsAppLink(phone, message);
                         if (link) window.open(link, '_blank');
-                        else renderNotification('No phone number available for this client.', 'error');
+                        else renderNotification('Niciun număr de telefon disponibil pentru acest client.', 'error');
                     });
                 });
                 
@@ -1067,7 +1067,7 @@
                             setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
                             renderClients(state.clients, state.clientFirebaseData);
                         } catch (err) {
-                            renderNotification(`Failed to save data: ${err.message}`, 'error');
+                            renderNotification(`Eroare la salvarea datelor: ${err.message}`, 'error');
                         }
                     });
                 });
@@ -1094,7 +1094,7 @@
                                 ${homeworkHTML}
                             </div>
                             <div>
-                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Ședințe (Ultimele 60 de zile)</h4>
+                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Sesiuni (Ultimele 60 de zile)</h4>
                                 ${historyHTML}
                             </div>
                         </div>
@@ -1102,7 +1102,7 @@
                     lucide.createIcons();
                     attachDetailEventListeners(container);
                 } catch (err) {
-                    container.innerHTML = `<div class="p-4 border-t border-gray-700 text-red-500">Failed to load details: ${err.message}</div>`;
+                    container.innerHTML = `<div class="p-4 border-t border-gray-700 text-red-500">Eroare la încărcarea detaliilor: ${err.message}</div>`;
                 }
             };
             
@@ -1115,9 +1115,9 @@
                         notesStatus.style.opacity = '1';
                         try {
                             await firestoreApi.saveClientData(clientName, { notes: e.target.value });
-                            notesStatus.textContent = 'Saved!';
+                            notesStatus.textContent = 'Salvat!';
                         } catch (err) {
-                            notesStatus.textContent = 'Error!';
+                            notesStatus.textContent = 'Eroare!';
                             console.error("Failed to save notes:", err);
                         }
                         setTimeout(() => { notesStatus.style.opacity = '0'; }, 2000);
@@ -1149,10 +1149,10 @@
                     if (name) {
                         try {
                             await firestoreApi.addInstructor(name);
-                            renderNotification(`Instructor "${name}" added.`, 'success');
+                            renderNotification(`Instructorul "${name}" a fost adăugat.`, 'success');
                             input.value = '';
                         } catch (err) {
-                            renderNotification(`Failed to add instructor: ${err.message}`, 'error');
+                            renderNotification(`Eroare la adăugarea instructorului: ${err.message}`, 'error');
                         }
                     }
                 });
@@ -1168,9 +1168,9 @@
                         const id = e.currentTarget.dataset.id;
                         try {
                            await firestoreApi.deleteInstructor(id);
-                           renderNotification('Instructor deleted.', 'success');
+                           renderNotification('Instructor eliminat.', 'success');
                         } catch (err) {
-                            renderNotification(`Failed to delete instructor: ${err.message}`, 'error');
+                            renderNotification(`Eroare la eliminarea instructorului: ${err.message}`, 'error');
                         }
                     });
                 });
@@ -1235,7 +1235,7 @@
                     await api.updateEventSummary(eventId, newSummary);
                     await api.cancelEvent(eventId);
                     
-                    renderNotification(`Event for ${name} cancelled by instructor. Session number removed.`, 'success');
+                    renderNotification(`Evenimentul pentru ${name} a fost anulat de instructor. Numărul sesiunii a fost eliminat.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
 
                     const message = `Salut ${name}! Ne cerem scuze ca a tebuit sa anulam sedinta ta de ${discipline} pe care o aveai programata pentru ${dayText}, la ora ${formattedTime}. Iti multumim pentru intelegere si vrem sa te instiintam ca aceasta sedinta nu va fi luata in calcul la abonamntul curent!`;
@@ -1244,7 +1244,7 @@
                         window.open(link, '_blank');
                     }
                 } catch (err) {
-                    renderNotification(`Failed to cancel event: ${err.message}`, 'error');
+                    renderNotification(`Eroare la anularea evenimentului: ${err.message}`, 'error');
                     originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
                     lucide.createIcons();
                     originalButton.disabled = false;
@@ -1262,13 +1262,13 @@
 
                 try {
                     await api.cancelEvent(eventId);
-                    renderNotification(`Event for ${name} cancelled by client.`, 'success');
+                    renderNotification(`Evenimentul pentru ${name} a fost anulat de client.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
                     const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
                     const link = getWhatsAppLink(phone, message);
                     if (link) window.open(link, '_blank');
                 } catch (err) {
-                    renderNotification(`Failed to cancel event: ${err.message}`, 'error');
+                    renderNotification(`Eroare la anularea evenimentului: ${err.message}`, 'error');
                     originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
                     lucide.createIcons();
                     originalButton.disabled = false;
@@ -1280,12 +1280,12 @@
                 const manualAccessTokenInput = document.getElementById('manualAccessToken');
                 const token = manualAccessTokenInput.value.trim();
                 if (!token) {
-                    renderNotification('Please paste a valid access token.', 'error');
+                    renderNotification('Te rugăm să introduci un token de acces valid.', 'error');
                     return;
                 }
 
                 state.accessToken = token;
-                renderNotification('Access token accepted. Initializing app...', 'success');
+                renderNotification('Token de acces acceptat. Se inițializează aplicația...', 'success');
                 
                 // Hide auth section and show main app controls
                 document.getElementById('auth-section').style.display = 'none';
@@ -1313,7 +1313,7 @@
                         e.preventDefault();
                         const isHidden = manualAuthSection.style.display === 'none';
                         manualAuthSection.style.display = isHidden ? 'block' : 'none';
-                        testingModeToggle.textContent = isHidden ? 'Hide Testing Mode' : 'Enter Testing Mode';
+                        testingModeToggle.textContent = isHidden ? 'Ascunde Modul de Testare' : 'Intră în Modul de Testare';
                     });
                 }
 
@@ -1324,7 +1324,7 @@
                     if (tokenClient) {
                         tokenClient.requestAccessToken();
                     } else {
-                        renderNotification('Google Auth client not initialized. Please wait or refresh.', 'error');
+                        renderNotification('Clientul de autentificare Google nu este inițializat. Te rugăm să aștepți sau să reîmprospătezi.', 'error');
                     }
                 }
 
@@ -1340,11 +1340,11 @@
                         scope: SCOPES,
                         callback: async (tokenResponse) => {
                             if (tokenResponse.error) {
-                                renderNotification(`Authorization error: ${tokenResponse.error_description || tokenResponse.error}`, 'error');
+                                renderNotification(`Eroare de autorizare: ${tokenResponse.error_description || tokenResponse.error}`, 'error');
                                 return;
                             }
                             state.accessToken = tokenResponse.access_token;
-                            renderNotification('Authorization successful. Initializing app...', 'success');
+                            renderNotification('Autorizare reușită. Se inițializează aplicația...', 'success');
                             
                             // Hide auth section and show main app controls
                             document.getElementById('auth-section').style.display = 'none';
@@ -1356,7 +1356,7 @@
                     });
                 } catch (error) {
                        console.error("Google Auth initialization failed:", error);
-                       renderNotification("Could not load Google Sign-In library. Please check your connection and refresh.", "error");
+                       renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
                 }
             };
             
