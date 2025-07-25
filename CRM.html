@@ -121,7 +121,8 @@
                         </div>
 
                         <div id="tab-controls">
-                            <div class="flex justify-center border-b border-gray-700">
+                            <div class="flex justify-center border-b border-gray-700 flex-wrap">
+                                <button data-tab="dashboard" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
@@ -228,7 +229,7 @@
                 clientFirebaseData: {}, // Holds Firestore data for clients
                 courses: null,
                 instructors: [],
-                activeTab: 'today',
+                activeTab: 'dashboard',
                 searchQuery: '',
                 isLoading: false,
                 isSearching: false,
@@ -391,6 +392,20 @@
 
             // --- Google Calendar & Classroom API ---
             const api = {
+                async getEventsForDateRange(startDate, endDate) {
+                    const params = new URLSearchParams({
+                        singleEvents: 'true',
+                        orderBy: 'startTime',
+                        maxResults: '2500',
+                        timeMin: startDate.toISOString(),
+                        timeMax: endDate.toISOString(),
+                    });
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events?${params.toString()}`;
+                    const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+                    return data.items || [];
+                },
                 async getEvents(day) {
                     const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '2500' });
                     if (day === 'all') {
@@ -778,6 +793,7 @@
                 }
                  if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
                  if (state.activeTab === 'settings') return 'Setări Aplicație';
+                 if (state.activeTab === 'dashboard') return 'Dashboard';
                 return 'Sumar Toți Clienții';
             };
 
@@ -878,6 +894,86 @@
                 `;
             };
 
+            const renderDashboard = (dashboardData) => {
+                const { totalStudents, sessionsThisWeek, endingSubscriptions, disciplineBreakdown, dateRangeString } = dashboardData;
+
+                // Create Discipline Breakdown Chart
+                const maxCount = Math.max(1, ...Object.values(disciplineBreakdown)); // Avoid division by zero
+                const disciplineChartHTML = Object.entries(disciplineBreakdown).map(([discipline, count]) => `
+                    <div class="flex items-center text-sm">
+                        <span class="w-24 truncate" title="${discipline}">${discipline}</span>
+                        <div class="flex-1 bg-gray-700 rounded-full h-4 mx-2">
+                            <div class="bg-blue-600 h-4 rounded-full text-xs text-white flex items-center justify-center" style="width: ${(count / maxCount) * 100}%">
+                                <span>${count}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                const dashboardHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                        <!-- Left Column -->
+                        <div class="space-y-6">
+                            <!-- Widget: Total Active Students -->
+                            <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-400">Total Studenți Activi</p>
+                                    <p class="text-4xl font-bold text-white">${totalStudents}</p>
+                                </div>
+                                <div class="bg-purple-500/20 p-3 rounded-full">
+                                    <i data-lucide="users" class="h-8 w-8 text-purple-400"></i>
+                                </div>
+                            </div>
+
+                            <!-- Widget: Sessions This Week -->
+                            <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-400">Ședințe Săptămâna Aceasta</p>
+                                    <p class="text-xs text-gray-500">${dateRangeString}</p>
+                                    <p class="text-4xl font-bold text-white mt-1">${sessionsThisWeek}</p>
+                                </div>
+                                <div class="bg-green-500/20 p-3 rounded-full">
+                                    <i data-lucide="calendar" class="h-8 w-8 text-green-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="space-y-6">
+                            <!-- Widget: Subscriptions Ending Soon -->
+                            <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+                                <div class="flex items-center mb-4">
+                                    <i data-lucide="user-x" class="h-6 w-6 text-red-400 mr-3"></i>
+                                    <h3 class="text-lg font-semibold text-white">Abonamente pe terminate</h3>
+                                </div>
+                                <ul class="space-y-2 h-32 overflow-y-auto">
+                                    ${endingSubscriptions.length > 0 ? endingSubscriptions.map(client => `
+                                        <li class="text-sm text-gray-300 flex justify-between">
+                                            <span>${client.name}</span>
+                                            <span class="font-medium text-gray-400">${client.discipline}</span>
+                                        </li>
+                                    `).join('') : '<p class="text-sm text-gray-400">Niciun abonament pe terminate.</p>'}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Full Width Widget: Discipline Breakdown -->
+                        <div class="md:col-span-2 bg-gray-800 p-6 rounded-xl shadow-lg">
+                            <div class="flex items-center mb-4">
+                                <i data-lucide="pie-chart" class="h-6 w-6 text-blue-400 mr-3"></i>
+                                <h3 class="text-lg font-semibold text-white">Distribuție pe Discipline</h3>
+                            </div>
+                            <div class="space-y-3">
+                                ${disciplineChartHTML || '<p class="text-sm text-gray-400">Nu sunt date despre discipline.</p>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                dom.resultsArea.innerHTML = dashboardHTML;
+                lucide.createIcons();
+            };
+
+
             // --- EVENT HANDLERS ---
             const handleTabChange = async () => {
                 if (state.activeTab === 'instructors') {
@@ -886,6 +982,10 @@
                 }
                 if (state.activeTab === 'settings') {
                     renderSettingsView();
+                    return;
+                }
+                if (state.activeTab === 'dashboard') {
+                    handleDashboardLoad();
                     return;
                 }
 
@@ -918,6 +1018,69 @@
                 } finally {
                     state.isLoading = false;
                     updateUI();
+                }
+            };
+
+            const handleDashboardLoad = async () => {
+                renderLoader('Se calculează datele pentru dashboard...');
+                try {
+                    // Calculate date range: last Monday to next Sunday
+                    const today = new Date();
+                    const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+                    const lastMonday = new Date(today);
+                    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    lastMonday.setDate(today.getDate() - diffToMonday);
+                    lastMonday.setHours(0, 0, 0, 0);
+
+                    const nextSunday = new Date(lastMonday);
+                    nextSunday.setDate(lastMonday.getDate() + 6);
+                    nextSunday.setHours(23, 59, 59, 999);
+                    
+                    const options = { day: 'numeric', month: 'long' };
+                    const dateRangeString = `${lastMonday.toLocaleDateString('ro-RO', options)} - ${nextSunday.toLocaleDateString('ro-RO', {...options, year: 'numeric'})}`;
+                    
+                    // Fetch events for the calculated week
+                    const weeklyEventsRaw = await api.getEventsForDateRange(lastMonday, nextSunday);
+                    
+                    const allClients = await api.getEvents('all');
+
+                    // 1. Total Active Students
+                    const totalStudents = Object.keys(allClients).length;
+
+                    // 2. Sessions This Week
+                    const sessionsThisWeek = weeklyEventsRaw.filter(event => event.status !== 'cancelled').length;
+
+                    // 3. Subscriptions Ending Soon
+                    const clientDataPromises = Object.keys(allClients).map(name => firestoreApi.getClientData(name));
+                    const allClientFirebaseData = await Promise.all(clientDataPromises);
+                    const endingSubscriptions = [];
+                    allClientFirebaseData.forEach(clientData => {
+                        const clientDetails = allClients[clientData.name];
+                        if (clientDetails) {
+                            const subType = parseInt(clientData.subscription || '4');
+                            if (clientDetails.sessionNumber === subType) {
+                                endingSubscriptions.push({ name: clientData.name, discipline: clientDetails.discipline });
+                            }
+                        }
+                    });
+
+                    // 4. Discipline Breakdown
+                    const disciplineBreakdown = Object.values(allClients).reduce((acc, client) => {
+                        acc[client.discipline] = (acc[client.discipline] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    renderDashboard({
+                        totalStudents,
+                        sessionsThisWeek,
+                        endingSubscriptions,
+                        disciplineBreakdown,
+                        dateRangeString
+                    });
+
+                } catch (err) {
+                    renderNotification(`Eroare la încărcarea datelor pentru dashboard: ${err.message}`, 'error');
+                    dom.resultsArea.innerHTML = '';
                 }
             };
 
@@ -1480,6 +1643,7 @@
             const updateUI = () => {
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
+                    if (tab === 'dashboard') btn.textContent = 'Dashboard';
                     if (tab === 'today') btn.textContent = 'Astăzi';
                     if (tab === 'tomorrow') btn.textContent = 'Mâine';
                     if (tab === 'all') btn.textContent = 'Toți Clienții';
@@ -1492,10 +1656,9 @@
                     btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
 
-                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii', settings: 'setările' }[state.activeTab];
+                const tabTitle = { dashboard: 'dashboard', today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii', settings: 'setările' }[state.activeTab];
                 dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
-                dom.fetchEventsBtn.disabled = state.isLoading;
-
+                
                 const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
                 dom.searchQueryInput.parentElement.style.display = isClientTab ? 'block' : 'none';
                 dom.filterControls.forEach(el => el.style.display = isClientTab ? 'block' : 'none');
