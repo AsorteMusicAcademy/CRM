@@ -242,7 +242,9 @@
                 messageTemplates: { // Default WhatsApp message templates
                     notification: `Salut {Nume}! Te contactăm pentru a-ți confirma prezența la cursul de {Disciplina} programat pentru {Data}, la ora {Ora}. Îți mulțumim și te așteptăm cu drag!`,
                     lastSession: `Salut {Nume}! Îți reamintim cu drag că sesiunea de {Data} este ultima din abonamentul tău. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`,
-                    newSubscription: `Salut {Nume}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`
+                    newSubscription: `Salut {Nume}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`,
+                    cancelByInstructor: `Salut {Nume}! Ne cerem scuze că a trebuit să anulăm ședința ta de {Disciplina} programată pentru {Data}, la ora {Ora}. Îți mulțumim pentru înțelegere și vrem să te înștiințăm că această ședință nu va fi luată în calcul la abonamentul curent!`,
+                    cancelByClient: `Ședința ta de {Disciplina} de {Data}, ora {Ora}, a fost anulată. Menționăm că, deoarece anularea a avut loc cu mai puțin de 48 de ore înainte, sesiunea va fi considerată ca fiind efectuată.`
                 },
             };
 
@@ -277,6 +279,16 @@
                     clearTimeout(timeout);
                     timeout = setTimeout(() => func.apply(this, args), delay);
                 };
+            };
+            
+            // --- HELPER FUNCTIONS ---
+            const replacePlaceholders = (template, data) => {
+                if (!template) return '';
+                return template
+                    .replace(/{Nume}/g, data.name || '')
+                    .replace(/{Disciplina}/g, data.discipline || '')
+                    .replace(/{Data}/g, data.date || '')
+                    .replace(/{Ora}/g, data.time || '');
             };
 
             // --- FIRESTORE API ---
@@ -368,6 +380,7 @@
                     if (templates) {
                         state.messageTemplates = { ...state.messageTemplates, ...templates };
                     } else {
+                        // If no templates in DB, save the defaults
                         firestoreApi.saveMessageTemplates(state.messageTemplates);
                     }
                 }).catch(err => {
@@ -628,18 +641,10 @@
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                 const formattedDate = startTime ? new Date(startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : (state.activeTab === 'today' ? 'astăzi' : 'mâine');
 
-                const replacePlaceholders = (template) => {
-                    if (!template) return '';
-                    return template
-                        .replace(/{Nume}/g, name)
-                        .replace(/{Disciplina}/g, discipline)
-                        .replace(/{Data}/g, formattedDate)
-                        .replace(/{Ora}/g, formattedTime);
-                };
-
-                const notificationMessage = replacePlaceholders(state.messageTemplates.notification);
-                const lastSessionMessage = replacePlaceholders(state.messageTemplates.lastSession);
-                const newSubMessage = replacePlaceholders(state.messageTemplates.newSubscription);
+                const messageData = { name, discipline, date: formattedDate, time: formattedTime };
+                const notificationMessage = replacePlaceholders(state.messageTemplates.notification, messageData);
+                const lastSessionMessage = replacePlaceholders(state.messageTemplates.lastSession, messageData);
+                const newSubMessage = replacePlaceholders(state.messageTemplates.newSubscription, messageData);
 
                 const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
 
@@ -838,6 +843,8 @@
                                     ${createMessageTemplateEditorHTML('notification', 'Notificare Ședință', state.messageTemplates.notification)}
                                     ${createMessageTemplateEditorHTML('lastSession', 'Notificare Ultima Ședință', state.messageTemplates.lastSession)}
                                     ${createMessageTemplateEditorHTML('newSubscription', 'Notificare Plată Nouă', state.messageTemplates.newSubscription)}
+                                    ${createMessageTemplateEditorHTML('cancelByInstructor', 'Anulare de către Instructor', state.messageTemplates.cancelByInstructor)}
+                                    ${createMessageTemplateEditorHTML('cancelByClient', 'Anulare de către Client', state.messageTemplates.cancelByClient)}
                                     <div class="flex justify-end pt-4">
                                         <button id="save-messages-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
                                             Salvează Mesajele
@@ -1451,6 +1458,8 @@
                         notification: document.getElementById('template-notification').value,
                         lastSession: document.getElementById('template-lastSession').value,
                         newSubscription: document.getElementById('template-newSubscription').value,
+                        cancelByInstructor: document.getElementById('template-cancelByInstructor').value,
+                        cancelByClient: document.getElementById('template-cancelByClient').value,
                     };
 
                     try {
@@ -1525,6 +1534,7 @@
                     const clientDetails = state.clients[name];
                     const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                     const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
+                    const formattedDate = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : dayText;
 
                     const newSummary = `${name} - ${discipline}`;
                     await api.updateEventSummary(eventId, newSummary);
@@ -1533,7 +1543,9 @@
                     renderNotification(`Evenimentul pentru ${name} a fost anulat de instructor. Numărul sesiunii a fost eliminat.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
 
-                    const message = `Salut ${name}! Ne cerem scuze ca a tebuit sa anulam sedinta ta de ${discipline} pe care o aveai programata pentru ${dayText}, la ora ${formattedTime}. Iti multumim pentru intelegere si vrem sa te instiintam ca aceasta sedinta nu va fi luata in calcul la abonamntul curent!`;
+                    const messageData = { name, discipline, date: formattedDate, time: formattedTime };
+                    const message = replacePlaceholders(state.messageTemplates.cancelByInstructor, messageData);
+                    
                     const link = getWhatsAppLink(phone, message);
                     if (link) {
                         window.open(link, '_blank');
@@ -1556,10 +1568,18 @@
                 lucide.createIcons();
 
                 try {
+                    const clientDetails = state.clients[name];
+                    const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
+                    const formattedDate = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : dayText;
+                    
                     await api.cancelEvent(eventId);
                     renderNotification(`Evenimentul pentru ${name} a fost anulat de client.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
-                    const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
+                    
+                    const messageData = { name, discipline, date: formattedDate, time: formattedTime };
+                    const message = replacePlaceholders(state.messageTemplates.cancelByClient, messageData);
+
                     const link = getWhatsAppLink(phone, message);
                     if (link) window.open(link, '_blank');
                 } catch (err) {
