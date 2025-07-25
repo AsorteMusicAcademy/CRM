@@ -447,8 +447,9 @@
                     }, {});
                 },
                 async cancelEvent(eventId) {
+                    // *** FIX: Corrected variable name from 'url' to 'getUrl' ***
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
-                    const getResponse = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const eventData = await getResponse.json();
                     if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
                     
@@ -1533,8 +1534,8 @@
                         },
                     });
                 } catch (error) {
-                       console.error("Google Auth initialization failed:", error);
-                       renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
+                        console.error("Google Auth initialization failed:", error);
+                        renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
                 }
             };
             
