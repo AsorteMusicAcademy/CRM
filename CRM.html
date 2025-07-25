@@ -105,7 +105,7 @@
                         </div>
 
                         <!-- Discipline Filter -->
-                        <div>
+                        <div class="filter-control">
                             <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
                             <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <!-- Options will be populated dynamically -->
@@ -113,7 +113,7 @@
                         </div>
 
                         <!-- Last Session Filter -->
-                        <div>
+                        <div class="filter-control">
                             <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
                                 <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
                                 <span class="text-sm font-medium text-gray-300">Afișează doar clienții în ultima ședință</span>
@@ -126,6 +126,7 @@
                                 <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="instructors" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                                <button data-tab="settings" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                             </div>
                              <div class="mt-4 space-y-2">
                                 <button id="fetchEventsBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
@@ -149,7 +150,7 @@
             <!-- Results Area -->
             <div id="results-area" class="max-w-4xl mx-auto">
                 <!-- Loading spinner will be injected here -->
-                <!-- Client/Instructor list will be injected here -->
+                <!-- Client/Instructor/Settings list will be injected here -->
             </div>
         </div>
     </div>
@@ -224,7 +225,7 @@
                 accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
-                clientFirebaseData: {}, // New state to hold Firestore data for clients
+                clientFirebaseData: {}, // Holds Firestore data for clients
                 courses: null,
                 instructors: [],
                 activeTab: 'today',
@@ -237,6 +238,12 @@
                 filterLastSessionOnly: false,
                 cancellationContext: null,
                 initialInstructorsLoaded: false, // Flag to track initial instructor load
+                isSettingsExpanded: false, // For settings accordion
+                messageTemplates: { // Default WhatsApp message templates
+                    notification: `Salut {Nume}! Te contactăm pentru a-ți confirma prezența la cursul de {Disciplina} programat pentru {Data}, la ora {Ora}. Îți mulțumim și te așteptăm cu drag!`,
+                    lastSession: `Salut {Nume}! Îți reamintim cu drag că sesiunea de {Data} este ultima din abonamentul tău. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`,
+                    newSubscription: `Salut {Nume}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`
+                },
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -253,6 +260,7 @@
                 tabControls: document.getElementById('tab-controls'),
                 tabButtons: document.querySelectorAll('.tab-button'),
                 disciplineFilter: document.getElementById('disciplineFilter'),
+                filterControls: document.querySelectorAll('.filter-control'),
                 lastSessionFilter: document.getElementById('lastSessionFilter'),
                 openCalendarBtn: document.getElementById('openCalendarBtn'),
                 cancelModal: document.getElementById('cancel-modal'),
@@ -312,6 +320,22 @@
                         });
                         callback(instructors);
                     });
+                },
+                async getMessageTemplates() {
+                    if (!db) return null;
+                    const docRef = doc(db, "app-settings", "whatsapp-templates");
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        return docSnap.data();
+                    } else {
+                        console.log("No message templates found in Firestore, using defaults.");
+                        return null;
+                    }
+                },
+                async saveMessageTemplates(templates) {
+                    if (!db) return;
+                    const docRef = doc(db, "app-settings", "whatsapp-templates");
+                    await setDoc(docRef, templates, { merge: true });
                 }
             };
 
@@ -327,20 +351,28 @@
                 updateUI();
                 lucide.createIcons();
 
-                // Fetch instructors and then fetch client data
+                // Fetch instructors 
                 firestoreApi.getInstructors(instructors => {
                     state.instructors = instructors;
-
-                    // On initial load, fetch clients after instructors are loaded
                     if (!state.initialInstructorsLoaded) {
                         state.initialInstructorsLoaded = true;
                         handleTabChange();
                     }
-
-                    // If the instructors tab is active, re-render it to show real-time changes
                     if (state.activeTab === 'instructors') {
                         renderInstructorsView();
                     }
+                });
+                
+                // Fetch message templates
+                firestoreApi.getMessageTemplates().then(templates => {
+                    if (templates) {
+                        state.messageTemplates = { ...state.messageTemplates, ...templates };
+                    } else {
+                        firestoreApi.saveMessageTemplates(state.messageTemplates);
+                    }
+                }).catch(err => {
+                    console.error("Error fetching message templates:", err);
+                    renderNotification("Nu s-au putut încărca șabloanele de mesaje.", "error");
                 });
             }
 
@@ -448,7 +480,7 @@
                 },
                 async cancelEvent(eventId) {
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
-                    const getResponse = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const eventData = await getResponse.json();
                     if (eventData.error) throw new Error(`Failed to get event details: ${eventData.error.message}`);
 
@@ -594,14 +626,23 @@
                 const assignedInstructor = clientData?.assignedInstructor || '';
                 const isExpanded = state.expandedClient === name;
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
-                const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
-                const notificationMessage = `Salut ${name}! Sunt Tudor de la Asorte Music Academy si te contactez pentru a te intreba daca iti confirmi prezenta pentru cursul de ${discipline} pe care il ai programat pentru ${dayText}, la ora ${formattedTime}. Iti multumim si te așteptăm cu drag!`;
-                const lastSessionMessage = `Salut ${name}! Îți reamintim cu drag că sesiunea ${dayText === 'astăzi' ? 'de astăzi' : 'de mâine'} este ultima din abonamentul tău. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
-                const newSubMessage = `Salut ${name}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
+                const formattedDate = startTime ? new Date(startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : (state.activeTab === 'today' ? 'astăzi' : 'mâine');
+
+                const replacePlaceholders = (template) => {
+                    if (!template) return '';
+                    return template
+                        .replace(/{Nume}/g, name)
+                        .replace(/{Disciplina}/g, discipline)
+                        .replace(/{Data}/g, formattedDate)
+                        .replace(/{Ora}/g, formattedTime);
+                };
+
+                const notificationMessage = replacePlaceholders(state.messageTemplates.notification);
+                const lastSessionMessage = replacePlaceholders(state.messageTemplates.lastSession);
+                const newSubMessage = replacePlaceholders(state.messageTemplates.newSubscription);
 
                 const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
 
-                // Create the Google Calendar edit link
                 const eventIdentifier = btoa(`${eventId} ${state.calendarId}`).replace(/=/g, '');
                 const editUrl = `https://calendar.google.com/calendar/r/eventedit/${eventIdentifier}`;
 
@@ -731,6 +772,7 @@
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
                  if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
+                 if (state.activeTab === 'settings') return 'Setări Aplicație';
                 return 'Sumar Toți Clienții';
             };
 
@@ -757,7 +799,6 @@
                 lucide.createIcons();
                 attachInstructorEventListeners();
 
-                // Render the current list of instructors
                 const list = document.getElementById('instructorList');
                 if (!list) return;
                 list.innerHTML = state.instructors.map(inst => `
@@ -777,11 +818,65 @@
                 attachInstructorPhoneInputListeners();
                 attachInstructorNotifyListeners();
             };
+            
+            const renderSettingsView = () => {
+                const isExpanded = state.isSettingsExpanded;
+                const settingsHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                            <h2 class="text-2xl font-bold text-gray-200">Setări Aplicație</h2>
+                        </div>
+                        <div class="p-6">
+                            <div class="border border-gray-700 rounded-lg">
+                                <button id="toggle-messages-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-t-lg focus:outline-none">
+                                    <span class="text-lg font-semibold text-gray-200">Modifică Mesaje WhatsApp</span>
+                                    <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                        <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                                    </span>
+                                </button>
+                                <div id="messages-container" class="p-6 space-y-6 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
+                                    ${createMessageTemplateEditorHTML('notification', 'Notificare Ședință', state.messageTemplates.notification)}
+                                    ${createMessageTemplateEditorHTML('lastSession', 'Notificare Ultima Ședință', state.messageTemplates.lastSession)}
+                                    ${createMessageTemplateEditorHTML('newSubscription', 'Notificare Plată Nouă', state.messageTemplates.newSubscription)}
+                                    <div class="flex justify-end pt-4">
+                                        <button id="save-messages-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                            Salvează Mesajele
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                dom.resultsArea.innerHTML = settingsHTML;
+                lucide.createIcons();
+                attachSettingsEventListeners();
+            };
+
+            const createMessageTemplateEditorHTML = (id, label, value) => {
+                return `
+                    <div>
+                        <label for="template-${id}" class="block text-sm font-medium text-gray-300 mb-2">${label}</label>
+                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                            <span class="text-xs text-gray-400">Variabile:</span>
+                            <button class="variable-btn text-xs bg-gray-600 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded" data-target="template-${id}" data-value="{Nume}">{Nume}</button>
+                            <button class="variable-btn text-xs bg-gray-600 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded" data-target="template-${id}" data-value="{Data}">{Data}</button>
+                            <button class="variable-btn text-xs bg-gray-600 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded" data-target="template-${id}" data-value="{Ora}">{Ora}</button>
+                            <button class="variable-btn text-xs bg-gray-600 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded" data-target="template-${id}" data-value="{Disciplina}">{Disciplina}</button>
+                        </div>
+                        <textarea id="template-${id}" class="w-full p-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4">${value}</textarea>
+                    </div>
+                `;
+            };
 
             // --- EVENT HANDLERS ---
             const handleTabChange = async () => {
                 if (state.activeTab === 'instructors') {
                     renderInstructorsView();
+                    return;
+                }
+                if (state.activeTab === 'settings') {
+                    renderSettingsView();
                     return;
                 }
 
@@ -797,8 +892,6 @@
 
                 try {
                     state.clients = await api.getEvents(state.activeTab);
-
-                    // Fetch Firestore data for all visible clients
                     const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
@@ -831,7 +924,6 @@
 
                 try {
                     state.clients = await api.searchEvents(state.searchQuery);
-
                     const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
@@ -840,7 +932,6 @@
                         }
                         return acc;
                     }, {});
-
                     populateDisciplineFilter(state.clients);
                     renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
@@ -935,7 +1026,6 @@
                     }
 
                     const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
-
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
                     renderNotification(`Sesiunea pentru ${name} a fost incrementată la ${newSessionNumber}.`, 'success');
 
@@ -965,7 +1055,6 @@
                 lucide.createIcons();
 
                 for (const [name, details] of tomorrowClients) {
-                    // Find the button in the DOM to pass to the handler
                     const clientLi = document.getElementById(`client-${details.eventId}`);
                     const button = clientLi?.querySelector('.increment-session-btn');
                     if (button) {
@@ -980,13 +1069,10 @@
 
             const handleReportToInstructors = () => {
                 if (state.activeTab !== 'tomorrow') return;
-
                 const clientsByInstructor = {};
-
                 for (const [clientName, details] of Object.entries(state.clients)) {
                     const clientData = state.clientFirebaseData[clientName];
                     const instructorName = clientData?.assignedInstructor;
-
                     if (instructorName) {
                         if (!clientsByInstructor[instructorName]) {
                             clientsByInstructor[instructorName] = [];
@@ -1000,16 +1086,12 @@
 
                 const instructorsWithoutPhone = [];
                 let reportsSent = 0;
-
                 for (const [instructorName, clientList] of Object.entries(clientsByInstructor)) {
                     const instructor = state.instructors.find(inst => inst.name === instructorName);
-
                     if (instructor && instructor.phone) {
                         clientList.sort((a, b) => a.time.localeCompare(b.time));
-
                         let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
                         message += clientList.map(client => `- ${client.name} la ${client.time}`).join('\n');
-
                         const link = getWhatsAppLink(instructor.phone, message);
                         window.open(link, '_blank');
                         reportsSent++;
@@ -1034,14 +1116,9 @@
                     renderNotification(`Instructorul ${instructorName} nu are un număr de telefon salvat.`, 'error');
                     return;
                 }
-
                 renderLoader('Se preiau programările pentru mâine...');
-
                 try {
-                    // Fetch tomorrow's events
                     const tomorrowsClients = await api.getEvents('tomorrow');
-                    
-                    // Fetch all client data from Firestore to get assigned instructors
                     const clientDataPromises = Object.keys(tomorrowsClients).map(name => firestoreApi.getClientData(name));
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     const clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
@@ -1050,8 +1127,6 @@
                         }
                         return acc;
                     }, {});
-
-                    // Filter for this specific instructor's clients
                     const instructorClients = [];
                     for (const [clientName, details] of Object.entries(tomorrowsClients)) {
                         if (clientFirebaseData[clientName]?.assignedInstructor === instructorName) {
@@ -1061,28 +1136,21 @@
                             });
                         }
                     }
-
-                    // Clear the loader and re-render the instructors view
                     dom.resultsArea.innerHTML = '';
                     renderInstructorsView();
-
                     if (instructorClients.length === 0) {
                         renderNotification(`Instructorul ${instructorName} nu are clienți programați pentru mâine.`, 'success');
                         return;
                     }
-
-                    // Sort by time and create message
                     instructorClients.sort((a, b) => a.time.localeCompare(b.time));
                     let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
                     message += instructorClients.map(client => `- ${client.name} la ${client.time}`).join('\n');
-                    
                     const link = getWhatsAppLink(instructorPhone, message);
                     window.open(link, '_blank');
                     renderNotification(`Raport generat pentru ${instructorName}.`, 'success');
-
                 } catch (err) {
                     renderNotification(`Eroare la generarea raportului: ${err.message}`, 'error');
-                    renderInstructorsView(); // Re-render on error
+                    renderInstructorsView();
                 }
             };
 
@@ -1112,13 +1180,14 @@
                         searchTimeout = setTimeout(handleSearch, 500);
                     } else {
                         dom.tabControls.style.display = 'block';
-                        handleTabChange(); // Re-fetch tab content when search is cleared
+                        handleTabChange();
                     }
                 });
 
                 dom.tabButtons.forEach(button => {
                     button.addEventListener('click', () => {
                         state.activeTab = button.dataset.tab;
+                        dom.resultsArea.innerHTML = ''; // Clear previous results
                         updateUI();
                         handleTabChange();
                     });
@@ -1134,7 +1203,6 @@
                     renderClients(state.clients, state.clientFirebaseData);
                 });
 
-                // Modal Listeners
                 dom.closeModalBtn.addEventListener('click', hideModal);
                 dom.cancelModal.addEventListener('click', (e) => {
                     if (e.target === dom.cancelModal) hideModal();
@@ -1146,7 +1214,6 @@
             const attachClientEventListeners = () => {
                 document.querySelectorAll('.client-header').forEach(header => {
                     header.addEventListener('click', (e) => {
-                        // Prevent toggle if the edit button was clicked
                         if (e.target.closest('a')) {
                             return;
                         }
@@ -1192,7 +1259,7 @@
 
                 document.querySelectorAll('.subscription-select, .instructor-select').forEach(select => {
                     select.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Prevent the card from expanding on click
+                        e.stopPropagation();
                     });
                     select.addEventListener('change', async (e) => {
                         e.stopPropagation();
@@ -1329,7 +1396,6 @@
 
             const attachInstructorDeleteListeners = () => {
                  document.querySelectorAll('.delete-instructor-btn').forEach(button => {
-                    // Prevent multiple listeners by replacing the node
                     const newButton = button.cloneNode(true);
                     button.parentNode.replaceChild(newButton, button);
                     newButton.addEventListener('click', async (e) => {
@@ -1338,7 +1404,7 @@
                            await firestoreApi.deleteInstructor(id);
                            renderNotification('Instructor eliminat.', 'success');
                         } catch (err) {
-                            renderNotification(`Eroare la eliminarea instructorului: ${err.message}`, 'error');
+                           renderNotification(`Eroare la eliminarea instructorului: ${err.message}`, 'error');
                         }
                     });
                 });
@@ -1353,6 +1419,53 @@
                 });
             };
 
+            const attachSettingsEventListeners = () => {
+                document.getElementById('toggle-messages-btn')?.addEventListener('click', () => {
+                    state.isSettingsExpanded = !state.isSettingsExpanded;
+                    renderSettingsView();
+                });
+
+                document.querySelectorAll('.variable-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const targetId = e.target.dataset.target;
+                        const value = e.target.dataset.value;
+                        const textarea = document.getElementById(targetId);
+                        if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = textarea.value;
+                            textarea.value = text.substring(0, start) + value + text.substring(end);
+                            textarea.focus();
+                            textarea.selectionEnd = start + value.length;
+                        }
+                    });
+                });
+
+                document.getElementById('save-messages-btn')?.addEventListener('click', async () => {
+                    const button = document.getElementById('save-messages-btn');
+                    button.disabled = true;
+                    button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se salvează...`;
+                    lucide.createIcons();
+
+                    const newTemplates = {
+                        notification: document.getElementById('template-notification').value,
+                        lastSession: document.getElementById('template-lastSession').value,
+                        newSubscription: document.getElementById('template-newSubscription').value,
+                    };
+
+                    try {
+                        await firestoreApi.saveMessageTemplates(newTemplates);
+                        state.messageTemplates = newTemplates;
+                        renderNotification('Șabloanele de mesaje au fost salvate cu succes!', 'success');
+                    } catch (err) {
+                        renderNotification(`Eroare la salvarea șabloanelor: ${err.message}`, 'error');
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = 'Salvează Mesajele';
+                    }
+                });
+            };
+
             const updateUI = () => {
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
@@ -1360,6 +1473,7 @@
                     if (tab === 'tomorrow') btn.textContent = 'Mâine';
                     if (tab === 'all') btn.textContent = 'Toți Clienții';
                     if (tab === 'instructors') btn.textContent = 'Instructori';
+                    if (tab === 'settings') btn.textContent = 'Setări';
 
                     const isSelected = tab === state.activeTab;
                     const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
@@ -1367,24 +1481,26 @@
                     btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
 
-                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii' }[state.activeTab];
+                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii', settings: 'setările' }[state.activeTab];
                 dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
                 dom.fetchEventsBtn.disabled = state.isLoading;
 
-                // Show/hide filters and increment all button based on tab
-                const clientFiltersVisible = state.activeTab !== 'instructors';
-                dom.disciplineFilter.style.display = clientFiltersVisible ? 'block' : 'none';
-                dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
-                dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
+                const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
+                dom.searchQueryInput.parentElement.style.display = isClientTab ? 'block' : 'none';
+                dom.filterControls.forEach(el => el.style.display = isClientTab ? 'block' : 'none');
+                dom.lastSessionFilter.parentElement.style.display = isClientTab ? 'flex' : 'none';
+                dom.fetchEventsBtn.style.display = isClientTab ? 'block' : 'none';
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
-                dom.reportToInstructorsBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
-                dom.reportToInstructorsBtn.style.display = 'none'; // Always hide the old button
+                dom.reportToInstructorsBtn.style.display = 'none';
             };
 
             // --- MODAL FUNCTIONS ---
             const showModal = () => {
-                dom.cancelModal.classList.remove('hidden', 'opacity-0');
-                dom.modalContent.classList.remove('scale-95');
+                dom.cancelModal.classList.remove('hidden');
+                setTimeout(() => {
+                    dom.cancelModal.classList.remove('opacity-0');
+                    dom.modalContent.classList.remove('scale-95');
+                }, 10);
             };
 
             const hideModal = () => {
@@ -1392,7 +1508,7 @@
                 dom.modalContent.classList.add('scale-95');
                 setTimeout(() => {
                     dom.cancelModal.classList.add('hidden');
-                    state.cancellationContext = null; // Clear context after closing
+                    state.cancellationContext = null;
                 }, 300);
             };
 
@@ -1462,15 +1578,11 @@
                     renderNotification('Te rugăm să introduci un token de acces valid.', 'error');
                     return;
                 }
-
                 state.accessToken = token;
                 renderNotification('Token de acces acceptat. Se inițializează aplicația...', 'success');
-
-                // Hide auth section and show main app controls
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('config-hr').style.display = 'block';
                 document.getElementById('main-config-controls').style.display = 'block';
-
                 initializeAppLogic();
             }
 
@@ -1478,13 +1590,11 @@
                 lucide.createIcons();
                 updateUI();
 
-                // Listener for manual token submission
                 const submitTokenBtn = document.getElementById('submitTokenBtn');
                 if (submitTokenBtn) {
                     submitTokenBtn.addEventListener('click', handleManualTokenSubmit);
                 }
 
-                // Listener for testing mode toggle
                 const testingModeToggle = document.getElementById('testing-mode-toggle');
                 const manualAuthSection = document.getElementById('manual-auth-section');
                 if (testingModeToggle && manualAuthSection) {
@@ -1496,9 +1606,7 @@
                     });
                 }
 
-                // --- Original Google Sign-In Initialization ---
                 let tokenClient; 
-
                 function handleAuthClick() {
                     if (tokenClient) {
                         tokenClient.requestAccessToken();
@@ -1512,7 +1620,6 @@
                     authBtn.addEventListener('click', handleAuthClick);
                 }
 
-                // Initialize the Google OAuth client
                 try {
                     tokenClient = google.accounts.oauth2.initTokenClient({
                         client_id: GOOGLE_CLIENT_ID,
@@ -1524,40 +1631,31 @@
                             }
                             state.accessToken = tokenResponse.access_token;
                             renderNotification('Autorizare reușită. Se inițializează aplicația...', 'success');
-
-                            // Hide auth section and show main app controls
                             document.getElementById('auth-section').style.display = 'none';
                             document.getElementById('config-hr').style.display = 'block';
                             document.getElementById('main-config-controls').style.display = 'block';
-
                             initializeAppLogic();
                         },
                     });
                 } catch (error) {
-                       console.error("Google Auth initialization failed:", error);
-                       renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
+                    console.error("Google Auth initialization failed:", error);
+                    renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
                 }
             };
 
-            // --- Helper Functions from original code ---
+            // --- Helper Functions ---
             const getWhatsAppLink = (phone, text = '') => {
                 if (!phone) return null;
-                // Remove all non-digit characters except the leading '+'
                 let cleanPhoneNumber = phone.trim().replace(/[\s-()]/g, '');
-
-                // If number starts with +, it's already in international format
                 if (cleanPhoneNumber.startsWith('+')) {
-                    cleanPhoneNumber = cleanPhoneNumber.substring(1); // Remove '+' for wa.me link
+                    cleanPhoneNumber = cleanPhoneNumber.substring(1);
                 } 
-                // If number starts with 0, assume it's a local Romanian number
                 else if (cleanPhoneNumber.startsWith('0')) {
                     cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
                 } 
-                // If it doesn't start with a known country code, assume Romanian
                 else if (!cleanPhoneNumber.startsWith('40') && !cleanPhoneNumber.startsWith('380')) {
                     cleanPhoneNumber = '40' + cleanPhoneNumber;
                 }
-
                 let link = `https://wa.me/${cleanPhoneNumber}`;
                 if (text) link += `?text=${encodeURIComponent(text)}`;
                 return link;
@@ -1577,7 +1675,6 @@
                 const processedClients = {};
                 if (!items) return processedClients;
 
-                // Get all existing client data from Firestore in one go
                 const clientsCollection = collection(db, "clients");
                 const snapshot = await getDocs(clientsCollection);
                 const existingClientsMap = new Map();
@@ -1590,7 +1687,6 @@
                 for (const event of filteredItems) {
                     if (!event.summary) continue;
                     const parts = event.summary.split(' - ').map(p => p.trim());
-
                     if (parts.length < 2) continue; 
 
                     const name = parts[0];
@@ -1635,7 +1731,6 @@
                 }
                 return processedClients;
             };
-
         });
     </script>
 </body>
