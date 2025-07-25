@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionare Sesiuni Clienți</title>
     
-    <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,7 +26,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         /* Simple debounce status indicator */
-        .notes-status, .sub-status {
+        .notes-status, .sub-status, .settings-status {
             transition: opacity 0.3s ease-in-out;
         }
         /* Modal styles */
@@ -41,7 +40,6 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
 
-    <!-- Container for the entire widget. -->
     <div id="client-tracker-widget" class="container mx-auto p-4 sm:p-6 lg:p-8">
         
         <header class="relative text-center mb-8">
@@ -49,14 +47,10 @@
             <p class="text-lg text-gray-400 mt-2">Gestionează sesiunile clienților din Google Calendar & Classroom</p>
         </header>
 
-        <!-- Main App View -->
         <div id="main-app-view">
-            <!-- Configuration Section -->
             <div id="config-section" class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
                 
-                <!-- Authorization Section -->
                 <div id="auth-section">
-                    <!-- Google Sign-In Button -->
                     <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația pentru a accesa datele din Google Calendar și Classroom.</p>
                     <button id="authBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
                         <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24px" height="24px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
@@ -73,7 +67,6 @@
                         <a href="#" id="testing-mode-toggle" class="text-sm text-blue-400 hover:underline cursor-pointer">Intră în Modul de Testare</a>
                     </div>
 
-                    <!-- Manual Access Token Input for Testing -->
                     <div id="manual-auth-section" style="display: none;">
                         <p class="text-center text-gray-400 mb-4">Pentru testare, introdu un token de acces OAuth 2.0 de pe <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
                         <div class="flex items-center space-x-2">
@@ -104,15 +97,12 @@
                             <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
                         </div>
 
-                        <!-- Discipline Filter -->
                         <div>
                             <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
                             <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <!-- Options will be populated dynamically -->
                             </select>
                         </div>
 
-                        <!-- Last Session Filter -->
                         <div>
                             <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
                                 <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
@@ -126,6 +116,7 @@
                                 <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="instructors" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                                <button data-tab="settings" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                             </div>
                              <div class="mt-4 space-y-2">
                                 <button id="fetchEventsBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
@@ -134,27 +125,19 @@
                                 <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
                                     Incrementează Toate Sesiunile pentru Mâine
                                 </button>
-                                <button id="reportToInstructorsBtn" class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
-                                    Raportează Instructorilor pe WhatsApp
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Notification Area -->
             <div id="notification-area" class="max-w-4xl mx-auto mb-6"></div>
 
-            <!-- Results Area -->
-            <div id="results-area" class="max-w-4xl mx-auto">
-                <!-- Loading spinner will be injected here -->
-                <!-- Client/Instructor list will be injected here -->
-            </div>
+            <div id="content-area" class="max-w-4xl mx-auto">
+                </div>
         </div>
     </div>
 
-    <!-- Cancellation Modal -->
     <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <h3 class="text-2xl font-bold text-white mb-4">Confirmă Anularea</h3>
@@ -174,47 +157,37 @@
     </div>
 
 
-    <!-- Firebase SDKs and App Logic -->
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase Configuration ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
-            authDomain: "asorte-crm.firebaseapp.com",
-            projectId: "asorte-crm",
-            storageBucket: "asorte-crm.appspot.com",
-            messagingSenderId: "848279125018",
-            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
-        };
+        // --- Firebase Configuration & Initialization ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
 
-        // --- Firebase Initialization ---
         let app, auth, db, userId;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            console.log("Firebase initialized successfully");
-        } catch (error) {
-            console.error("Firebase initialization failed:", error);
-            renderNotification("Firebase initialization failed. Please check your configuration.", "error");
-        }
-
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                userId = user.uid;
-                console.log("User is signed in with UID:", userId);
-            } else {
-                signInAnonymously(auth).catch(error => {
-                    console.error("Anonymous sign-in failed:", error);
-                });
-            }
-        });
 
         document.addEventListener('DOMContentLoaded', () => {
+
+            if (!firebaseConfig) {
+                console.error("Firebase configuration is missing.");
+                document.body.innerHTML = `<div class="p-4 bg-red-800 text-white text-center">Firebase configuration is missing. The application cannot start.</div>`;
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                console.log("Firebase initialized successfully");
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                document.body.innerHTML = `<div class="p-4 bg-red-800 text-white text-center">Firebase initialization failed: ${error.message}. Check console.</div>`;
+                return;
+            }
+
             // --- Google Sign-In Configuration ---
             const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
             const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
@@ -224,7 +197,7 @@
                 accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
-                clientFirebaseData: {}, // New state to hold Firestore data for clients
+                clientFirebaseData: {}, 
                 courses: null,
                 instructors: [],
                 activeTab: 'today',
@@ -236,7 +209,16 @@
                 activeDiscipline: 'all',
                 filterLastSessionOnly: false,
                 cancellationContext: null,
-                initialInstructorsLoaded: false, // Flag to track initial instructor load
+                initialInstructorsLoaded: false,
+                isSettingsExpanded: false, // CHANGED: Settings section is now collapsed by default
+                messageTemplates: {
+                    sessionNotification: 'Salut {name}! Sunt Tudor de la Asorte Music Academy si te contactez pentru a te intreba daca iti confirmi prezenta pentru cursul de {discipline} pe care il ai programat pentru {day}, la ora {time}. Iti multumim si te așteptăm cu drag!',
+                    lastSessionNotification: 'Salut {name}! Îți reamintim cu drag că sesiunea de {day} este ultima din abonamentul tău. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!',
+                    newSubNotification: 'Salut {name}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!',
+                    cancellationByInstructor: 'Salut {name}! Ne cerem scuze ca a tebuit sa anulam sedinta ta de {discipline} pe care o aveai programata pentru {day}, la ora {time}. Iti multumim pentru intelegere si vrem sa te instiintam ca aceasta sedinta nu va fi luata in calcul la abonamntul curent!',
+                    cancellationByClient: 'Sedinta ta de {discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata',
+                },
+                appInitialized: false,
             };
 
             // --- DOM ELEMENT REFERENCES ---
@@ -247,9 +229,8 @@
                 searchQueryInput: document.getElementById('searchQuery'),
                 fetchEventsBtn: document.getElementById('fetchEventsBtn'),
                 incrementAllBtn: document.getElementById('incrementAllBtn'),
-                reportToInstructorsBtn: document.getElementById('reportToInstructorsBtn'),
                 notificationArea: document.getElementById('notification-area'),
-                resultsArea: document.getElementById('results-area'),
+                contentArea: document.getElementById('content-area'),
                 tabControls: document.getElementById('tab-controls'),
                 tabButtons: document.querySelectorAll('.tab-button'),
                 disciplineFilter: document.getElementById('disciplineFilter'),
@@ -273,9 +254,16 @@
 
             // --- FIRESTORE API ---
             const firestoreApi = {
+                _checkReady() {
+                    if (!db || !userId || !appId) {
+                        console.error("Firestore cannot be used: db, userId, or appId is not available.");
+                        return false;
+                    }
+                    return true;
+                },
                 async getClientData(clientName) {
-                    if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
-                    const docRef = doc(db, "clients", clientName);
+                    if (!this._checkReady() || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/clients`, clientName);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -285,26 +273,28 @@
                     }
                 },
                 async saveClientData(clientName, data) {
-                    if (!db || !clientName) return;
-                    const docRef = doc(db, "clients", clientName);
+                    if (!this._checkReady() || !clientName) return;
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/clients`, clientName);
                     await setDoc(docRef, data, { merge: true });
                 },
                 async addInstructor(name, phone) {
-                    if (!db || !name) return;
-                    await addDoc(collection(db, "instructors"), { name, phone });
+                    if (!this._checkReady() || !name) return;
+                    const colRef = collection(db, `artifacts/${appId}/users/${userId}/instructors`);
+                    await addDoc(colRef, { name, phone });
                 },
                 async updateInstructor(id, data) {
-                    if (!db || !id) return;
-                    const docRef = doc(db, "instructors", id);
+                    if (!this._checkReady() || !id) return;
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/instructors`, id);
                     await updateDoc(docRef, data);
                 },
                 async deleteInstructor(id) {
-                    if (!db || !id) return;
-                    await deleteDoc(doc(db, "instructors", id));
+                    if (!this._checkReady() || !id) return;
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/instructors`, id);
+                    await deleteDoc(docRef);
                 },
                 getInstructors(callback) {
-                    if (!db) return () => {};
-                    const q = collection(db, "instructors");
+                    if (!this._checkReady()) return () => {};
+                    const q = collection(db, `artifacts/${appId}/users/${userId}/instructors`);
                     return onSnapshot(q, (querySnapshot) => {
                         const instructors = [];
                         querySnapshot.forEach((doc) => {
@@ -312,11 +302,33 @@
                         });
                         callback(instructors);
                     });
+                },
+                async saveMessageTemplates(templates) {
+                    if (!this._checkReady()) return;
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, 'messageTemplates');
+                    await setDoc(docRef, { templates });
+                },
+                async getMessageTemplates() {
+                    if (!this._checkReady()) return state.messageTemplates;
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/settings`, 'messageTemplates');
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists() && docSnap.data().templates) {
+                        return { ...state.messageTemplates, ...docSnap.data().templates };
+                    } else {
+                        return state.messageTemplates;
+                    }
                 }
             };
 
-            // --- Main App Initialization ---
-            function initializeAppLogic() {
+            // --- App Initialization Logic ---
+            function initializeAppLogicIfReady() {
+                if (state.accessToken && userId && !state.appInitialized) {
+                    state.appInitialized = true; 
+                    initializeAppLogic();
+                }
+            }
+            
+            async function initializeAppLogic() {
                 if (state.accessToken && !state.courses) {
                     api.fetchCourses()
                         .then(courses => { state.courses = courses; })
@@ -327,17 +339,16 @@
                 updateUI();
                 lucide.createIcons();
                 
-                // Fetch instructors and then fetch client data
+                state.messageTemplates = await firestoreApi.getMessageTemplates();
+                
                 firestoreApi.getInstructors(instructors => {
                     state.instructors = instructors;
                     
-                    // On initial load, fetch clients after instructors are loaded
                     if (!state.initialInstructorsLoaded) {
                         state.initialInstructorsLoaded = true;
                         handleTabChange();
                     }
                     
-                    // If the instructors tab is active, re-render it to show real-time changes
                     if (state.activeTab === 'instructors') {
                         renderInstructorsView();
                     }
@@ -376,7 +387,7 @@
                 },
                 async findLastPastEvent(clientName) {
                     const now = new Date();
-                    now.setHours(0, 0, 0, 0); // Start of today
+                    now.setHours(0, 0, 0, 0);
                     const thirtyDaysAgo = new Date();
                     thirtyDaysAgo.setDate(now.getDate() - 30);
 
@@ -403,7 +414,7 @@
                             }
                             const sessionPart = parts[2];
                             const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-                            return !isNaN(parsedNumber); // Only keep events where a number can be parsed
+                            return !isNaN(parsedNumber);
                         })
                         .sort((a, b) => new Date(b.start.dateTime || b.start.date) - new Date(a.start.dateTime || a.start.date));
 
@@ -447,7 +458,6 @@
                     }, {});
                 },
                 async cancelEvent(eventId) {
-                    // *** FIX: Corrected variable name from 'url' to 'getUrl' ***
                     const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${state.calendarId}/events/${eventId}`;
                     const getResponse = await fetch(getUrl, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
                     const eventData = await getResponse.json();
@@ -529,7 +539,7 @@
             };
 
             const renderLoader = (message) => {
-                dom.resultsArea.innerHTML = `<div class="flex items-center justify-center p-10"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-blue-400"></i><span class="ml-3 text-lg">${message}</span></div>`;
+                dom.contentArea.innerHTML = `<div class="flex items-center justify-center p-10"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-blue-400"></i><span class="ml-3 text-lg">${message}</span></div>`;
                 lucide.createIcons();
             };
             
@@ -570,14 +580,14 @@
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
                     if (state.activeDiscipline !== 'all') message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
                     if(state.filterLastSessionOnly) message += ` Afișând doar clienții în ultima ședință.`
-                    dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
+                    dom.contentArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
 
                 const displayTitle = getDisplayTitle();
                 const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details, clientFirebaseData[name])).join('');
 
-                dom.resultsArea.innerHTML = `
+                dom.contentArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
                         <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
                             <h2 class="text-2xl font-bold text-gray-200">${displayTitle}</h2>
@@ -589,6 +599,14 @@
                 attachClientEventListeners();
             };
             
+            const formatMessage = (template, data) => {
+                let message = template;
+                for (const key in data) {
+                    message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), data[key] || '');
+                }
+                return message;
+            };
+
             const createClientListItemHTML = (name, details, clientData) => {
                 const { eventId, discipline, sessionNumber, phone, startTime, lastPayment } = details;
                 const subscriptionType = clientData?.subscription || '4';
@@ -596,20 +614,24 @@
                 const isExpanded = state.expandedClient === name;
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                 const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
-                const notificationMessage = `Salut ${name}! Sunt Tudor de la Asorte Music Academy si te contactez pentru a te intreba daca iti confirmi prezenta pentru cursul de ${discipline} pe care il ai programat pentru ${dayText}, la ora ${formattedTime}. Iti multumim si te așteptăm cu drag!`;
-                const lastSessionMessage = `Salut ${name}! Îți reamintim cu drag că sesiunea ${dayText === 'astăzi' ? 'de astăzi' : 'de mâine'} este ultima din abonamentul tău. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
-                const newSubMessage = `Salut ${name}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesand acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`;
                 
-                const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
+                const messageData = {
+                    name: name,
+                    discipline: discipline,
+                    day: dayText,
+                    time: formattedTime
+                };
+                const notificationMessage = formatMessage(state.messageTemplates.sessionNotification, messageData);
+                const lastSessionMessage = formatMessage(state.messageTemplates.lastSessionNotification, messageData);
+                const newSubMessage = formatMessage(state.messageTemplates.newSubNotification, messageData);
 
-                // Create the Google Calendar edit link
+                const instructorOptions = state.instructors.map(inst => `<option value="${inst.name}" ${assignedInstructor === inst.name ? 'selected' : ''}>${inst.name}</option>`).join('');
                 const eventIdentifier = btoa(`${eventId} ${state.calendarId}`).replace(/=/g, '');
                 const editUrl = `https://calendar.google.com/calendar/r/eventedit/${eventIdentifier}`;
 
                 return `
                     <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
                         <div class="flex items-center justify-between flex-wrap cursor-pointer client-header" data-name="${name}">
-                            <!-- Client Info -->
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
                                     <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
@@ -638,7 +660,6 @@
                                 ${phone ? `<button class="whatsapp-btn flex items-center justify-center mt-2 bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs w-fit" data-phone="${phone}"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
                                 ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
                             </div>
-                            <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-48">
                                 <div class="w-full text-right mb-2">
                                     <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
@@ -654,8 +675,7 @@
                             </div>
                         </div>
                         <div class="client-details w-full" style="display: ${isExpanded ? 'block' : 'none'};">
-                            <!-- Details will be loaded here -->
-                        </div>
+                            </div>
                     </li>
                 `;
             };
@@ -732,11 +752,12 @@
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
                  if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
+                 if (state.activeTab === 'settings') return 'Setări Mesaje Notificare';
                 return 'Sumar Toți Clienții';
             };
 
             const renderInstructorsView = () => {
-                dom.resultsArea.innerHTML = `
+                dom.contentArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
                         <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
                             <h2 class="text-2xl font-bold text-gray-200">Gestionează Instructorii</h2>
@@ -750,24 +771,19 @@
                                 </button>
                             </div>
                             <ul id="instructorList" class="divide-y divide-gray-600">
-                                <!-- Instructors will be rendered here -->
-                            </ul>
+                                </ul>
                         </div>
                     </div>
                 `;
                 lucide.createIcons();
                 attachInstructorEventListeners();
                 
-                // Render the current list of instructors
                 const list = document.getElementById('instructorList');
                 if (!list) return;
                 list.innerHTML = state.instructors.map(inst => `
                     <li class="flex items-center justify-between py-3 space-x-2">
                         <span class="text-gray-300 font-semibold">${inst.name}</span>
                         <input type="text" value="${inst.phone || ''}" data-id="${inst.id}" class="instructor-phone-input flex-grow px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <button class="notify-instructor-btn bg-cyan-600 text-white p-2 rounded-md hover:bg-cyan-700" data-id="${inst.id}" data-name="${inst.name}" data-phone="${inst.phone || ''}" title="Notifică pentru programul de mâine">
-                            <i data-lucide="send" class="h-4 w-4"></i>
-                        </button>
                         <button class="delete-instructor-btn text-red-500 hover:text-red-400" data-id="${inst.id}">
                             <i data-lucide="trash-2" class="h-5 w-5"></i>
                         </button>
@@ -776,11 +792,117 @@
                 lucide.createIcons();
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
-                attachInstructorNotifyListeners();
             };
+            
+            const renderSettingsView = () => {
+                const isExpanded = state.isSettingsExpanded;
+                const createVariableButton = (variable) => `
+                    <button class="insert-variable-btn bg-gray-600 hover:bg-gray-500 text-xs font-mono py-1 px-2 rounded" data-variable="${variable}">
+                        ${variable}
+                    </button>`;
+                
+                const allVariables = `
+                    ${createVariableButton('{name}')}
+                    ${createVariableButton('{discipline}')}
+                    ${createVariableButton('{day}')}
+                    ${createVariableButton('{time}')}
+                `;
+
+                dom.contentArea.innerHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                        <div id="settings-header" class="px-6 py-4 bg-gray-700 border-b border-gray-600 flex justify-between items-center cursor-pointer">
+                            <h2 class="text-2xl font-bold text-gray-200">${getDisplayTitle()}</h2>
+                             <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                            </span>
+                        </div>
+                        <div id="settings-content" style="display: ${isExpanded ? 'block' : 'none'};">
+                            <div id="settings-form" class="p-6 space-y-8">
+                                
+                                <!-- Template Group -->
+                                <div>
+                                    <label for="session-notification-template" class="block text-lg font-medium text-gray-300 mb-2">Notificare Ședință</label>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="text-sm text-gray-400">Variabile:</span>
+                                        ${allVariables}
+                                    </div>
+                                    <textarea id="session-notification-template" class="message-template w-full p-3 border border-gray-600 bg-gray-700 rounded-md" rows="5">${state.messageTemplates.sessionNotification}</textarea>
+                                    <div class="mt-2 flex items-center justify-end">
+                                        <span class="settings-status text-sm text-green-400 opacity-0 mr-3">Salvat!</span>
+                                        <button class="save-template-btn bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700" data-template-key="sessionNotification">Salvează</button>
+                                    </div>
+                                </div>
+
+                                <!-- Template Group -->
+                                <div>
+                                    <label for="last-session-notification-template" class="block text-lg font-medium text-gray-300 mb-2">Notificare Ultima Ședință</label>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="text-sm text-gray-400">Variabile:</span>
+                                         ${allVariables}
+                                    </div>
+                                    <textarea id="last-session-notification-template" class="message-template w-full p-3 border border-gray-600 bg-gray-700 rounded-md" rows="4">${state.messageTemplates.lastSessionNotification}</textarea>
+                                    <div class="mt-2 flex items-center justify-end">
+                                        <span class="settings-status text-sm text-green-400 opacity-0 mr-3">Salvat!</span>
+                                        <button class="save-template-btn bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700" data-template-key="lastSessionNotification">Salvează</button>
+                                    </div>
+                                </div>
+
+                                <!-- Template Group -->
+                                <div>
+                                    <label for="new-sub-notification-template" class="block text-lg font-medium text-gray-300 mb-2">Notificare Plată Nouă</label>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                         <span class="text-sm text-gray-400">Variabile:</span>
+                                         ${allVariables}
+                                    </div>
+                                    <textarea id="new-sub-notification-template" class="message-template w-full p-3 border border-gray-600 bg-gray-700 rounded-md" rows="4">${state.messageTemplates.newSubNotification}</textarea>
+                                    <div class="mt-2 flex items-center justify-end">
+                                        <span class="settings-status text-sm text-green-400 opacity-0 mr-3">Salvat!</span>
+                                        <button class="save-template-btn bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700" data-template-key="newSubNotification">Salvează</button>
+                                    </div>
+                                </div>
+
+                                <!-- Template Group -->
+                                <div>
+                                    <label for="cancellation-by-instructor-template" class="block text-lg font-medium text-gray-300 mb-2">Notificare Anulare (de către Instructor)</label>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="text-sm text-gray-400">Variabile:</span>
+                                        ${allVariables}
+                                    </div>
+                                    <textarea id="cancellation-by-instructor-template" class="message-template w-full p-3 border border-gray-600 bg-gray-700 rounded-md" rows="5">${state.messageTemplates.cancellationByInstructor}</textarea>
+                                    <div class="mt-2 flex items-center justify-end">
+                                        <span class="settings-status text-sm text-green-400 opacity-0 mr-3">Salvat!</span>
+                                        <button class="save-template-btn bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700" data-template-key="cancellationByInstructor">Salvează</button>
+                                    </div>
+                                </div>
+
+                                <!-- Template Group -->
+                                <div>
+                                    <label for="cancellation-by-client-template" class="block text-lg font-medium text-gray-300 mb-2">Notificare Anulare (de către Client)</label>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                         <span class="text-sm text-gray-400">Variabile:</span>
+                                         ${allVariables}
+                                    </div>
+                                    <textarea id="cancellation-by-client-template" class="message-template w-full p-3 border border-gray-600 bg-gray-700 rounded-md" rows="4">${state.messageTemplates.cancellationByClient}</textarea>
+                                    <div class="mt-2 flex items-center justify-end">
+                                        <span class="settings-status text-sm text-green-400 opacity-0 mr-3">Salvat!</span>
+                                        <button class="save-template-btn bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700" data-template-key="cancellationByClient">Salvează</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                attachSettingsEventListeners();
+            };
+
 
             // --- EVENT HANDLERS ---
             const handleTabChange = async () => {
+                if (state.activeTab === 'settings') {
+                    renderSettingsView();
+                    return;
+                }
                 if (state.activeTab === 'instructors') {
                     renderInstructorsView();
                     return;
@@ -799,7 +921,6 @@
                 try {
                     state.clients = await api.getEvents(state.activeTab);
                     
-                    // Fetch Firestore data for all visible clients
                     const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
@@ -813,7 +934,7 @@
                     renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
                     renderNotification(`Eroare la preluarea evenimentelor: ${err.message}`, 'error');
-                    dom.resultsArea.innerHTML = '';
+                    dom.contentArea.innerHTML = '';
                 } finally {
                     state.isLoading = false;
                     updateUI();
@@ -846,7 +967,7 @@
                     renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
                     renderNotification(`Căutarea a eșuat: ${err.message}`, 'error');
-                    dom.resultsArea.innerHTML = '';
+                    dom.contentArea.innerHTML = '';
                 } finally {
                     state.isSearching = false;
                     updateUI();
@@ -966,7 +1087,6 @@
                 lucide.createIcons();
 
                 for (const [name, details] of tomorrowClients) {
-                    // Find the button in the DOM to pass to the handler
                     const clientLi = document.getElementById(`client-${details.eventId}`);
                     const button = clientLi?.querySelector('.increment-session-btn');
                     if (button) {
@@ -979,120 +1099,11 @@
                 renderNotification("Toate sesiunile pentru mâine au fost incrementate.", "success");
             };
 
-            const handleReportToInstructors = () => {
-                if (state.activeTab !== 'tomorrow') return;
-
-                const clientsByInstructor = {};
-
-                for (const [clientName, details] of Object.entries(state.clients)) {
-                    const clientData = state.clientFirebaseData[clientName];
-                    const instructorName = clientData?.assignedInstructor;
-
-                    if (instructorName) {
-                        if (!clientsByInstructor[instructorName]) {
-                            clientsByInstructor[instructorName] = [];
-                        }
-                        clientsByInstructor[instructorName].push({
-                            name: clientName,
-                            time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
-                        });
-                    }
-                }
-
-                const instructorsWithoutPhone = [];
-                let reportsSent = 0;
-
-                for (const [instructorName, clientList] of Object.entries(clientsByInstructor)) {
-                    const instructor = state.instructors.find(inst => inst.name === instructorName);
-
-                    if (instructor && instructor.phone) {
-                        clientList.sort((a, b) => a.time.localeCompare(b.time));
-
-                        let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
-                        message += clientList.map(client => `- ${client.name} la ${client.time}`).join('\n');
-                        
-                        const link = getWhatsAppLink(instructor.phone, message);
-                        window.open(link, '_blank');
-                        reportsSent++;
-                    } else {
-                        instructorsWithoutPhone.push(instructorName);
-                    }
-                }
-
-                if (reportsSent > 0) {
-                    renderNotification(`${reportsSent} rapoarte au fost generate.`, 'success');
-                }
-                if (instructorsWithoutPhone.length > 0) {
-                    renderNotification(`Nu s-a putut trimite raportul pentru: ${instructorsWithoutPhone.join(', ')} (lipsește numărul de telefon).`, 'error');
-                }
-                if(reportsSent === 0 && instructorsWithoutPhone.length === 0) {
-                    renderNotification('Niciun client alocat instructorilor pentru mâine.', 'success');
-                }
-            };
-
-            const handleNotifyInstructor = async (instructorId, instructorName, instructorPhone) => {
-                if (!instructorPhone) {
-                    renderNotification(`Instructorul ${instructorName} nu are un număr de telefon salvat.`, 'error');
-                    return;
-                }
-
-                renderLoader('Se preiau programările pentru mâine...');
-
-                try {
-                    // Fetch tomorrow's events
-                    const tomorrowsClients = await api.getEvents('tomorrow');
-                    
-                    // Fetch all client data from Firestore to get assigned instructors
-                    const clientDataPromises = Object.keys(tomorrowsClients).map(name => firestoreApi.getClientData(name));
-                    const clientFirebaseDataArray = await Promise.all(clientDataPromises);
-                    const clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
-                        if (data.name) {
-                            acc[data.name] = data;
-                        }
-                        return acc;
-                    }, {});
-
-                    // Filter for this specific instructor's clients
-                    const instructorClients = [];
-                    for (const [clientName, details] of Object.entries(tomorrowsClients)) {
-                        if (clientFirebaseData[clientName]?.assignedInstructor === instructorName) {
-                            instructorClients.push({
-                                name: clientName,
-                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
-                            });
-                        }
-                    }
-
-                    // Clear the loader and re-render the instructors view
-                    dom.resultsArea.innerHTML = '';
-                    renderInstructorsView();
-
-                    if (instructorClients.length === 0) {
-                        renderNotification(`Instructorul ${instructorName} nu are clienți programați pentru mâine.`, 'success');
-                        return;
-                    }
-
-                    // Sort by time and create message
-                    instructorClients.sort((a, b) => a.time.localeCompare(b.time));
-                    let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
-                    message += instructorClients.map(client => `- ${client.name} la ${client.time}`).join('\n');
-                    
-                    const link = getWhatsAppLink(instructorPhone, message);
-                    window.open(link, '_blank');
-                    renderNotification(`Raport generat pentru ${instructorName}.`, 'success');
-
-                } catch (err) {
-                    renderNotification(`Eroare la generarea raportului: ${err.message}`, 'error');
-                    renderInstructorsView(); // Re-render on error
-                }
-            };
-
             // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.fetchEventsBtn.addEventListener('click', handleTabChange);
                 dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
-                dom.reportToInstructorsBtn.addEventListener('click', handleReportToInstructors);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -1113,7 +1124,7 @@
                         searchTimeout = setTimeout(handleSearch, 500);
                     } else {
                         dom.tabControls.style.display = 'block';
-                        handleTabChange(); // Re-fetch tab content when search is cleared
+                        handleTabChange(); 
                     }
                 });
 
@@ -1147,8 +1158,7 @@
             const attachClientEventListeners = () => {
                 document.querySelectorAll('.client-header').forEach(header => {
                     header.addEventListener('click', (e) => {
-                        // Prevent toggle if the edit button was clicked
-                        if (e.target.closest('a')) {
+                        if (e.target.closest('a') || e.target.closest('select')) {
                             return;
                         }
                         const name = header.dataset.name;
@@ -1193,7 +1203,7 @@
 
                 document.querySelectorAll('.subscription-select, .instructor-select').forEach(select => {
                     select.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Prevent the card from expanding on click
+                        e.stopPropagation();
                     });
                     select.addEventListener('change', async (e) => {
                         e.stopPropagation();
@@ -1206,6 +1216,7 @@
                             state.clientFirebaseData[clientName].subscription = e.target.value;
                         } else {
                             dataToSave = { assignedInstructor: e.target.value };
+                             if (!state.clientFirebaseData[clientName]) state.clientFirebaseData[clientName] = {};
                             state.clientFirebaseData[clientName].assignedInstructor = e.target.value;
                         }
 
@@ -1309,7 +1320,6 @@
                 });
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
-                attachInstructorNotifyListeners();
             };
 
             const attachInstructorPhoneInputListeners = () => {
@@ -1330,7 +1340,6 @@
 
             const attachInstructorDeleteListeners = () => {
                  document.querySelectorAll('.delete-instructor-btn').forEach(button => {
-                    // Prevent multiple listeners by replacing the node
                     const newButton = button.cloneNode(true);
                     button.parentNode.replaceChild(newButton, button);
                     newButton.addEventListener('click', async (e) => {
@@ -1345,11 +1354,44 @@
                 });
             };
 
-            const attachInstructorNotifyListeners = () => {
-                document.querySelectorAll('.notify-instructor-btn').forEach(button => {
+            const attachSettingsEventListeners = () => {
+                const settingsHeader = document.getElementById('settings-header');
+                if (settingsHeader) {
+                    settingsHeader.addEventListener('click', () => {
+                        state.isSettingsExpanded = !state.isSettingsExpanded;
+                        const content = document.getElementById('settings-content');
+                        const chevron = document.querySelector('.settings-chevron-wrapper');
+                        if (content && chevron) {
+                            content.style.display = state.isSettingsExpanded ? 'block' : 'none';
+                            chevron.classList.toggle('rotate-180', state.isSettingsExpanded);
+                        }
+                    });
+                }
+
+                document.querySelectorAll('.save-template-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const key = e.target.dataset.templateKey;
+                        const container = e.target.closest('div');
+                        const textarea = container.previousElementSibling;
+                        const statusEl = container.querySelector('.settings-status');
+
+                        state.messageTemplates[key] = textarea.value;
+                        
+                        try {
+                            await firestoreApi.saveMessageTemplates(state.messageTemplates);
+                            statusEl.classList.remove('opacity-0');
+                            setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+                        } catch (err) {
+                            renderNotification(`Eroare la salvarea șablonului: ${err.message}`, 'error');
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.insert-variable-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        const { id, name, phone } = e.currentTarget.dataset;
-                        handleNotifyInstructor(id, name, phone);
+                        const variable = e.target.dataset.variable;
+                        const textarea = e.target.closest('div').nextElementSibling;
+                        insertAtCursor(textarea, ` ${variable} `);
                     });
                 });
             };
@@ -1361,6 +1403,7 @@
                     if (tab === 'tomorrow') btn.textContent = 'Mâine';
                     if (tab === 'all') btn.textContent = 'Toți Clienții';
                     if (tab === 'instructors') btn.textContent = 'Instructori';
+                    if (tab === 'settings') btn.textContent = 'Setări';
 
                     const isSelected = tab === state.activeTab;
                     const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
@@ -1368,17 +1411,17 @@
                     btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
                 
-                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii' }[state.activeTab];
-                dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
+                const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
+                if (tabTitle) {
+                   dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
+                }
                 dom.fetchEventsBtn.disabled = state.isLoading;
                 
-                // Show/hide filters and increment all button based on tab
-                const clientFiltersVisible = state.activeTab !== 'instructors';
-                dom.disciplineFilter.style.display = clientFiltersVisible ? 'block' : 'none';
-                dom.lastSessionFilter.parentElement.style.display = clientFiltersVisible ? 'flex' : 'none';
-                dom.fetchEventsBtn.style.display = clientFiltersVisible ? 'block' : 'none';
+                const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
+                document.getElementById('disciplineFilter').parentElement.style.display = isClientTab ? 'block' : 'none';
+                document.getElementById('lastSessionFilter').parentElement.style.display = isClientTab ? 'flex' : 'none';
+                dom.fetchEventsBtn.style.display = isClientTab ? 'block' : 'none';
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
-                dom.reportToInstructorsBtn.style.display = 'none'; // Always hide the old button
             };
 
             // --- MODAL FUNCTIONS ---
@@ -1392,7 +1435,7 @@
                 dom.modalContent.classList.add('scale-95');
                 setTimeout(() => {
                     dom.cancelModal.classList.add('hidden');
-                    state.cancellationContext = null; // Clear context after closing
+                    state.cancellationContext = null; 
                 }, 300);
             };
 
@@ -1417,7 +1460,9 @@
                     renderNotification(`Evenimentul pentru ${name} a fost anulat de instructor. Numărul sesiunii a fost eliminat.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
 
-                    const message = `Salut ${name}! Ne cerem scuze ca a tebuit sa anulam sedinta ta de ${discipline} pe care o aveai programata pentru ${dayText}, la ora ${formattedTime}. Iti multumim pentru intelegere si vrem sa te instiintam ca aceasta sedinta nu va fi luata in calcul la abonamntul curent!`;
+                    const messageData = { name, discipline, day: dayText, time: formattedTime };
+                    const message = formatMessage(state.messageTemplates.cancellationByInstructor, messageData);
+
                     const link = getWhatsAppLink(phone, message);
                     if (link) {
                         window.open(link, '_blank');
@@ -1440,10 +1485,17 @@
                 lucide.createIcons();
 
                 try {
+                    const clientDetails = state.clients[name];
+                    const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
+
                     await api.cancelEvent(eventId);
                     renderNotification(`Evenimentul pentru ${name} a fost anulat de client.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
-                    const message = `Sedinta ta de ${discipline} care era programata la Asorte a fost anulata. Mentionam ca datorita faptului ca anularea a avut loc cu mai putin de 48 de ore inaintea datei si orei convenite initial, sesiunea va fi considerata ca fiind efectuata`;
+                    
+                    const messageData = { name, discipline, day: dayText, time: formattedTime };
+                    const message = formatMessage(state.messageTemplates.cancellationByClient, messageData);
+
                     const link = getWhatsAppLink(phone, message);
                     if (link) window.open(link, '_blank');
                 } catch (err) {
@@ -1466,25 +1518,22 @@
                 state.accessToken = token;
                 renderNotification('Token de acces acceptat. Se inițializează aplicația...', 'success');
                 
-                // Hide auth section and show main app controls
                 document.getElementById('auth-section').style.display = 'none';
                 document.getElementById('config-hr').style.display = 'block';
                 document.getElementById('main-config-controls').style.display = 'block';
                 
-                initializeAppLogic();
+                initializeAppLogicIfReady();
             }
 
             window.onload = () => {
                 lucide.createIcons();
                 updateUI();
                 
-                // Listener for manual token submission
                 const submitTokenBtn = document.getElementById('submitTokenBtn');
                 if (submitTokenBtn) {
                     submitTokenBtn.addEventListener('click', handleManualTokenSubmit);
                 }
 
-                // Listener for testing mode toggle
                 const testingModeToggle = document.getElementById('testing-mode-toggle');
                 const manualAuthSection = document.getElementById('manual-auth-section');
                 if (testingModeToggle && manualAuthSection) {
@@ -1496,7 +1545,6 @@
                     });
                 }
 
-                // --- Original Google Sign-In Initialization ---
                 let tokenClient; 
 
                 function handleAuthClick() {
@@ -1512,7 +1560,6 @@
                     authBtn.addEventListener('click', handleAuthClick);
                 }
 
-                // Initialize the Google OAuth client
                 try {
                     tokenClient = google.accounts.oauth2.initTokenClient({
                         client_id: GOOGLE_CLIENT_ID,
@@ -1525,35 +1572,47 @@
                             state.accessToken = tokenResponse.access_token;
                             renderNotification('Autorizare reușită. Se inițializează aplicația...', 'success');
                             
-                            // Hide auth section and show main app controls
                             document.getElementById('auth-section').style.display = 'none';
                             document.getElementById('config-hr').style.display = 'block';
                             document.getElementById('main-config-controls').style.display = 'block';
                             
-                            initializeAppLogic();
+                            initializeAppLogicIfReady();
                         },
                     });
                 } catch (error) {
-                        console.error("Google Auth initialization failed:", error);
-                        renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
+                         console.error("Google Auth initialization failed:", error);
+                         renderNotification("Nu s-a putut încărca biblioteca Google Sign-In. Verifică conexiunea și reîmprospătează pagina.", "error");
                 }
             };
             
-            // --- Helper Functions from original code ---
+            // --- Helper Functions ---
+            function insertAtCursor(myField, myValue) {
+                if (document.selection) {
+                    myField.focus();
+                    let sel = document.selection.createRange();
+                    sel.text = myValue;
+                } else if (myField.selectionStart || myField.selectionStart === 0) {
+                    let startPos = myField.selectionStart;
+                    let endPos = myField.selectionEnd;
+                    myField.value = myField.value.substring(0, startPos) + myValue + myField.value.substring(endPos, myField.value.length);
+                    myField.selectionStart = startPos + myValue.length;
+                    myField.selectionEnd = startPos + myValue.length;
+                    myField.focus();
+                } else {
+                    myField.value += myValue;
+                    myField.focus();
+                }
+            }
+            
             const getWhatsAppLink = (phone, text = '') => {
                 if (!phone) return null;
-                // Remove all non-digit characters except the leading '+'
                 let cleanPhoneNumber = phone.trim().replace(/[\s-()]/g, '');
-
-                // If number starts with +, it's already in international format
                 if (cleanPhoneNumber.startsWith('+')) {
-                    cleanPhoneNumber = cleanPhoneNumber.substring(1); // Remove '+' for wa.me link
+                    cleanPhoneNumber = cleanPhoneNumber.substring(1);
                 } 
-                // If number starts with 0, assume it's a local Romanian number
                 else if (cleanPhoneNumber.startsWith('0')) {
                     cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
                 } 
-                // If it doesn't start with a known country code, assume Romanian
                 else if (!cleanPhoneNumber.startsWith('40') && !cleanPhoneNumber.startsWith('380')) {
                     cleanPhoneNumber = '40' + cleanPhoneNumber;
                 }
@@ -1576,10 +1635,18 @@
             const processCalendarItems = async (items) => {
                 const processedClients = {};
                 if (!items) return processedClients;
+                
+                if (!firestoreApi._checkReady()) {
+                    console.error("Cannot process calendar items, Firestore not ready.");
+                    return {};
+                }
 
-                // Get all existing client data from Firestore in one go
-                const clientsCollection = collection(db, "clients");
-                const snapshot = await getDocs(clientsCollection);
+                const clientsCollection = collection(db, `artifacts/${appId}/users/${userId}/clients`);
+                const snapshot = await getDocs(clientsCollection).catch(err => {
+                    console.error("Could not fetch existing clients from Firestore:", err);
+                    return { docs: [] }; 
+                });
+
                 const existingClientsMap = new Map();
                 snapshot.forEach(doc => {
                     existingClientsMap.set(doc.id, doc.data());
@@ -1614,7 +1681,7 @@
                     }
                     const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
                     
-                    if (name && discipline && phone) {
+                    if (name && discipline && phone && firestoreApi._checkReady()) {
                         const existingData = existingClientsMap.get(name);
                         if (!existingData || existingData.discipline !== discipline || existingData.phone !== phone) {
                             console.log(`Syncing data for ${name}: New or changed.`);
@@ -1635,6 +1702,27 @@
                 }
                 return processedClients;
             };
+
+            // UPDATED: Centralized Firebase Auth Logic
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("User is signed in with UID:", userId);
+                    initializeAppLogicIfReady();
+                } else {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        signInWithCustomToken(auth, __initial_auth_token).catch(error => {
+                            console.error("Custom token sign-in failed:", error);
+                            renderNotification(`Authentication failed: ${error.message}`, "error");
+                        });
+                    } else {
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Anonymous sign-in failed:", error);
+                            renderNotification(`Anonymous authentication failed: ${error.message}`, "error");
+                        });
+                    }
+                }
+            });
 
         });
     </script>
