@@ -300,9 +300,19 @@
                 cancellationContext: null,
                 initialInstructorsLoaded: false, // Flag to track initial instructor load
                 isSettingsExpanded: false, // For settings accordion
+                isWorkingHoursExpanded: false, // For working hours accordion
+                isDoubleBookingExpanded: false, // For double booking accordion
                 disciplinesForBooking: [ // Updated list for the new event form
                     'Chitară', 'Canto', 'Pian', 'Bas', 'Tobe', 'Productie'
                 ],
+                workingHours: {
+                    'Luni': { enabled: true, startTime: 9, endTime: 21 },
+                    'Marți': { enabled: true, startTime: 9, endTime: 21 },
+                    'Miercuri': { enabled: true, startTime: 9, endTime: 21 },
+                    'Joi': { enabled: true, startTime: 9, endTime: 21 },
+                    'Vineri': { enabled: true, startTime: 9, endTime: 21 },
+                    'Sâmbătă': { enabled: true, startTime: 9, endTime: 21 },
+                },
                 doubleBookingRules: { // Default rule
                     'Miercuri': { enabled: true, startTime: 14, endTime: 21 }
                 },
@@ -430,6 +440,17 @@
                     if (!db) return;
                     const docRef = doc(db, "app-settings", "double-booking-rules");
                     await setDoc(docRef, rules);
+                },
+                async getWorkingHours() {
+                    if (!db) return null;
+                    const docRef = doc(db, "app-settings", "working-hours");
+                    const docSnap = await getDoc(docRef);
+                    return docSnap.exists() ? docSnap.data() : null;
+                },
+                async saveWorkingHours(hours) {
+                    if (!db) return;
+                    const docRef = doc(db, "app-settings", "working-hours");
+                    await setDoc(docRef, hours);
                 }
             };
 
@@ -479,6 +500,18 @@
                 }).catch(err => {
                     console.error("Error fetching double booking rules:", err);
                     renderNotification("Nu s-au putut încărca regulile de rezervare dublă.", "error");
+                });
+
+                // Fetch working hours
+                firestoreApi.getWorkingHours().then(hours => {
+                    if (hours) {
+                        state.workingHours = hours;
+                    } else {
+                        firestoreApi.saveWorkingHours(state.workingHours);
+                    }
+                }).catch(err => {
+                    console.error("Error fetching working hours:", err);
+                    renderNotification("Nu s-au putut încărca setările pentru programul de lucru.", "error");
                 });
             }
 
@@ -960,6 +993,7 @@
                         <div class="p-6 space-y-6">
                             ${createMessageSettingsHTML()}
                             ${createDoubleBookingSettingsHTML()}
+                            ${createWorkingHoursSettingsHTML()}
                         </div>
                     </div>
                 `;
@@ -972,7 +1006,7 @@
                 const isExpanded = state.isSettingsExpanded;
                  return `
                     <div class="border border-gray-700 rounded-lg">
-                        <button id="toggle-messages-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-t-lg focus:outline-none">
+                        <button id="toggle-messages-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
                             <span class="text-lg font-semibold text-gray-200">Modifică Mesaje WhatsApp</span>
                             <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
                                 <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
@@ -995,6 +1029,7 @@
             }
 
             const createDoubleBookingSettingsHTML = () => {
+                const isExpanded = state.isDoubleBookingExpanded;
                 const days = { 'Luni': 1, 'Marți': 2, 'Miercuri': 3, 'Joi': 4, 'Vineri': 5, 'Sâmbătă': 6 };
                 let daysHTML = Object.keys(days).map(dayName => {
                     const rule = state.doubleBookingRules[dayName] || { enabled: false, startTime: 14, endTime: 21 };
@@ -1015,15 +1050,59 @@
 
                 return `
                      <div class="border border-gray-700 rounded-lg">
-                        <div class="w-full flex justify-between items-center p-4 bg-gray-700/50 rounded-t-lg">
+                        <button id="toggle-double-booking-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
                             <span class="text-lg font-semibold text-gray-200">Reguli de Rezervare Dublă</span>
-                        </div>
-                        <div class="p-6 space-y-4 border-t border-gray-700">
+                             <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                            </span>
+                        </button>
+                        <div id="double-booking-container" class="p-6 space-y-4 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
                             <p class="text-sm text-gray-400">Selectează zilele și intervalele orare în care sunt permise două programări pe oră.</p>
                             ${daysHTML}
                             <div class="flex justify-end pt-4">
                                 <button id="save-booking-rules-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
                                     Salvează Regulile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            const createWorkingHoursSettingsHTML = () => {
+                const isExpanded = state.isWorkingHoursExpanded;
+                const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+                let daysHTML = days.map(dayName => {
+                    const hours = state.workingHours[dayName] || { enabled: true, startTime: 9, endTime: 21 };
+                    return `
+                        <div class="flex items-center space-x-4 p-2 rounded-md hover:bg-gray-700/50">
+                            <label class="flex items-center space-x-2 w-32 cursor-pointer">
+                                <input type="checkbox" data-day="${dayName}" class="wh-day-enable-checkbox h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500" ${hours.enabled ? 'checked' : ''}>
+                                <span class="font-medium text-gray-300">${dayName}</span>
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" min="0" max="23" value="${hours.startTime}" data-day="${dayName}" data-type="start" class="wh-time-input w-20 px-2 py-1 border border-gray-600 bg-gray-800 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" ${!hours.enabled ? 'disabled' : ''}>
+                                <span>-</span>
+                                <input type="number" min="1" max="24" value="${hours.endTime}" data-day="${dayName}" data-type="end" class="wh-time-input w-20 px-2 py-1 border border-gray-600 bg-gray-800 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" ${!hours.enabled ? 'disabled' : ''}>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                     <div class="border border-gray-700 rounded-lg">
+                        <button id="toggle-working-hours-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
+                            <span class="text-lg font-semibold text-gray-200">Setări Program de Lucru</span>
+                             <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                            </span>
+                        </button>
+                        <div id="working-hours-container" class="p-6 space-y-4 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
+                            <p class="text-sm text-gray-400">Definește programul de lucru pentru fiecare zi. Zilele nebifate nu vor afișa intervale disponibile.</p>
+                            ${daysHTML}
+                            <div class="flex justify-end pt-4">
+                                <button id="save-working-hours-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                    Salvează Programul
                                 </button>
                             </div>
                         </div>
@@ -1153,7 +1232,7 @@
                     const startDate = new Date();
                     startDate.setHours(0, 0, 0, 0);
                     const endDate = new Date();
-                    endDate.setDate(startDate.getDate() + 20); // Fetch a bit more to account for skipped Sundays
+                    endDate.setDate(startDate.getDate() + 20); // Fetch a bit more to account for skipped days
 
                     const allEvents = await api.getEventsForDateRange(startDate, endDate);
                     
@@ -1168,12 +1247,17 @@
                         dayOffset++;
 
                         const dayOfWeek = currentDate.getDay();
-                        if (dayOfWeek === 0) continue; // Skip Sundays
+                        const dayName = dayNames[dayOfWeek];
+                        const workHoursRule = state.workingHours[dayName];
+
+                        // Skip if it's Sunday or if the day is disabled in settings
+                        if (dayOfWeek === 0 || !workHoursRule || !workHoursRule.enabled) {
+                            continue;
+                        }
 
                         daysShown++;
 
-                        const dayName = dayNames[dayOfWeek];
-                        const rule = state.doubleBookingRules[dayName];
+                        const doubleBookingRule = state.doubleBookingRules[dayName];
 
                         const dayStart = new Date(currentDate);
                         dayStart.setHours(0, 0, 0, 0);
@@ -1191,18 +1275,16 @@
                         }));
 
                         let daySlotsHTML = '';
-                        const workingHoursStart = 9;
-                        const workingHoursEnd = 21;
                         const slotDuration = 60; // minutes
 
-                        for (let hour = workingHoursStart; hour < workingHoursEnd; hour++) {
+                        for (let hour = workHoursRule.startTime; hour < workHoursRule.endTime; hour++) {
                             const slotStart = new Date(currentDate);
                             slotStart.setHours(hour, 0, 0, 0);
                             const slotEnd = new Date(slotStart);
                             slotEnd.setMinutes(slotStart.getMinutes() + slotDuration);
                             const timeString = slotStart.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 
-                            const isDoubleBookingTime = rule && rule.enabled && hour >= rule.startTime && hour < rule.endTime;
+                            const isDoubleBookingTime = doubleBookingRule && doubleBookingRule.enabled && hour >= doubleBookingRule.startTime && hour < doubleBookingRule.endTime;
 
                             if (isDoubleBookingTime) {
                                 const overlappingEvents = busySlots.filter(busySlot => (slotStart < busySlot.end && slotEnd > busySlot.start));
@@ -1924,6 +2006,11 @@
                 });
 
                 // Event listeners for double booking rules
+                document.getElementById('toggle-double-booking-btn')?.addEventListener('click', () => {
+                    state.isDoubleBookingExpanded = !state.isDoubleBookingExpanded;
+                    renderSettingsView();
+                });
+
                 document.querySelectorAll('.day-enable-checkbox').forEach(checkbox => {
                     checkbox.addEventListener('change', (e) => {
                         const day = e.target.dataset.day;
@@ -1960,6 +2047,51 @@
                     } finally {
                         button.disabled = false;
                         button.textContent = 'Salvează Regulile';
+                    }
+                });
+
+                // Event listeners for working hours
+                document.getElementById('toggle-working-hours-btn')?.addEventListener('click', () => {
+                    state.isWorkingHoursExpanded = !state.isWorkingHoursExpanded;
+                    renderSettingsView();
+                });
+
+                document.querySelectorAll('.wh-day-enable-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const day = e.target.dataset.day;
+                        const timeInputs = document.querySelectorAll(`.wh-time-input[data-day="${day}"]`);
+                        timeInputs.forEach(input => input.disabled = !e.target.checked);
+                    });
+                });
+
+                document.getElementById('save-working-hours-btn')?.addEventListener('click', async () => {
+                    const button = document.getElementById('save-working-hours-btn');
+                    button.disabled = true;
+                    button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se salvează...`;
+                    lucide.createIcons();
+
+                    const newHours = {};
+                    document.querySelectorAll('.wh-day-enable-checkbox').forEach(checkbox => {
+                        const day = checkbox.dataset.day;
+                        const enabled = checkbox.checked;
+                        const startTime = document.querySelector(`.wh-time-input[data-day="${day}"][data-type="start"]`).value;
+                        const endTime = document.querySelector(`.wh-time-input[data-day="${day}"][data-type="end"]`).value;
+                        newHours[day] = {
+                            enabled,
+                            startTime: parseInt(startTime, 10),
+                            endTime: parseInt(endTime, 10)
+                        };
+                    });
+
+                    try {
+                        await firestoreApi.saveWorkingHours(newHours);
+                        state.workingHours = newHours;
+                        renderNotification('Programul de lucru a fost salvat!', 'success');
+                    } catch (err) {
+                        renderNotification(`Eroare la salvarea programului: ${err.message}`, 'error');
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = 'Salvează Programul';
                     }
                 });
             };
