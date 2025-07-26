@@ -67,7 +67,7 @@
         <!-- Main App View -->
         <div id="main-app-view">
             <!-- Configuration Section -->
-            <div id="config-section" class="max-w-2xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
+            <div id="config-section" class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
 
                 <!-- Authorization Section -->
                 <div id="auth-section">
@@ -103,7 +103,7 @@
                 <hr id="config-hr" class="border-gray-600" style="display: none;"/>
 
                 <div id="main-config-controls" style="display: none;">
-                    <div class="space-y-4">
+                    <div class="space-y-6">
                         <div>
                             <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">ID Google Calendar</label>
                             <div class="flex items-center space-x-2">
@@ -114,49 +114,47 @@
                             </div>
                         </div>
 
-                        <div class="relative">
+                        <div id="tab-controls" class="space-y-4">
+                             <div class="flex flex-wrap items-center justify-center gap-2">
+                                <button data-tab="dashboard" class="tab-button"></button>
+                                <button data-tab="add" class="tab-button"></button>
+                                <button data-tab="today" class="tab-button"></button>
+                                <button data-tab="tomorrow" class="tab-button"></button>
+                                <button data-tab="all" class="tab-button"></button>
+                                <button data-tab="instructors" class="tab-button"></button>
+                                <button data-tab="settings" class="tab-button"></button>
+                            </div>
+                        </div>
+
+                        <div class="relative filter-control">
                             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
                             <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
                         </div>
 
-                        <!-- Discipline Filter -->
-                        <div class="filter-control">
-                            <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
-                            <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <!-- Options will be populated dynamically -->
-                            </select>
-                        </div>
-
-                        <!-- Last Session Filter -->
-                        <div class="filter-control">
-                            <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-300">Afișează doar clienții în ultima ședință</span>
-                            </label>
-                        </div>
-
-                        <div id="tab-controls">
-                            <div class="flex justify-center border-b border-gray-700 flex-wrap">
-                                <button data-tab="dashboard" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                                <button data-tab="add" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                                <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                                <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                                <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                                <button data-tab="instructors" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
-                                <button data-tab="settings" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                        <div class="flex flex-wrap gap-4 filter-control">
+                            <!-- Discipline Filter -->
+                            <div class="flex-1 min-w-[200px]">
+                                <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
+                                <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <!-- Options will be populated dynamically -->
+                                </select>
                             </div>
-                             <div class="mt-4 space-y-2">
-                                <button id="fetchEventsBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
-                                    Afișează programările
-                                </button>
-                                <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
-                                    Incrementează Toate Sesiunile pentru Mâine
-                                </button>
-                                <button id="reportToInstructorsBtn" class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
-                                    Raportează Instructorilor pe WhatsApp
-                                </button>
+
+                            <!-- Last Session Filter -->
+                            <div class="flex items-end pb-1">
+                                <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm font-medium text-gray-300">Afișează doar clienții în ultima ședință</span>
+                                </label>
                             </div>
                         </div>
+                        
+                        <div class="mt-4 space-y-2">
+                            <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                                Incrementează Toate Sesiunile pentru Mâine
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -331,9 +329,7 @@
                 authBtn: document.getElementById('authBtn'),
                 calendarIdInput: document.getElementById('calendarId'),
                 searchQueryInput: document.getElementById('searchQuery'),
-                fetchEventsBtn: document.getElementById('fetchEventsBtn'),
                 incrementAllBtn: document.getElementById('incrementAllBtn'),
-                reportToInstructorsBtn: document.getElementById('reportToInstructorsBtn'),
                 notificationArea: document.getElementById('notification-area'),
                 resultsArea: document.getElementById('results-area'),
                 tabControls: document.getElementById('tab-controls'),
@@ -1688,9 +1684,7 @@
             // --- EVENT LISTENERS ---
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
-                dom.fetchEventsBtn.addEventListener('click', handleTabChange);
                 dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
-                dom.reportToInstructorsBtn.addEventListener('click', handleReportToInstructors);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -1963,6 +1957,16 @@
                     renderSettingsView();
                 });
 
+                 document.getElementById('toggle-double-booking-btn')?.addEventListener('click', () => {
+                    state.isDoubleBookingExpanded = !state.isDoubleBookingExpanded;
+                    renderSettingsView();
+                });
+
+                document.getElementById('toggle-working-hours-btn')?.addEventListener('click', () => {
+                    state.isWorkingHoursExpanded = !state.isWorkingHoursExpanded;
+                    renderSettingsView();
+                });
+
                 document.querySelectorAll('.variable-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const targetId = e.target.dataset.target;
@@ -2006,11 +2010,6 @@
                 });
 
                 // Event listeners for double booking rules
-                document.getElementById('toggle-double-booking-btn')?.addEventListener('click', () => {
-                    state.isDoubleBookingExpanded = !state.isDoubleBookingExpanded;
-                    renderSettingsView();
-                });
-
                 document.querySelectorAll('.day-enable-checkbox').forEach(checkbox => {
                     checkbox.addEventListener('change', (e) => {
                         const day = e.target.dataset.day;
@@ -2051,11 +2050,6 @@
                 });
 
                 // Event listeners for working hours
-                document.getElementById('toggle-working-hours-btn')?.addEventListener('click', () => {
-                    state.isWorkingHoursExpanded = !state.isWorkingHoursExpanded;
-                    renderSettingsView();
-                });
-
                 document.querySelectorAll('.wh-day-enable-checkbox').forEach(checkbox => {
                     checkbox.addEventListener('change', (e) => {
                         const day = e.target.dataset.day;
@@ -2107,35 +2101,35 @@
             };
 
             const updateUI = () => {
+                const tabConfig = {
+                    dashboard: { name: 'Dashboard', icon: 'layout-dashboard' },
+                    add: { name: 'Adaugă Programare', icon: 'calendar-plus' },
+                    today: { name: 'Astăzi', icon: 'calendar-check' },
+                    tomorrow: { name: 'Mâine', icon: 'calendar-clock' },
+                    all: { name: 'Toți Clienții', icon: 'users' },
+                    instructors: { name: 'Instructori', icon: 'user-cog' },
+                    settings: { name: 'Setări', icon: 'settings' }
+                };
+
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
-                    const tabNames = {
-                        dashboard: 'Dashboard',
-                        add: 'Adaugă Programare',
-                        today: 'Astăzi',
-                        tomorrow: 'Mâine',
-                        all: 'Toți Clienții',
-                        instructors: 'Instructori',
-                        settings: 'Setări'
-                    };
-                    btn.textContent = tabNames[tab];
-
+                    const config = tabConfig[tab];
+                    
+                    btn.innerHTML = `<i data-lucide="${config.icon}" class="h-4 w-4 mr-2"></i><span>${config.name}</span>`;
+                    
                     const isSelected = tab === state.activeTab;
-                    const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
-                    const unselectedClasses = 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50';
-                    btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
+                    const baseClasses = 'tab-button flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800';
+                    const selectedClasses = 'bg-blue-600 text-white shadow-md';
+                    const unselectedClasses = 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white';
+                    
+                    btn.className = `${baseClasses} ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
-
-                const tabTitle = { dashboard: 'dashboard', add: 'programare', today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii', settings: 'setările' }[state.activeTab];
-                dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
                 
                 const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
-                dom.searchQueryInput.parentElement.style.display = isClientTab ? 'block' : 'none';
-                dom.filterControls.forEach(el => el.style.display = isClientTab ? 'block' : 'none');
-                dom.lastSessionFilter.parentElement.style.display = isClientTab ? 'flex' : 'none';
-                dom.fetchEventsBtn.style.display = isClientTab ? 'block' : 'none';
+                document.querySelectorAll('.filter-control').forEach(el => el.style.display = isClientTab ? 'block' : 'none');
+                
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
-                dom.reportToInstructorsBtn.style.display = 'none'; // This button is now in the instructors tab
+                lucide.createIcons();
             };
 
             // --- MODAL FUNCTIONS ---
