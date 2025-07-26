@@ -37,6 +37,21 @@
         .modal-content {
             transition: transform 0.3s ease;
         }
+        /* Custom scrollbar for better aesthetics in dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* gray-500 */
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -123,6 +138,7 @@
                         <div id="tab-controls">
                             <div class="flex justify-center border-b border-gray-700 flex-wrap">
                                 <button data-tab="dashboard" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
+                                <button data-tab="add" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="today" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="tomorrow" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
                                 <button data-tab="all" class="tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200"></button>
@@ -131,7 +147,7 @@
                             </div>
                              <div class="mt-4 space-y-2">
                                 <button id="fetchEventsBtn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out">
-                                    Afișează programările pentru astăzi
+                                    Afișează programările
                                 </button>
                                 <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
                                     Incrementează Toate Sesiunile pentru Mâine
@@ -146,12 +162,12 @@
             </div>
 
             <!-- Notification Area -->
-            <div id="notification-area" class="max-w-4xl mx-auto mb-6"></div>
+            <div id="notification-area" class="max-w-7xl mx-auto mb-6"></div>
 
             <!-- Results Area -->
-            <div id="results-area" class="max-w-4xl mx-auto">
+            <div id="results-area" class="max-w-7xl mx-auto">
                 <!-- Loading spinner will be injected here -->
-                <!-- Client/Instructor/Settings list will be injected here -->
+                <!-- Client/Instructor/Settings/Add Appointment list will be injected here -->
             </div>
         </div>
     </div>
@@ -172,6 +188,50 @@
             <button id="close-modal-btn" class="mt-6 w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
                 Renunță
             </button>
+        </div>
+    </div>
+
+    <!-- Create Event Modal -->
+    <div id="create-event-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-lg transform scale-95">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-white">Adaugă Programare Nouă</h3>
+                <button id="close-create-modal-btn" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+            <form id="create-event-form" class="space-y-4">
+                <input type="hidden" id="event-start-time">
+                <input type="hidden" id="event-end-time">
+                <div>
+                    <label for="event-time-display" class="block text-sm font-medium text-gray-300 mb-1">Interval Orar</label>
+                    <input type="text" id="event-time-display" disabled class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="client-name" class="block text-sm font-medium text-gray-300 mb-1">Nume Client</label>
+                    <input type="text" id="client-name" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="client-phone" class="block text-sm font-medium text-gray-300 mb-1">Telefon Client</label>
+                    <input type="tel" id="client-phone" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="client-email" class="block text-sm font-medium text-gray-300 mb-1">Email Client</label>
+                    <input type="email" id="client-email" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="event-discipline" class="block text-sm font-medium text-gray-300 mb-1">Disciplina</label>
+                    <select id="event-discipline" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="submit" id="submit-event-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center">
+                        <i data-lucide="plus-circle" class="h-5 w-5 mr-2"></i>
+                        Creează Eveniment
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -219,7 +279,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Google Sign-In Configuration ---
             const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
-            const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
+            const SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
 
             // --- STATE MANAGEMENT ---
             let state = {
@@ -240,6 +300,12 @@
                 cancellationContext: null,
                 initialInstructorsLoaded: false, // Flag to track initial instructor load
                 isSettingsExpanded: false, // For settings accordion
+                disciplinesForBooking: [ // Updated list for the new event form
+                    'Chitară', 'Canto', 'Pian', 'Bas', 'Tobe', 'Productie'
+                ],
+                doubleBookingRules: { // Default rule
+                    'Miercuri': { enabled: true, startTime: 14, endTime: 21 }
+                },
                 messageTemplates: { // Default WhatsApp message templates
                     notification: `Salut {Nume}! Te contactăm pentru a-ți confirma prezența la cursul de {Disciplina} programat pentru {Data}, la ora {Ora}. Îți mulțumim și te așteptăm cu drag!`,
                     lastSession: `Salut {Nume}! Îți reamintim cu drag că sesiunea de {Data} este ultima din abonamentul tău. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`,
@@ -267,10 +333,14 @@
                 lastSessionFilter: document.getElementById('lastSessionFilter'),
                 openCalendarBtn: document.getElementById('openCalendarBtn'),
                 cancelModal: document.getElementById('cancel-modal'),
-                modalContent: document.querySelector('.modal-content'),
+                modalContent: document.querySelector('#cancel-modal .modal-content'),
                 cancelByInstructorBtn: document.getElementById('cancel-by-instructor-btn'),
                 cancelByClientBtn: document.getElementById('cancel-by-client-btn'),
                 closeModalBtn: document.getElementById('close-modal-btn'),
+                createEventModal: document.getElementById('create-event-modal'),
+                createEventForm: document.getElementById('create-event-form'),
+                closeCreateModalBtn: document.getElementById('close-create-modal-btn'),
+                submitEventBtn: document.getElementById('submit-event-btn'),
             };
 
             // --- DEBOUNCE UTILITY ---
@@ -349,6 +419,17 @@
                     if (!db) return;
                     const docRef = doc(db, "app-settings", "whatsapp-templates");
                     await setDoc(docRef, templates, { merge: true });
+                },
+                async getDoubleBookingRules() {
+                    if (!db) return null;
+                    const docRef = doc(db, "app-settings", "double-booking-rules");
+                    const docSnap = await getDoc(docRef);
+                    return docSnap.exists() ? docSnap.data() : null;
+                },
+                async saveDoubleBookingRules(rules) {
+                    if (!db) return;
+                    const docRef = doc(db, "app-settings", "double-booking-rules");
+                    await setDoc(docRef, rules);
                 }
             };
 
@@ -381,12 +462,23 @@
                     if (templates) {
                         state.messageTemplates = { ...state.messageTemplates, ...templates };
                     } else {
-                        // If no templates in DB, save the defaults
                         firestoreApi.saveMessageTemplates(state.messageTemplates);
                     }
                 }).catch(err => {
                     console.error("Error fetching message templates:", err);
                     renderNotification("Nu s-au putut încărca șabloanele de mesaje.", "error");
+                });
+
+                // Fetch double booking rules
+                firestoreApi.getDoubleBookingRules().then(rules => {
+                    if (rules) {
+                        state.doubleBookingRules = rules;
+                    } else {
+                        firestoreApi.saveDoubleBookingRules(state.doubleBookingRules);
+                    }
+                }).catch(err => {
+                    console.error("Error fetching double booking rules:", err);
+                    renderNotification("Nu s-au putut încărca regulile de rezervare dublă.", "error");
                 });
             }
 
@@ -561,6 +653,22 @@
                     if (data.error) throw new Error(data.error.message);
                     return data;
                 },
+                async createEvent(eventData) {
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(eventData)
+                    });
+                    const data = await response.json();
+                    if (data.error) {
+                        throw new Error(data.error.message);
+                    }
+                    return data;
+                }
             };
 
             // --- RENDER & UI FUNCTIONS ---
@@ -794,6 +902,7 @@
                  if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
                  if (state.activeTab === 'settings') return 'Setări Aplicație';
                  if (state.activeTab === 'dashboard') return 'Dashboard';
+                 if (state.activeTab === 'add') return 'Adaugă Programare Nouă';
                 return 'Sumar Toți Clienții';
             };
 
@@ -843,39 +952,83 @@
             };
             
             const renderSettingsView = () => {
-                const isExpanded = state.isSettingsExpanded;
                 const settingsHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
                         <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
                             <h2 class="text-2xl font-bold text-gray-200">Setări Aplicație</h2>
                         </div>
-                        <div class="p-6">
-                            <div class="border border-gray-700 rounded-lg">
-                                <button id="toggle-messages-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-t-lg focus:outline-none">
-                                    <span class="text-lg font-semibold text-gray-200">Modifică Mesaje WhatsApp</span>
-                                    <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
-                                        <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
-                                    </span>
-                                </button>
-                                <div id="messages-container" class="p-6 space-y-6 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
-                                    ${createMessageTemplateEditorHTML('notification', 'Notificare Ședință', state.messageTemplates.notification)}
-                                    ${createMessageTemplateEditorHTML('lastSession', 'Notificare Ultima Ședință', state.messageTemplates.lastSession)}
-                                    ${createMessageTemplateEditorHTML('newSubscription', 'Notificare Plată Nouă', state.messageTemplates.newSubscription)}
-                                    ${createMessageTemplateEditorHTML('cancelByInstructor', 'Anulare de către Instructor', state.messageTemplates.cancelByInstructor)}
-                                    ${createMessageTemplateEditorHTML('cancelByClient', 'Anulare de către Client', state.messageTemplates.cancelByClient)}
-                                    <div class="flex justify-end pt-4">
-                                        <button id="save-messages-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
-                                            Salvează Mesajele
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="p-6 space-y-6">
+                            ${createMessageSettingsHTML()}
+                            ${createDoubleBookingSettingsHTML()}
                         </div>
                     </div>
                 `;
                 dom.resultsArea.innerHTML = settingsHTML;
                 lucide.createIcons();
                 attachSettingsEventListeners();
+            };
+
+            const createMessageSettingsHTML = () => {
+                const isExpanded = state.isSettingsExpanded;
+                 return `
+                    <div class="border border-gray-700 rounded-lg">
+                        <button id="toggle-messages-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-t-lg focus:outline-none">
+                            <span class="text-lg font-semibold text-gray-200">Modifică Mesaje WhatsApp</span>
+                            <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                            </span>
+                        </button>
+                        <div id="messages-container" class="p-6 space-y-6 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
+                            ${createMessageTemplateEditorHTML('notification', 'Notificare Ședință', state.messageTemplates.notification)}
+                            ${createMessageTemplateEditorHTML('lastSession', 'Notificare Ultima Ședință', state.messageTemplates.lastSession)}
+                            ${createMessageTemplateEditorHTML('newSubscription', 'Notificare Plată Nouă', state.messageTemplates.newSubscription)}
+                            ${createMessageTemplateEditorHTML('cancelByInstructor', 'Anulare de către Instructor', state.messageTemplates.cancelByInstructor)}
+                            ${createMessageTemplateEditorHTML('cancelByClient', 'Anulare de către Client', state.messageTemplates.cancelByClient)}
+                            <div class="flex justify-end pt-4">
+                                <button id="save-messages-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                    Salvează Mesajele
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const createDoubleBookingSettingsHTML = () => {
+                const days = { 'Luni': 1, 'Marți': 2, 'Miercuri': 3, 'Joi': 4, 'Vineri': 5, 'Sâmbătă': 6 };
+                let daysHTML = Object.keys(days).map(dayName => {
+                    const rule = state.doubleBookingRules[dayName] || { enabled: false, startTime: 14, endTime: 21 };
+                    return `
+                        <div class="flex items-center space-x-4 p-2 rounded-md hover:bg-gray-700/50">
+                            <label class="flex items-center space-x-2 w-32 cursor-pointer">
+                                <input type="checkbox" data-day="${dayName}" class="day-enable-checkbox h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500" ${rule.enabled ? 'checked' : ''}>
+                                <span class="font-medium text-gray-300">${dayName}</span>
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" min="9" max="21" value="${rule.startTime}" data-day="${dayName}" data-type="start" class="time-input w-20 px-2 py-1 border border-gray-600 bg-gray-800 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" ${!rule.enabled ? 'disabled' : ''}>
+                                <span>-</span>
+                                <input type="number" min="9" max="21" value="${rule.endTime}" data-day="${dayName}" data-type="end" class="time-input w-20 px-2 py-1 border border-gray-600 bg-gray-800 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" ${!rule.enabled ? 'disabled' : ''}>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                     <div class="border border-gray-700 rounded-lg">
+                        <div class="w-full flex justify-between items-center p-4 bg-gray-700/50 rounded-t-lg">
+                            <span class="text-lg font-semibold text-gray-200">Reguli de Rezervare Dublă</span>
+                        </div>
+                        <div class="p-6 space-y-4 border-t border-gray-700">
+                            <p class="text-sm text-gray-400">Selectează zilele și intervalele orare în care sunt permise două programări pe oră.</p>
+                            ${daysHTML}
+                            <div class="flex justify-end pt-4">
+                                <button id="save-booking-rules-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                    Salvează Regulile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             };
 
             const createMessageTemplateEditorHTML = (id, label, value) => {
@@ -973,6 +1126,126 @@
                 lucide.createIcons();
             };
 
+            const renderAddAppointmentView = () => {
+                dom.resultsArea.innerHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                            <h2 class="text-2xl font-bold text-gray-200">Adaugă Programare</h2>
+                        </div>
+                        <div class="p-6">
+                            <div id="availability-schedule" class="flex overflow-x-auto space-x-4 pb-4">
+                                <!-- 14-day schedule will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                `;
+                renderAvailabilitySchedule();
+            };
+
+            const renderAvailabilitySchedule = async () => {
+                const container = document.getElementById('availability-schedule');
+                if (!container) return;
+
+                container.innerHTML = `<div class="flex items-center justify-center p-10 w-full"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-blue-400"></i><span class="ml-3 text-lg">Se încarcă disponibilitatea...</span></div>`;
+                lucide.createIcons();
+
+                try {
+                    const startDate = new Date();
+                    startDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date();
+                    endDate.setDate(startDate.getDate() + 20); // Fetch a bit more to account for skipped Sundays
+
+                    const allEvents = await api.getEventsForDateRange(startDate, endDate);
+                    
+                    let scheduleHTML = '';
+                    let daysShown = 0;
+                    let dayOffset = 0;
+                    const dayNames = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+
+                    while (daysShown < 14) {
+                        const currentDate = new Date(startDate);
+                        currentDate.setDate(startDate.getDate() + dayOffset);
+                        dayOffset++;
+
+                        const dayOfWeek = currentDate.getDay();
+                        if (dayOfWeek === 0) continue; // Skip Sundays
+
+                        daysShown++;
+
+                        const dayName = dayNames[dayOfWeek];
+                        const rule = state.doubleBookingRules[dayName];
+
+                        const dayStart = new Date(currentDate);
+                        dayStart.setHours(0, 0, 0, 0);
+                        const dayEnd = new Date(currentDate);
+                        dayEnd.setHours(23, 59, 59, 999);
+
+                        const eventsForDay = allEvents.filter(event => {
+                            const eventStart = new Date(event.start.dateTime || event.start.date);
+                            return eventStart >= dayStart && eventStart <= dayEnd;
+                        });
+
+                        const busySlots = eventsForDay.map(event => ({
+                            start: new Date(event.start.dateTime || event.start.date),
+                            end: new Date(event.end.dateTime || event.end.date)
+                        }));
+
+                        let daySlotsHTML = '';
+                        const workingHoursStart = 9;
+                        const workingHoursEnd = 21;
+                        const slotDuration = 60; // minutes
+
+                        for (let hour = workingHoursStart; hour < workingHoursEnd; hour++) {
+                            const slotStart = new Date(currentDate);
+                            slotStart.setHours(hour, 0, 0, 0);
+                            const slotEnd = new Date(slotStart);
+                            slotEnd.setMinutes(slotStart.getMinutes() + slotDuration);
+                            const timeString = slotStart.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+
+                            const isDoubleBookingTime = rule && rule.enabled && hour >= rule.startTime && hour < rule.endTime;
+
+                            if (isDoubleBookingTime) {
+                                const overlappingEvents = busySlots.filter(busySlot => (slotStart < busySlot.end && slotEnd > busySlot.start));
+                                const busyCount = overlappingEvents.length;
+
+                                if (busyCount < 2) {
+                                    if (busyCount === 0) {
+                                        daySlotsHTML += `<button class="time-slot-btn w-full text-left p-2 rounded-md transition-colors duration-200 bg-gray-700 hover:bg-blue-600 text-gray-200" data-start-time="${slotStart.toISOString()}" data-end-time="${slotEnd.toISOString()}">${timeString} (Slot 1)</button>`;
+                                    }
+                                    daySlotsHTML += `<button class="time-slot-btn w-full text-left p-2 rounded-md transition-colors duration-200 bg-gray-700 hover:bg-blue-600 text-gray-200" data-start-time="${slotStart.toISOString()}" data-end-time="${slotEnd.toISOString()}">${timeString} (Slot 2)</button>`;
+                                }
+                            } else {
+                                const isBusy = busySlots.some(busySlot => (slotStart < busySlot.end && slotEnd > busySlot.start));
+                                if (!isBusy) {
+                                    daySlotsHTML += `<button class="time-slot-btn w-full text-left p-2 rounded-md transition-colors duration-200 bg-gray-700 hover:bg-blue-600 text-gray-200" data-start-time="${slotStart.toISOString()}" data-end-time="${slotEnd.toISOString()}">${timeString}</button>`;
+                                }
+                            }
+                        }
+
+                        const dateString = currentDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' });
+
+                        scheduleHTML += `
+                            <div class="day-schedule flex-shrink-0 w-48 bg-gray-700/50 rounded-lg p-3">
+                                <h3 class="font-bold text-center text-blue-400">${dayName}</h3>
+                                <p class="text-sm text-center text-gray-400 mb-3">${dateString}</p>
+                                <div class="space-y-2">
+                                    ${daySlotsHTML || '<p class="text-xs text-center text-gray-500 py-4">Niciun interval disponibil</p>'}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    container.innerHTML = scheduleHTML;
+                    attachTimeSlotEventListeners();
+
+                } catch (err) {
+                    renderNotification(`Eroare la preluarea disponibilității: ${err.message}`, 'error');
+                    container.innerHTML = `<p class="text-red-400 p-4">Nu s-a putut încărca programul.</p>`;
+                } finally {
+                    lucide.createIcons();
+                }
+            };
+
 
             // --- EVENT HANDLERS ---
             const handleTabChange = async () => {
@@ -986,6 +1259,10 @@
                 }
                 if (state.activeTab === 'dashboard') {
                     handleDashboardLoad();
+                    return;
+                }
+                if (state.activeTab === 'add') {
+                    renderAddAppointmentView();
                     return;
                 }
 
@@ -1118,7 +1395,7 @@
             const handleDeclineClick = (button) => {
                 const { eventId, name, discipline, phone } = button.dataset;
                 state.cancellationContext = { eventId, name, discipline, phone, originalButton: button };
-                showModal();
+                showModal(dom.cancelModal);
             };
 
             const handlePostHomeworkClick = async (button) => {
@@ -1375,12 +1652,19 @@
                     renderClients(state.clients, state.clientFirebaseData);
                 });
 
-                dom.closeModalBtn.addEventListener('click', hideModal);
+                dom.closeModalBtn.addEventListener('click', () => hideModal(dom.cancelModal));
                 dom.cancelModal.addEventListener('click', (e) => {
-                    if (e.target === dom.cancelModal) hideModal();
+                    if (e.target === dom.cancelModal) hideModal(dom.cancelModal);
                 });
                 dom.cancelByInstructorBtn.addEventListener('click', handleCancelByInstructor);
                 dom.cancelByClientBtn.addEventListener('click', handleCancelByClient);
+
+                // New event modal listeners
+                dom.closeCreateModalBtn.addEventListener('click', () => hideModal(dom.createEventModal));
+                dom.createEventModal.addEventListener('click', (e) => {
+                    if(e.target === dom.createEventModal) hideModal(dom.createEventModal);
+                });
+                dom.createEventForm.addEventListener('submit', handleCreateEventSubmit);
             }
 
             const attachClientEventListeners = () => {
@@ -1638,17 +1922,71 @@
                         button.textContent = 'Salvează Mesajele';
                     }
                 });
+
+                // Event listeners for double booking rules
+                document.querySelectorAll('.day-enable-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const day = e.target.dataset.day;
+                        const timeInputs = document.querySelectorAll(`.time-input[data-day="${day}"]`);
+                        timeInputs.forEach(input => input.disabled = !e.target.checked);
+                    });
+                });
+
+                document.getElementById('save-booking-rules-btn')?.addEventListener('click', async () => {
+                    const button = document.getElementById('save-booking-rules-btn');
+                    button.disabled = true;
+                    button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se salvează...`;
+                    lucide.createIcons();
+
+                    const newRules = {};
+                    document.querySelectorAll('.day-enable-checkbox').forEach(checkbox => {
+                        const day = checkbox.dataset.day;
+                        const enabled = checkbox.checked;
+                        const startTime = document.querySelector(`.time-input[data-day="${day}"][data-type="start"]`).value;
+                        const endTime = document.querySelector(`.time-input[data-day="${day}"][data-type="end"]`).value;
+                        newRules[day] = {
+                            enabled,
+                            startTime: parseInt(startTime, 10),
+                            endTime: parseInt(endTime, 10)
+                        };
+                    });
+
+                    try {
+                        await firestoreApi.saveDoubleBookingRules(newRules);
+                        state.doubleBookingRules = newRules;
+                        renderNotification('Regulile de rezervare dublă au fost salvate!', 'success');
+                    } catch (err) {
+                        renderNotification(`Eroare la salvarea regulilor: ${err.message}`, 'error');
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = 'Salvează Regulile';
+                    }
+                });
+            };
+
+            const attachTimeSlotEventListeners = () => {
+                document.querySelectorAll('.time-slot-btn').forEach(button => {
+                    if (button.disabled) return;
+                    button.addEventListener('click', () => {
+                        const { startTime, endTime } = button.dataset;
+                        showCreateEventModal(startTime, endTime);
+                    });
+                });
             };
 
             const updateUI = () => {
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
-                    if (tab === 'dashboard') btn.textContent = 'Dashboard';
-                    if (tab === 'today') btn.textContent = 'Astăzi';
-                    if (tab === 'tomorrow') btn.textContent = 'Mâine';
-                    if (tab === 'all') btn.textContent = 'Toți Clienții';
-                    if (tab === 'instructors') btn.textContent = 'Instructori';
-                    if (tab === 'settings') btn.textContent = 'Setări';
+                    const tabNames = {
+                        dashboard: 'Dashboard',
+                        add: 'Adaugă Programare',
+                        today: 'Astăzi',
+                        tomorrow: 'Mâine',
+                        all: 'Toți Clienții',
+                        instructors: 'Instructori',
+                        settings: 'Setări'
+                    };
+                    btn.textContent = tabNames[tab];
 
                     const isSelected = tab === state.activeTab;
                     const selectedClasses = 'border-b-2 border-blue-400 text-blue-400 bg-blue-900/40';
@@ -1656,7 +1994,7 @@
                     btn.className = `tab-button flex-1 text-center px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
 
-                const tabTitle = { dashboard: 'dashboard', today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii', settings: 'setările' }[state.activeTab];
+                const tabTitle = { dashboard: 'dashboard', add: 'programare', today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții', instructors: 'instructorii', settings: 'setările' }[state.activeTab];
                 dom.fetchEventsBtn.textContent = `Afișează ${tabTitle}`;
                 
                 const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
@@ -1665,32 +2003,97 @@
                 dom.lastSessionFilter.parentElement.style.display = isClientTab ? 'flex' : 'none';
                 dom.fetchEventsBtn.style.display = isClientTab ? 'block' : 'none';
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
-                dom.reportToInstructorsBtn.style.display = 'none';
+                dom.reportToInstructorsBtn.style.display = 'none'; // This button is now in the instructors tab
             };
 
             // --- MODAL FUNCTIONS ---
-            const showModal = () => {
-                dom.cancelModal.classList.remove('hidden');
+            const showModal = (modalElement) => {
+                modalElement.classList.remove('hidden');
                 setTimeout(() => {
-                    dom.cancelModal.classList.remove('opacity-0');
-                    dom.modalContent.classList.remove('scale-95');
+                    modalElement.classList.remove('opacity-0');
+                    modalElement.querySelector('.modal-content').classList.remove('scale-95');
                 }, 10);
             };
 
-            const hideModal = () => {
-                dom.cancelModal.classList.add('opacity-0');
-                dom.modalContent.classList.add('scale-95');
+            const hideModal = (modalElement) => {
+                modalElement.classList.add('opacity-0');
+                modalElement.querySelector('.modal-content').classList.add('scale-95');
                 setTimeout(() => {
-                    dom.cancelModal.classList.add('hidden');
-                    state.cancellationContext = null;
+                    modalElement.classList.add('hidden');
+                    if (modalElement.id === 'cancel-modal') {
+                        state.cancellationContext = null;
+                    }
                 }, 300);
             };
+
+            const showCreateEventModal = (startTime, endTime) => {
+                const start = new Date(startTime);
+                const end = new Date(endTime);
+                document.getElementById('event-start-time').value = startTime;
+                document.getElementById('event-end-time').value = endTime;
+                document.getElementById('event-time-display').value = 
+                    `${start.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' })} la ${start.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}`;
+                
+                const disciplineSelect = document.getElementById('event-discipline');
+                disciplineSelect.innerHTML = state.disciplinesForBooking
+                    .map(d => `<option value="${d}">${d}</option>`)
+                    .join('');
+
+                dom.createEventForm.reset(); // Clear previous inputs
+                showModal(dom.createEventModal);
+            };
+
+            async function handleCreateEventSubmit(e) {
+                e.preventDefault();
+                const button = dom.submitEventBtn;
+                button.disabled = true;
+                button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 mr-2 animate-spin"></i> Se creează...`;
+                lucide.createIcons();
+
+                try {
+                    const name = document.getElementById('client-name').value.trim();
+                    const phone = document.getElementById('client-phone').value.trim();
+                    const email = document.getElementById('client-email').value.trim();
+                    const discipline = document.getElementById('event-discipline').value;
+                    const startTime = document.getElementById('event-start-time').value;
+                    const endTime = document.getElementById('event-end-time').value;
+
+                    if (!name || !phone || !email || !discipline) {
+                        throw new Error("Toate câmpurile sunt obligatorii.");
+                    }
+
+                    const eventData = {
+                        summary: `${name} - ${discipline} - Sedinta de proba`,
+                        description: `Telefon: ${phone}\nEmail: ${email}`,
+                        start: { dateTime: startTime, timeZone: 'Europe/Bucharest' },
+                        end: { dateTime: endTime, timeZone: 'Europe/Bucharest' },
+                        attendees: [{ email: email }],
+                        colorId: '3' // Purple
+                    };
+
+                    await api.createEvent(eventData);
+                    
+                    // Also save client to Firestore if they don't exist
+                    await firestoreApi.saveClientData(name, { name, phone, discipline, subscription: '4', assignedInstructor: '' });
+
+                    renderNotification(`Programarea pentru ${name} a fost creată cu succes!`, 'success');
+                    hideModal(dom.createEventModal);
+                    renderAvailabilitySchedule(); // Refresh the view
+
+                } catch (err) {
+                    renderNotification(`Eroare la crearea evenimentului: ${err.message}`, 'error');
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = `<i data-lucide="plus-circle" class="h-5 w-5 mr-2"></i> Creează Eveniment`;
+                    lucide.createIcons();
+                }
+            }
 
             async function handleCancelByInstructor() {
                 if (!state.cancellationContext) return;
                 const { eventId, name, discipline, phone, originalButton } = state.cancellationContext;
 
-                hideModal();
+                hideModal(dom.cancelModal);
                 originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
                 originalButton.disabled = true;
                 lucide.createIcons();
@@ -1727,7 +2130,7 @@
                 if (!state.cancellationContext) return;
                 const { eventId, name, phone, discipline, originalButton } = state.cancellationContext;
 
-                hideModal();
+                hideModal(dom.cancelModal);
                 originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
                 originalButton.disabled = true;
                 lucide.createIcons();
