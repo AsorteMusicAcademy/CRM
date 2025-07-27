@@ -52,6 +52,11 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280; /* gray-500 */
         }
+        /* Ensure table layout is fixed for reports */
+        .report-table {
+            table-layout: fixed;
+            width: 100%;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200">
@@ -122,6 +127,8 @@
                                 <button data-tab="tomorrow" class="tab-button"></button>
                                 <button data-tab="all" class="tab-button"></button>
                                 <button data-tab="instructors" class="tab-button"></button>
+                                <button data-tab="financials" class="tab-button"></button>
+                                <button data-tab="reports" class="tab-button"></button>
                                 <button data-tab="settings" class="tab-button"></button>
                             </div>
                         </div>
@@ -165,7 +172,7 @@
             <!-- Results Area -->
             <div id="results-area" class="max-w-7xl mx-auto">
                 <!-- Loading spinner will be injected here -->
-                <!-- Client/Instructor/Settings/Add Appointment list will be injected here -->
+                <!-- Client/Instructor/Settings/Add Appointment/Reports list will be injected here -->
             </div>
         </div>
     </div>
@@ -240,6 +247,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -300,6 +308,12 @@
                 isSettingsExpanded: false, // For settings accordion
                 isWorkingHoursExpanded: false, // For working hours accordion
                 isDoubleBookingExpanded: false, // For double booking accordion
+                isApiKeysExpanded: false, // For API Keys accordion
+                financials: { // State for the financials tab
+                    allPayments: [],
+                    filteredPayments: [],
+                    searchQuery: ''
+                },
                 disciplinesForBooking: [ // Updated list for the new event form
                     'Chitară', 'Canto', 'Pian', 'Bas', 'Tobe', 'Productie'
                 ],
@@ -368,11 +382,19 @@
                     .replace(/{Ora}/g, data.time || '');
             };
 
+            const sanitizeForFirestoreId = (text) => {
+                if (!text) return '';
+                // Replace characters that are invalid for Firestore document IDs.
+                // Most notably, forward slashes.
+                return text.replace(/\//g, '-');
+            };
+
             // --- FIRESTORE API ---
             const firestoreApi = {
                 async getClientData(clientName) {
                     if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
-                    const docRef = doc(db, "clients", clientName);
+                    const sanitizedName = sanitizeForFirestoreId(clientName);
+                    const docRef = doc(db, "clients", sanitizedName);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -383,7 +405,8 @@
                 },
                 async saveClientData(clientName, data) {
                     if (!db || !clientName) return;
-                    const docRef = doc(db, "clients", clientName);
+                    const sanitizedName = sanitizeForFirestoreId(clientName);
+                    const docRef = doc(db, "clients", sanitizedName);
                     await setDoc(docRef, data, { merge: true });
                 },
                 async addInstructor(name, phone) {
@@ -447,6 +470,20 @@
                     if (!db) return;
                     const docRef = doc(db, "app-settings", "working-hours");
                     await setDoc(docRef, hours);
+                },
+                async getApiKey(keyName) {
+                    if (!db) return null;
+                    const docRef = doc(db, "app-settings", "api-keys");
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        return docSnap.data()[keyName] || null;
+                    }
+                    return null;
+                },
+                async saveApiKey(keyName, keyValue) {
+                    if (!db) return;
+                    const docRef = doc(db, "app-settings", "api-keys");
+                    await setDoc(docRef, { [keyName]: keyValue }, { merge: true });
                 }
             };
 
@@ -513,13 +550,14 @@
 
             // --- Google Calendar & Classroom API ---
             const api = {
-                async getEventsForDateRange(startDate, endDate) {
+                async getEventsForDateRange(startDate, endDate, showDeleted = false) {
                     const params = new URLSearchParams({
                         singleEvents: 'true',
                         orderBy: 'startTime',
                         maxResults: '2500',
                         timeMin: startDate.toISOString(),
                         timeMax: endDate.toISOString(),
+                        showDeleted: String(showDeleted)
                     });
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events?${params.toString()}`;
                     const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
@@ -929,6 +967,8 @@
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
                  if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
+                 if (state.activeTab === 'financials') return 'Date Financiare';
+                 if (state.activeTab === 'reports') return 'Rapoarte Avansate';
                  if (state.activeTab === 'settings') return 'Setări Aplicație';
                  if (state.activeTab === 'dashboard') return 'Dashboard';
                  if (state.activeTab === 'add') return 'Adaugă Programare Nouă';
@@ -987,6 +1027,7 @@
                             <h2 class="text-2xl font-bold text-gray-200">Setări Aplicație</h2>
                         </div>
                         <div class="p-6 space-y-6">
+                            ${createApiKeysSettingsHTML()}
                             ${createMessageSettingsHTML()}
                             ${createDoubleBookingSettingsHTML()}
                             ${createWorkingHoursSettingsHTML()}
@@ -996,6 +1037,37 @@
                 dom.resultsArea.innerHTML = settingsHTML;
                 lucide.createIcons();
                 attachSettingsEventListeners();
+            };
+
+            const createApiKeysSettingsHTML = () => {
+                const isExpanded = state.isApiKeysExpanded;
+                return `
+                    <div class="border border-gray-700 rounded-lg">
+                        <button id="toggle-api-keys-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
+                            <span class="text-lg font-semibold text-gray-200">Chei API (Integrări)</span>
+                            <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
+                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                            </span>
+                        </button>
+                        <div id="api-keys-container" class="p-6 space-y-6 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
+                            <div>
+                                <label for="stripe-key-input" class="block text-sm font-medium text-gray-300 mb-1">Cheie Restricționată Stripe</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="password" id="stripe-key-input" placeholder="rk_live_..." class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <button id="save-stripe-key-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Salvează</button>
+                                </div>
+                                <div class="mt-2 p-3 rounded-md bg-yellow-900/50 border border-yellow-700 text-yellow-300 text-xs">
+                                    <div class="flex items-start">
+                                        <i data-lucide="shield-alert" class="h-4 w-4 mr-2 mt-0.5 flex-shrink-0"></i>
+                                        <span>
+                                            <span class="font-bold">Atenție:</span> Salvați această cheie aici doar pentru a fi utilizată de un dezvoltator pentru a construi o integrare de backend sigură (ex: Firebase Cloud Function). Nu utilizați această cheie direct în aplicație pentru a prelua date, deoarece ar expune-o public.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             };
 
             const createMessageSettingsHTML = () => {
@@ -1323,6 +1395,109 @@
                     lucide.createIcons();
                 }
             };
+            
+            const renderReportsView = () => {
+                const today = new Date().toISOString().split('T')[0];
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+                dom.resultsArea.innerHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
+                        <!-- Attendance Report -->
+                        <div id="attendance-report-section" class="report-section border border-gray-700 rounded-lg p-6">
+                            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                                <h3 class="text-xl font-bold text-white">Raport de Prezență</h3>
+                                <button id="export-attendance" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"><i data-lucide="download" class="h-4 w-4"></i>Exportă CSV</button>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                                <div class="flex-grow">
+                                    <label for="attendance-start-date" class="block text-sm font-medium text-gray-300 mb-1">Data de început</label>
+                                    <input type="date" id="attendance-start-date" value="${thirtyDaysAgoStr}" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex-grow">
+                                    <label for="attendance-end-date" class="block text-sm font-medium text-gray-300 mb-1">Data de sfârșit</label>
+                                    <input type="date" id="attendance-end-date" value="${today}" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <button id="generate-attendance-report" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex-shrink-0">Generează Raport</button>
+                            </div>
+                            <div id="attendance-report-results" class="overflow-x-auto"></div>
+                        </div>
+                        
+                        <!-- Client Retention Report -->
+                        <div id="retention-report-section" class="report-section border border-gray-700 rounded-lg p-6">
+                            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                                <h3 class="text-xl font-bold text-white">Raport Retenție Clienți</h3>
+                                <button id="export-retention" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"><i data-lucide="download" class="h-4 w-4"></i>Exportă CSV</button>
+                            </div>
+                             <div class="flex flex-wrap gap-4 items-end mb-4">
+                                <button id="generate-retention-report" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Generează Raport de Retenție (Ultimele 90 de zile)</button>
+                            </div>
+                            <div id="retention-report-results" class="overflow-x-auto"></div>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                attachReportsEventListeners();
+            };
+
+            const renderFinancialsView = () => {
+                const today = new Date().toISOString().split('T')[0];
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+                dom.resultsArea.innerHTML = `
+                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
+                        <!-- Financial Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-700/50 p-6 rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-400">Venituri (ultimele 30 de zile)</p>
+                                    <p id="revenue-stat" class="text-4xl font-bold text-white">... RON</p>
+                                </div>
+                                <div class="bg-green-500/20 p-3 rounded-full">
+                                    <i data-lucide="trending-up" class="h-8 w-8 text-green-400"></i>
+                                </div>
+                            </div>
+                            <div class="bg-gray-700/50 p-6 rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-400">Cheltuială medie/client</p>
+                                    <p id="avg-spend-stat" class="text-4xl font-bold text-white">... RON</p>
+                                </div>
+                                <div class="bg-blue-500/20 p-3 rounded-full">
+                                    <i data-lucide="wallet" class="h-8 w-8 text-blue-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payments List -->
+                        <div id="payments-list-section" class="report-section border border-gray-700 rounded-lg p-6">
+                             <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+                                <h3 class="text-xl font-bold text-white">Istoric Plăți</h3>
+                                <div class="relative w-full md:w-1/3">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
+                                    <input type="text" id="financial-client-search" placeholder="Caută client sau email..." class="block w-full rounded-md border-gray-600 bg-gray-900/50 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                                </div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+                                <div class="flex-grow">
+                                    <label for="payments-start-date" class="block text-sm font-medium text-gray-300 mb-1">Data de început</label>
+                                    <input type="date" id="payments-start-date" value="${thirtyDaysAgoStr}" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex-grow">
+                                    <label for="payments-end-date" class="block text-sm font-medium text-gray-300 mb-1">Data de sfârșit</label>
+                                    <input type="date" id="payments-end-date" value="${today}" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <button id="generate-payments-list" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex-shrink-0">Generează Listă</button>
+                            </div>
+                            <div id="payments-list-results" class="overflow-x-auto"></div>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                attachFinancialsEventListeners();
+            };
 
 
             // --- EVENT HANDLERS ---
@@ -1341,6 +1516,14 @@
                 }
                 if (state.activeTab === 'add') {
                     renderAddAppointmentView();
+                    return;
+                }
+                if (state.activeTab === 'reports') {
+                    renderReportsView();
+                    return;
+                }
+                 if (state.activeTab === 'financials') {
+                    renderFinancialsView();
                     return;
                 }
 
@@ -1952,6 +2135,11 @@
             };
 
             const attachSettingsEventListeners = () => {
+                document.getElementById('toggle-api-keys-btn')?.addEventListener('click', () => {
+                    state.isApiKeysExpanded = !state.isApiKeysExpanded;
+                    renderSettingsView();
+                });
+
                 document.getElementById('toggle-messages-btn')?.addEventListener('click', () => {
                     state.isSettingsExpanded = !state.isSettingsExpanded;
                     renderSettingsView();
@@ -2006,6 +2194,22 @@
                     } finally {
                         button.disabled = false;
                         button.textContent = 'Salvează Mesajele';
+                    }
+                });
+
+                document.getElementById('save-stripe-key-btn')?.addEventListener('click', async () => {
+                    const input = document.getElementById('stripe-key-input');
+                    const key = input.value.trim();
+                    if (!key) {
+                        renderNotification("Te rugăm să introduci o cheie.", "error");
+                        return;
+                    }
+                    try {
+                        await firestoreApi.saveApiKey('stripeRestrictedKey', key);
+                        renderNotification('Cheia Stripe a fost salvată cu succes.', 'success');
+                        input.value = '';
+                    } catch (err) {
+                        renderNotification(`Eroare la salvarea cheii: ${err.message}`, 'error');
                     }
                 });
 
@@ -2108,6 +2312,8 @@
                     tomorrow: { name: 'Mâine', icon: 'calendar-clock' },
                     all: { name: 'Toți Clienții', icon: 'users' },
                     instructors: { name: 'Instructori', icon: 'user-cog' },
+                    financials: { name: 'Financiar', icon: 'credit-card' },
+                    reports: { name: 'Rapoarte', icon: 'bar-chart-3' },
                     settings: { name: 'Setări', icon: 'settings' }
                 };
 
@@ -2126,7 +2332,7 @@
                 });
                 
                 const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
-                document.querySelectorAll('.filter-control').forEach(el => el.style.display = isClientTab ? 'block' : 'none');
+                document.querySelectorAll('.filter-control').forEach(el => el.style.display = isClientTab ? 'flex' : 'none');
                 
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
                 lucide.createIcons();
@@ -2429,9 +2635,10 @@
                     const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
 
                     if (name && discipline && phone) {
-                        const existingData = existingClientsMap.get(name);
+                        const sanitizedName = sanitizeForFirestoreId(name);
+                        const existingData = existingClientsMap.get(sanitizedName);
                         if (!existingData || existingData.discipline !== discipline || existingData.phone !== phone) {
-                            console.log(`Syncing data for ${name}: New or changed.`);
+                            console.log(`Syncing data for ${sanitizedName}: New or changed.`);
                             firestoreApi.saveClientData(name, {
                                 name: name,
                                 discipline: discipline,
@@ -2449,6 +2656,292 @@
                 }
                 return processedClients;
             };
+
+            // --- Reports Logic ---
+            const attachReportsEventListeners = () => {
+                document.getElementById('generate-attendance-report')?.addEventListener('click', generateAttendanceReport);
+                document.getElementById('generate-retention-report')?.addEventListener('click', generateClientRetentionReport);
+            };
+
+            const generateAttendanceReport = async () => {
+                const resultsContainer = document.getElementById('attendance-report-results');
+                const startDateStr = document.getElementById('attendance-start-date').value;
+                const endDateStr = document.getElementById('attendance-end-date').value;
+                if (!startDateStr || !endDateStr) {
+                    renderNotification("Te rugăm să selectezi un interval de date.", "error");
+                    return;
+                }
+
+                resultsContainer.innerHTML = `<div class="flex items-center justify-center p-5"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-400"></i><span class="ml-3">Se generează raportul de prezență...</span></div>`;
+                lucide.createIcons();
+
+                try {
+                    const startDate = new Date(startDateStr);
+                    startDate.setHours(0,0,0,0);
+                    const endDate = new Date(endDateStr);
+                    endDate.setHours(23,59,59,999);
+
+                    const events = await api.getEventsForDateRange(startDate, endDate, true); // showDeleted = true
+                    
+                    const clientStats = {};
+
+                    for (const event of events) {
+                        if (!event.summary) continue;
+                        const parts = event.summary.split(' - ').map(p => p.trim());
+                        if (parts.length < 2) continue;
+                        const name = parts[0];
+
+                        if (!clientStats[name]) {
+                            clientStats[name] = { name, attended: 0, cancelledByClient: 0, cancelledByInstructor: 0, total: 0 };
+                        }
+
+                        clientStats[name].total++;
+
+                        const organizer = event.attendees?.find(a => a.organizer);
+                        const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
+
+                        if (event.status === 'cancelled' || isDeclinedByOrganizer) {
+                            clientStats[name].cancelledByClient++; 
+                        } else {
+                            clientStats[name].attended++;
+                        }
+                    }
+                    
+                    const reportData = Object.values(clientStats).sort((a,b) => a.name.localeCompare(b.name));
+
+                    if (reportData.length === 0) {
+                        resultsContainer.innerHTML = `<p class="text-center text-gray-400 py-4">Nu s-au găsit date pentru intervalul selectat.</p>`;
+                        return;
+                    }
+
+                    const reportHTML = reportData.map(client => {
+                        const attendanceRate = client.total > 0 ? (client.attended / client.total) * 100 : 0;
+                        let progressBarColor = 'bg-green-500';
+                        if (attendanceRate < 80) progressBarColor = 'bg-yellow-500';
+                        if (attendanceRate < 50) progressBarColor = 'bg-red-500';
+
+                        return `
+                            <div class="bg-gray-700/50 rounded-lg p-4 mb-3 transition-all hover:bg-gray-700">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="mb-3 sm:mb-0 min-w-0">
+                                        <p class="text-lg font-bold text-white truncate" title="${client.name}">${client.name}</p>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-center">
+                                        <div>
+                                            <p class="text-xs text-gray-400">Prezent</p>
+                                            <p class="text-xl font-semibold text-green-400">${client.attended}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-400">Anulat</p>
+                                            <p class="text-xl font-semibold text-red-400">${client.cancelledByClient}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-400">Total</p>
+                                            <p class="text-xl font-semibold text-gray-300">${client.total}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-medium text-gray-400">Rată Prezență</span>
+                                        <span class="text-sm font-bold ${progressBarColor.replace('bg-', 'text-')}">${attendanceRate.toFixed(0)}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-600 rounded-full h-2.5">
+                                        <div class="${progressBarColor} h-2.5 rounded-full" style="width: ${attendanceRate}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    resultsContainer.innerHTML = `<div class="space-y-3">${reportHTML}</div>`;
+                    document.getElementById('export-attendance').onclick = () => exportToCSV(reportData, 'raport_prezenta');
+
+                } catch (err) {
+                    resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la generarea raportului: ${err.message}</p>`;
+                }
+            };
+            
+            const generateClientRetentionReport = async () => {
+                const resultsContainer = document.getElementById('retention-report-results');
+                resultsContainer.innerHTML = `<div class="flex items-center justify-center p-5"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-400"></i><span class="ml-3">Se generează raportul de retenție...</span></div>`;
+                lucide.createIcons();
+
+                try {
+                    const ninetyDaysAgo = new Date();
+                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                    const today = new Date();
+
+                    const events = await api.getEventsForDateRange(ninetyDaysAgo, today);
+
+                    const trialSessions = events.filter(e => e.summary?.toLowerCase().includes('sedinta de proba'));
+                    const regularSessions = events.filter(e => e.summary?.match(/sedinta \d+/i));
+
+                    let convertedCount = 0;
+                    const trialClients = new Set(trialSessions.map(e => e.summary.split(' - ')[0]));
+
+                    trialClients.forEach(clientName => {
+                        if (regularSessions.some(e => e.summary.startsWith(clientName))) {
+                            convertedCount++;
+                        }
+                    });
+
+                    const conversionRate = trialClients.size > 0 ? (convertedCount / trialClients.size) * 100 : 0;
+                    
+                    const reportData = [
+                        { metric: 'Ședințe de probă', value: trialClients.size },
+                        { metric: 'Clienți convertiți', value: convertedCount },
+                        { metric: 'Rata de conversie', value: `${conversionRate.toFixed(1)}%` },
+                    ];
+
+                    const tableHTML = `
+                        <table class="report-table min-w-full divide-y divide-gray-600">
+                            <thead class="bg-gray-700">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Metrică</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Valoare</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-gray-800 divide-y divide-gray-700">
+                                ${reportData.map(item => `
+                                    <tr>
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-white">${item.metric}</td>
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-300">${item.value}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    resultsContainer.innerHTML = tableHTML;
+                    document.getElementById('export-retention').onclick = () => exportToCSV(reportData, 'raport_retentie');
+
+                } catch (err) {
+                    resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la generarea raportului: ${err.message}</p>`;
+                }
+            };
+
+            const exportToCSV = (data, filename) => {
+                if (!data || data.length === 0) {
+                    renderNotification("Nu există date de exportat.", "error");
+                    return;
+                }
+                const headers = Object.keys(data[0]);
+                const csvRows = [
+                    headers.join(','),
+                    ...data.map(row => 
+                        headers.map(header => 
+                            JSON.stringify(row[header], (key, value) => value === undefined ? '' : value)
+                        ).join(',')
+                    )
+                ];
+                
+                const csvString = csvRows.join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const attachFinancialsEventListeners = () => {
+                document.getElementById('generate-payments-list')?.addEventListener('click', fetchAndDisplayFinancials);
+                document.getElementById('financial-client-search')?.addEventListener('input', debounce(filterAndRenderPayments, 300));
+                // Initial load
+                fetchAndDisplayFinancials();
+            };
+
+            const fetchAndDisplayFinancials = async () => {
+                const resultsContainer = document.getElementById('payments-list-results');
+                const startDateStr = document.getElementById('payments-start-date').value;
+                const endDateStr = document.getElementById('payments-end-date').value;
+
+                if (!startDateStr || !endDateStr) {
+                    renderNotification("Te rugăm să selectezi un interval de date valid.", "error");
+                    return;
+                }
+
+                resultsContainer.innerHTML = `<div class="flex items-center justify-center p-5"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-400"></i><span class="ml-3">Se încarcă datele financiare de la Stripe...</span></div>`;
+                lucide.createIcons();
+
+                try {
+                    const functions = getFunctions(app);
+                    const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
+
+                    const result = await getStripeFinancials({ 
+                        startDate: new Date(startDateStr).toISOString(),
+                        endDate: new Date(endDateStr).toISOString()
+                    });
+
+                    state.financials.allPayments = result.data.payments || [];
+                    
+                    // Update stats based on the full dataset for the date range
+                    const revenueStatEl = document.getElementById('revenue-stat');
+                    const avgSpendStatEl = document.getElementById('avg-spend-stat');
+
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const recentPayments = state.financials.allPayments.filter(p => new Date(p.date) >= thirtyDaysAgo);
+                    const totalRevenue = recentPayments.reduce((sum, p) => sum + p.net, 0);
+                    const totalGross = recentPayments.reduce((sum, p) => sum + p.amount, 0);
+                    const uniqueCustomers = new Set(recentPayments.map(p => p.customer)).size;
+                    const avgSpend = uniqueCustomers > 0 ? totalGross / uniqueCustomers : 0;
+
+                    revenueStatEl.textContent = `${totalRevenue.toFixed(2)} RON`;
+                    avgSpendStatEl.textContent = `${avgSpend.toFixed(2)} RON`;
+
+                    // Render the list
+                    filterAndRenderPayments();
+
+                } catch (error) {
+                    console.error("Error calling Cloud Function:", error);
+                    resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la preluarea datelor de la Stripe: ${error.message}</p>`;
+                }
+            };
+            
+            const filterAndRenderPayments = () => {
+                const resultsContainer = document.getElementById('payments-list-results');
+                const searchQuery = document.getElementById('financial-client-search').value.toLowerCase();
+
+                const filteredPayments = state.financials.allPayments.filter(p => 
+                    p.customer.toLowerCase().includes(searchQuery) ||
+                    p.email.toLowerCase().includes(searchQuery)
+                );
+
+                if (filteredPayments.length === 0) {
+                    resultsContainer.innerHTML = `<p class="text-center text-gray-400 py-4">Nu s-au găsit plăți pentru căutarea curentă.</p>`;
+                    return;
+                }
+
+                const paymentCardsHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${filteredPayments.map(p => `
+                            <div class="bg-gray-700/50 rounded-lg p-4 flex flex-col justify-between transition-all hover:bg-gray-700">
+                                <div>
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="text-lg font-bold text-white truncate" title="${p.customer}">${p.customer}</p>
+                                            <p class="text-xs text-gray-400 truncate" title="${p.email}">${p.email}</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-2xl font-bold text-green-400 mt-2">${p.net.toFixed(2)} RON</p>
+                                    <p class="text-sm text-gray-300 mt-2">${p.description}</p>
+                                </div>
+                                <div class="flex items-center text-xs text-gray-500 mt-4">
+                                    <i data-lucide="calendar" class="h-3 w-3 mr-1.5"></i>
+                                    <span>${new Date(p.date).toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                resultsContainer.innerHTML = paymentCardsHTML;
+                lucide.createIcons();
+            }
+
         });
     </script>
 </body>
