@@ -481,6 +481,10 @@
                         created: new Date().toISOString()
                     });
                 },
+                async deleteCashPayment(paymentId) {
+                    if (!db || !paymentId) return;
+                    await deleteDoc(doc(db, "payments", paymentId));
+                },
                 async getMessageTemplates() {
                     if (!db) return null;
                     const docRef = doc(db, "app-settings", "whatsapp-templates");
@@ -2995,6 +2999,31 @@
             const attachFinancialsEventListeners = () => {
                 document.getElementById('generate-payments-list')?.addEventListener('click', fetchAndDisplayFinancials);
                 document.getElementById('financial-client-search')?.addEventListener('input', debounce(filterAndRenderPayments, 300));
+                
+                const resultsContainer = document.getElementById('payments-list-results');
+                if (resultsContainer) {
+                    resultsContainer.addEventListener('click', async (e) => {
+                        const deleteButton = e.target.closest('.delete-payment-btn');
+                        if (deleteButton) {
+                            const paymentId = deleteButton.dataset.id;
+                            if (!paymentId) return;
+
+                            deleteButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                            lucide.createIcons();
+                            deleteButton.disabled = true;
+
+                            try {
+                                await firestoreApi.deleteCashPayment(paymentId);
+                                state.financials.allPayments = state.financials.allPayments.filter(p => p.id !== paymentId);
+                                filterAndRenderPayments();
+                                renderNotification('Plata cash a fost ștearsă.', 'success');
+                            } catch (err) {
+                                renderNotification(`Eroare la ștergerea plății: ${err.message}`, 'error');
+                            }
+                        }
+                    });
+                }
+
                 // Initial load
                 fetchAndDisplayFinancials();
             };
@@ -3032,6 +3061,7 @@
                         const rangeEnd = new Date(endDateStr);
                         if(paymentDate >= rangeStart && paymentDate <= rangeEnd) {
                             cashPayments.push({
+                                id: doc.id, // Store document ID for deletion
                                 customer: data.clientName,
                                 email: 'N/A',
                                 amount: data.amount,
@@ -3098,9 +3128,16 @@
                                     <p class="text-2xl font-bold text-green-400 mt-2">${p.net.toFixed(2)} RON</p>
                                     <p class="text-sm text-gray-300 mt-2">${p.description}</p>
                                 </div>
-                                <div class="flex items-center text-xs text-gray-500 mt-4">
-                                    <i data-lucide="calendar" class="h-3 w-3 mr-1.5"></i>
-                                    <span>${new Date(p.date).toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                <div class="flex justify-between items-center text-xs text-gray-500 mt-4">
+                                    <div class="flex items-center">
+                                        <i data-lucide="calendar" class="h-3 w-3 mr-1.5"></i>
+                                        <span>${new Date(p.date).toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                    </div>
+                                    ${p.method === 'Cash' ? `
+                                    <button class="delete-payment-btn text-red-500 hover:text-red-400 p-1" data-id="${p.id}" title="Șterge Plata">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                    ` : ''}
                                 </div>
                             </div>
                         `).join('')}
