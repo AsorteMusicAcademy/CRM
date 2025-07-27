@@ -947,7 +947,7 @@
                                         <i data-lucide="dollar-sign" class="h-4 w-4 mr-1.5"></i><span>Cash</span>
                                     </button>
                                 </div>
-                                ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment.startsWith('20') ? new Date(lastPayment.split(' - ')[0]).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : lastPayment}</span></div>` : ''}
+                                ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment}</span></div>` : ''}
                             </div>
                             <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-full sm:w-48">
@@ -1628,6 +1628,8 @@
                         }
                         return acc;
                     }, {});
+                    
+                    await fetchAndMergeLastPayments(state.clients, state.clientFirebaseData);
 
                     populateDisciplineFilter(state.clients);
                     renderClients(state.clients, state.clientFirebaseData);
@@ -1723,6 +1725,7 @@
                         }
                         return acc;
                     }, {});
+                    await fetchAndMergeLastPayments(state.clients, state.clientFirebaseData);
                     populateDisciplineFilter(state.clients);
                     renderClients(state.clients, state.clientFirebaseData);
                 } catch (err) {
@@ -2740,12 +2743,22 @@
             };
 
             const isPaymentOverdue = (paymentDateStr) => {
-                if (!paymentDateStr) return false;
+                if (!paymentDateStr || paymentDateStr === "Nici o plată încă") return false;
+                
+                const datePart = paymentDateStr.split(' - ')[0];
+                const parts = datePart.split('.');
+                if (parts.length !== 3) return false; 
+
+                const paymentDate = new Date(parts[2], parts[1] - 1, parts[0]);
+
+                if (isNaN(paymentDate.getTime())) return false;
+
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const paymentDate = new Date(paymentDateStr.split(' - ')[0]);
+                
                 const timeDifference = today.getTime() - paymentDate.getTime();
                 const daysDifference = timeDifference / (1000 * 3600 * 24);
+                
                 return daysDifference > 30;
             };
 
@@ -2779,12 +2792,10 @@
                         }
                     }
 
-                    let phone = null, lastPayment = null;
+                    let phone = null;
                     if (event.description) {
                         const phoneMatch = event.description.match(/\+?\d[\d\s-()]{8,15}/);
                         if (phoneMatch) phone = phoneMatch[0];
-                        const paymentMatch = event.description.match(/Last Payment: (.*)/);
-                        if (paymentMatch) lastPayment = paymentMatch[1];
                     }
                     const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
 
@@ -2805,11 +2816,101 @@
                         eventId: event.id, discipline, sessionNumber, studentEmail,
                         startTime: event.start?.dateTime,
                         phone: phone || processedClients[name]?.phone,
-                        lastPayment: lastPayment || processedClients[name]?.lastPayment,
+                        lastPayment: null, // This will be populated later
                     };
                 }
                 return processedClients;
             };
+
+            async function fetchAndMergeLastPayments(clients, clientFirebaseData) {
+                if (Object.keys(clients).length === 0) return;
+
+                console.log("Fetching last payments for all visible clients...");
+                const clientNames = Object.keys(clients);
+                const lastPayments = {};
+
+                // Create a map for client emails for easier lookup
+                const clientEmailMap = {};
+                clientNames.forEach(name => {
+                    const firebaseData = clientFirebaseData[name];
+                    const calendarData = clients[name];
+                    // Prioritize email from Firestore, fallback to email from Calendar event
+                    clientEmailMap[name] = firebaseData?.email || calendarData?.studentEmail || null;
+                });
+
+                // 1. Fetch Stripe Payments
+                try {
+                    const functions = getFunctions(app);
+                    const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(endDate.getDate() - 365); // Look back one year
+
+                    const stripeResult = await getStripeFinancials({
+                        startDate: startDate.toISOString(),
+                        endDate: endDate.toISOString()
+                    });
+                    const stripePayments = stripeResult.data.payments || [];
+
+                    // Iterate through clients and find their latest stripe payment
+                    clientNames.forEach(name => {
+                        const clientEmail = clientEmailMap[name]?.toLowerCase();
+                        const clientNameLower = name.toLowerCase();
+
+                        const relevantPayments = stripePayments.filter(p => {
+                            const paymentCustomerLower = p.customer?.toLowerCase();
+                            const paymentEmailLower = p.email?.toLowerCase();
+                            
+                            return (paymentCustomerLower && paymentCustomerLower === clientNameLower) || 
+                                (clientEmail && paymentEmailLower && paymentEmailLower === clientEmail);
+                        });
+
+                        if (relevantPayments.length > 0) {
+                            // Find the most recent payment among the relevant ones
+                            relevantPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+                            const latestPayment = relevantPayments[0];
+                            const paymentDate = new Date(latestPayment.date);
+
+                            lastPayments[name] = {
+                                date: paymentDate,
+                                text: `${paymentDate.toLocaleDateString('ro-RO')} - Stripe`
+                            };
+                        }
+                    });
+
+                } catch (error) {
+                    console.error("Could not fetch Stripe payments:", error);
+                }
+
+                // 2. Fetch Cash Payments from Firestore and potentially override Stripe if newer
+                try {
+                    const cashPaymentsSnapshot = await getDocs(collection(db, "payments"));
+                    cashPaymentsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const clientName = data.clientName;
+                        if (clientNames.includes(clientName)) { // Only process for visible clients
+                            const paymentDate = new Date(data.created);
+                            if (!lastPayments[clientName] || paymentDate > lastPayments[clientName].date) {
+                                lastPayments[clientName] = {
+                                    date: paymentDate,
+                                    text: `${new Date(data.date).toLocaleDateString('ro-RO')} - Cash`
+                                };
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error("Could not fetch cash payments:", error);
+                }
+
+                // 3. Merge into state.clients
+                clientNames.forEach(name => {
+                    if (clients[name]) {
+                        clients[name].lastPayment = lastPayments[name] ? lastPayments[name].text : "Nici o plată încă";
+                    }
+                });
+                console.log("Finished merging last payments.");
+            }
+
 
             // --- Reports Logic ---
             const attachReportsEventListeners = () => {
