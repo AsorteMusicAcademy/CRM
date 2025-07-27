@@ -467,7 +467,7 @@
                     state.instructors = instructors;
                     if (!state.initialInstructorsLoaded) {
                         state.initialInstructorsLoaded = true;
-                        handleTabChange();
+                        if (state.accessToken) handleTabChange();
                     }
                     if (state.activeTab === 'instructors') {
                         renderInstructorsView();
@@ -1046,22 +1046,22 @@
 
                 return `
                      <div class="border border-gray-700 rounded-lg">
-                        <button id="toggle-double-booking-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
-                            <span class="text-lg font-semibold text-gray-200">Reguli de Rezervare Dublă</span>
+                         <button id="toggle-double-booking-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
+                             <span class="text-lg font-semibold text-gray-200">Reguli de Rezervare Dublă</span>
                              <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
-                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
-                            </span>
-                        </button>
-                        <div id="double-booking-container" class="p-6 space-y-4 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
-                            <p class="text-sm text-gray-400">Selectează zilele și intervalele orare în care sunt permise două programări pe oră.</p>
-                            ${daysHTML}
-                            <div class="flex justify-end pt-4">
-                                <button id="save-booking-rules-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
-                                    Salvează Regulile
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                                 <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                             </span>
+                         </button>
+                         <div id="double-booking-container" class="p-6 space-y-4 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
+                             <p class="text-sm text-gray-400">Selectează zilele și intervalele orare în care sunt permise două programări pe oră.</p>
+                             ${daysHTML}
+                             <div class="flex justify-end pt-4">
+                                 <button id="save-booking-rules-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                     Salvează Regulile
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
                 `;
             };
 
@@ -1087,22 +1087,22 @@
 
                 return `
                      <div class="border border-gray-700 rounded-lg">
-                        <button id="toggle-working-hours-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
-                            <span class="text-lg font-semibold text-gray-200">Setări Program de Lucru</span>
+                         <button id="toggle-working-hours-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
+                             <span class="text-lg font-semibold text-gray-200">Setări Program de Lucru</span>
                              <span class="settings-chevron-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
-                                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
-                            </span>
-                        </button>
-                        <div id="working-hours-container" class="p-6 space-y-4 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
-                            <p class="text-sm text-gray-400">Definește programul de lucru pentru fiecare zi. Zilele nebifate nu vor afișa intervale disponibile.</p>
-                            ${daysHTML}
-                            <div class="flex justify-end pt-4">
-                                <button id="save-working-hours-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
-                                    Salvează Programul
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                                 <i data-lucide="chevron-down" class="h-6 w-6 text-gray-400"></i>
+                             </span>
+                         </button>
+                         <div id="working-hours-container" class="p-6 space-y-4 border-t border-gray-700" style="display: ${isExpanded ? 'block' : 'none'};">
+                             <p class="text-sm text-gray-400">Definește programul de lucru pentru fiecare zi. Zilele nebifate nu vor afișa intervale disponibile.</p>
+                             ${daysHTML}
+                             <div class="flex justify-end pt-4">
+                                 <button id="save-working-hours-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                                     Salvează Programul
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
                 `;
             };
 
@@ -2153,6 +2153,8 @@
             };
 
             const showCreateEventModal = (startTime, endTime) => {
+                dom.createEventForm.reset(); // Clear previous inputs
+
                 const start = new Date(startTime);
                 const end = new Date(endTime);
                 document.getElementById('event-start-time').value = startTime;
@@ -2165,7 +2167,6 @@
                     .map(d => `<option value="${d}">${d}</option>`)
                     .join('');
 
-                dom.createEventForm.reset(); // Clear previous inputs
                 showModal(dom.createEventModal);
             };
 
@@ -2188,9 +2189,13 @@
                         throw new Error("Toate câmpurile sunt obligatorii.");
                     }
 
+                    const cancellationPolicy = `\n\nCancellation policy\nVa reamintim ca sedintele anulate cu mai putin de 48 de ore inainte de programare vor fi considerate ca fiind efectuate iar pretul lor nu va fi returnat.`;
+                    const eventLocation = "Asorte Music Academy, Strada Nucetului 25c, București 040696";
+
                     const eventData = {
                         summary: `${name} - ${discipline} - Sedinta de proba`,
-                        description: `Telefon: ${phone}\nEmail: ${email}`,
+                        description: `Telefon: ${phone}\nEmail: ${email}${cancellationPolicy}`,
+                        location: eventLocation,
                         start: { dateTime: startTime, timeZone: 'Europe/Bucharest' },
                         end: { dateTime: endTime, timeZone: 'Europe/Bucharest' },
                         attendees: [{ email: email }],
@@ -2199,8 +2204,7 @@
 
                     await api.createEvent(eventData);
                     
-                    // Also save client to Firestore if they don't exist
-                    await firestoreApi.saveClientData(name, { name, phone, discipline, subscription: '4', assignedInstructor: '' });
+                    await firestoreApi.saveClientData(name, { name, phone, email, discipline, subscription: '4', assignedInstructor: '' });
 
                     renderNotification(`Programarea pentru ${name} a fost creată cu succes!`, 'success');
                     hideModal(dom.createEventModal);
