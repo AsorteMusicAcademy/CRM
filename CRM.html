@@ -1378,7 +1378,7 @@
                     const endDate = new Date();
                     endDate.setDate(startDate.getDate() + 20); // Fetch a bit more to account for skipped days
 
-                    const allEvents = await api.getEventsForDateRange(startDate, endDate);
+                    const allEvents = await api.getEventsForDateRange(startDate, endDate, true);
                     
                     let scheduleHTML = '';
                     let daysShown = 0;
@@ -1413,7 +1413,12 @@
                             return eventStart >= dayStart && eventStart <= dayEnd;
                         });
 
-                        const busySlots = eventsForDay.map(event => ({
+                        const activeEventsForDay = eventsForDay.filter(event => {
+                            const isDeclinedByOrganizer = event.attendees?.find(a => a.organizer)?.responseStatus === 'declined';
+                            return event.status !== 'cancelled' && !isDeclinedByOrganizer;
+                        });
+
+                        const busySlots = activeEventsForDay.map(event => ({
                             start: new Date(event.start.dateTime || event.start.date),
                             end: new Date(event.end.dateTime || event.end.date)
                         }));
