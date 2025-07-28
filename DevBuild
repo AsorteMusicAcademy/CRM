@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionare Sesiuni Clienți</title>
 
-    <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -61,7 +60,6 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
 
-    <!-- Container for the entire widget. -->
     <div id="client-tracker-widget" class="container mx-auto p-4 sm:p-6 lg:p-8">
 
         <header class="relative text-center mb-8">
@@ -69,14 +67,10 @@
             <p class="text-lg text-gray-400 mt-2">Gestionează sesiunile clienților din Google Calendar & Classroom</p>
         </header>
 
-        <!-- Main App View -->
         <div id="main-app-view">
-            <!-- Configuration Section -->
             <div id="config-section" class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
 
-                <!-- Authorization Section -->
                 <div id="auth-section">
-                    <!-- Google Sign-In Button -->
                     <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația pentru a accesa datele din Google Calendar și Classroom.</p>
                     <button id="authBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
                         <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24px" height="24px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
@@ -93,7 +87,6 @@
                         <a href="#" id="testing-mode-toggle" class="text-sm text-blue-400 hover:underline cursor-pointer">Intră în Modul de Testare</a>
                     </div>
 
-                    <!-- Manual Access Token Input for Testing -->
                     <div id="manual-auth-section" style="display: none;">
                         <p class="text-center text-gray-400 mb-4">Pentru testare, introdu un token de acces OAuth 2.0 de pe <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
                         <div class="flex items-center space-x-2">
@@ -140,15 +133,12 @@
                         </div>
 
                         <div class="flex flex-wrap gap-4 filter-control">
-                            <!-- Discipline Filter -->
                             <div class="flex-1 min-w-[200px]">
                                 <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
                                 <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <!-- Options will be populated dynamically -->
-                                </select>
+                                    </select>
                             </div>
 
-                            <!-- Last Session Filter -->
                             <div class="flex items-end pb-1">
                                 <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
                                     <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
@@ -167,18 +157,13 @@
                 </div>
             </div>
 
-            <!-- Notification Area -->
             <div id="notification-area" class="max-w-7xl mx-auto mb-6"></div>
 
-            <!-- Results Area -->
             <div id="results-area" class="max-w-7xl mx-auto">
-                <!-- Loading spinner will be injected here -->
-                <!-- Client/Instructor/Settings/Add Appointment/Reports list will be injected here -->
-            </div>
+                </div>
         </div>
     </div>
 
-    <!-- Cancellation Modal -->
     <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <h3 class="text-2xl font-bold text-white mb-4">Confirmă Anularea</h3>
@@ -197,7 +182,6 @@
         </div>
     </div>
 
-    <!-- Create Event Modal -->
     <div id="create-event-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-lg transform scale-95">
             <div class="flex justify-between items-center mb-4">
@@ -228,8 +212,7 @@
                 <div>
                     <label for="event-discipline" class="block text-sm font-medium text-gray-300 mb-1">Disciplina</label>
                     <select id="event-discipline" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <!-- Options will be populated dynamically -->
-                    </select>
+                        </select>
                 </div>
                 <div class="flex justify-end pt-4">
                     <button type="submit" id="submit-event-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center">
@@ -241,7 +224,6 @@
         </div>
     </div>
 
-    <!-- Cash Payment Modal -->
     <div id="cash-payment-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <div class="flex justify-between items-center mb-4">
@@ -272,7 +254,6 @@
     </div>
 
 
-    <!-- Firebase SDKs and App Logic -->
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -922,7 +903,6 @@
                 return `
                     <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
                         <div class="flex items-center justify-between flex-wrap cursor-pointer client-header" data-name="${name}">
-                            <!-- Client Info -->
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
                                     <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
@@ -962,7 +942,6 @@
                                 </div>
                                 ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment}</span></div>` : ''}
                             </div>
-                            <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-full sm:w-48">
                                 <div class="w-full text-right mb-2">
                                     <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
@@ -978,8 +957,7 @@
                             </div>
                         </div>
                         <div class="client-details w-full" style="display: ${isExpanded ? 'block' : 'none'};">
-                            <!-- Details will be loaded here -->
-                        </div>
+                            </div>
                     </li>
                 `;
             };
@@ -1084,8 +1062,7 @@
                                 </button>
                             </div>
                             <ul id="instructorList" class="divide-y divide-gray-600">
-                                <!-- Instructors will be rendered here -->
-                            </ul>
+                                </ul>
                         </div>
                     </div>
                 `;
@@ -1313,9 +1290,7 @@
 
                 const dashboardHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
-                        <!-- Left Column -->
                         <div class="space-y-6">
-                            <!-- Widget: Total Active Students -->
                             <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-400">Total Studenți Activi</p>
@@ -1326,7 +1301,6 @@
                                 </div>
                             </div>
 
-                            <!-- Widget: Sessions This Week -->
                             <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-400">Ședințe Săptămâna Aceasta</p>
@@ -1339,9 +1313,7 @@
                             </div>
                         </div>
 
-                        <!-- Right Column -->
                         <div class="space-y-6">
-                            <!-- Widget: Subscriptions Ending Soon -->
                             <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
                                 <div class="flex items-center mb-4">
                                     <i data-lucide="user-x" class="h-6 w-6 text-red-400 mr-3"></i>
@@ -1358,7 +1330,6 @@
                             </div>
                         </div>
 
-                        <!-- Full Width Widget: Discipline Breakdown -->
                         <div class="md:col-span-2 bg-gray-800 p-6 rounded-xl shadow-lg">
                             <div class="flex items-center mb-4">
                                 <i data-lucide="pie-chart" class="h-6 w-6 text-blue-400 mr-3"></i>
@@ -1382,8 +1353,7 @@
                         </div>
                         <div class="p-6">
                             <div id="availability-schedule" class="flex overflow-x-auto space-x-4 pb-4">
-                                <!-- 14-day schedule will be rendered here -->
-                            </div>
+                                </div>
                         </div>
                     </div>
                 `;
@@ -1510,7 +1480,6 @@
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
-                        <!-- Attendance Report -->
                         <div id="attendance-report-section" class="report-section border border-gray-700 rounded-lg p-6">
                             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Raport de Prezență</h3>
@@ -1530,7 +1499,6 @@
                             <div id="attendance-report-results" class="overflow-x-auto"></div>
                         </div>
                         
-                        <!-- Client Retention Report -->
                         <div id="retention-report-section" class="report-section border border-gray-700 rounded-lg p-6">
                             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Raport Retenție Clienți</h3>
@@ -1555,7 +1523,6 @@
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
-                        <!-- Financial Stats -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-gray-700/50 p-6 rounded-xl flex items-center justify-between">
                                 <div>
@@ -1577,7 +1544,6 @@
                             </div>
                         </div>
 
-                        <!-- Payments List -->
                         <div id="payments-list-section" class="report-section border border-gray-700 rounded-lg p-6">
                              <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Istoric Plăți</h3>
@@ -1607,39 +1573,70 @@
 
             // --- TIMESHEET VIEW (MODIFIED) ---
             const renderTimesheetView = (scheduleData = null) => {
-                const todayStr = new Date().toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
                 let contentHTML = '';
-
                 const instructorsAndUnassigned = [...state.instructors, { name: 'Nealocat' }];
 
                 if (scheduleData) {
                     // Render the generated schedule
                     contentHTML = instructorsAndUnassigned.map(inst => {
-                        const sessions = scheduleData[inst.name];
-                        const sessionsHTML = sessions && sessions.length > 0
-                            ? sessions.map(s => `
+                        const scheduleForInstructor = scheduleData[inst.name];
+                        // Check if there are any sessions for the instructor
+                        if (!scheduleForInstructor || Object.keys(scheduleForInstructor).length === 0) {
+                            return `
+                                <div class="bg-gray-700/50 rounded-lg p-4">
+                                    <h4 class="text-lg font-bold text-white mb-3">${inst.name}</h4>
+                                    <p class="text-sm text-gray-500 text-center p-2">Nicio sesiune programată.</p>
+                                </div>
+                            `;
+                        }
+
+                        // Sort dates chronologically before rendering
+                        const sortedDateKeys = Object.keys(scheduleForInstructor).sort((a, b) => {
+                            const dateAStr = a.split(' - ')[1];
+                            const dateBStr = b.split(' - ')[1];
+                            const dateA = new Date(dateAStr.split('.').reverse().join('-'));
+                            const dateB = new Date(dateBStr.split('.').reverse().join('-'));
+                            return dateA - dateB;
+                        });
+
+                        const daysHTML = sortedDateKeys.map(dateKey => {
+                            const sessions = scheduleForInstructor[dateKey];
+                            const sessionsHTML = sessions.map(s => `
                                 <li class="flex justify-between items-center text-sm p-2 bg-gray-900/50 rounded-md">
                                     <span>${s.name}</span>
                                     <div class="flex items-center gap-x-4">
                                         <span class="font-semibold text-green-400">${s.calculatedPay.toFixed(2)} RON</span>
                                         <span class="font-semibold text-blue-400">${s.time}</span>
                                     </div>
-                                </li>`).join('')
-                            : '<li class="text-sm text-gray-500 text-center p-2">Nicio sesiune programată astăzi.</li>';
-                        
+                                </li>`).join('');
+
+                            return `
+                                <div class="day-group bg-gray-800 rounded-md overflow-hidden">
+                                    <button class="day-header w-full flex justify-between items-center p-3 text-left hover:bg-gray-700 transition-colors focus:outline-none">
+                                        <span class="font-semibold text-gray-200">${dateKey}</span>
+                                        <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
+                                    </button>
+                                    <ul class="day-sessions px-3 pb-3 space-y-2" style="display: none;">
+                                        ${sessionsHTML}
+                                    </ul>
+                                </div>
+                            `;
+                        }).join('');
+
                         return `
                             <div class="bg-gray-700/50 rounded-lg p-4">
                                 <h4 class="text-lg font-bold text-white mb-3">${inst.name}</h4>
-                                <ul class="space-y-2">${sessionsHTML}</ul>
+                                <div class="space-y-2">${daysHTML}</div>
                             </div>
                         `;
                     }).join('');
+
                 } else {
                     // Render the initial empty/placeholder state
                     contentHTML = instructorsAndUnassigned.map(inst => `
                         <div class="bg-gray-700/50 rounded-lg p-4">
                             <h4 class="text-lg font-bold text-white mb-3">${inst.name}</h4>
-                            <p class="text-sm text-gray-500 text-center p-2">Generează pontajul din tab-ul "Astăzi" pentru a vedea programul.</p>
+                             <p class="text-sm text-gray-500 text-center p-2">Generează pontajul din tab-ul "Astăzi" pentru a vedea programul.</p>
                         </div>
                     `).join('');
                 }
@@ -1648,7 +1645,7 @@
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
                         <div id="timesheet-section" class="report-section">
                             <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                                <h3 class="text-xl font-bold text-white">Pontaj Instructori pentru ${todayStr}</h3>
+                                <h3 class="text-xl font-bold text-white">Pontaj Instructori</h3>
                             </div>
                             <div id="timesheet-report-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 ${contentHTML}
@@ -1657,8 +1654,8 @@
                     </div>
                 `;
                 lucide.createIcons();
+                attachTimesheetEventListeners();
             };
-
 
             // --- EVENT HANDLERS ---
             const handleTabChange = async () => {
@@ -2506,6 +2503,21 @@
                     button.addEventListener('click', () => {
                         const { startTime, endTime } = button.dataset;
                         showCreateEventModal(startTime, endTime);
+                    });
+                });
+            };
+
+            const attachTimesheetEventListeners = () => {
+                document.querySelectorAll('.day-header').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const sessionsList = button.nextElementSibling;
+                        const icon = button.querySelector('i[data-lucide="chevron-down"]');
+                        
+                        if (!sessionsList || !icon) return;
+
+                        const isVisible = sessionsList.style.display !== 'none';
+                        sessionsList.style.display = isVisible ? 'none' : 'block';
+                        icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
                     });
                 });
             };
@@ -3408,16 +3420,27 @@
                         }
                     }
 
-                    // --- 2. Build the schedule with calculations ---
+                    // --- 2. Build the schedule with calculations and group by date ---
                     const instructorSchedules = {};
                     state.instructors.forEach(inst => {
-                        instructorSchedules[inst.name] = [];
+                        instructorSchedules[inst.name] = {};
                     });
-                    instructorSchedules['Nealocat'] = [];
+                    instructorSchedules['Nealocat'] = {};
 
                     for (const [clientName, details] of Object.entries(state.clients)) {
                         const clientData = state.clientFirebaseData[clientName];
                         const instructorName = clientData?.assignedInstructor || 'Nealocat';
+                        
+                        // Group by formatted date string
+                        const sessionDate = new Date(details.startTime);
+                        const dayName = sessionDate.toLocaleDateString('ro-RO', { weekday: 'long' });
+                        const formattedDate = sessionDate.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const capitalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+                        const dateKey = `${capitalizedDayName} - ${formattedDate}`;
+
+                        if (!instructorSchedules[instructorName][dateKey]) {
+                            instructorSchedules[instructorName][dateKey] = [];
+                        }
                         
                         let calculatedPay = 0;
                         const lastPaymentAmount = lastPaymentMap.get(clientName) || 0;
@@ -3431,7 +3454,7 @@
                         }
                         
                         if (instructorSchedules.hasOwnProperty(instructorName)) {
-                            instructorSchedules[instructorName].push({
+                            instructorSchedules[instructorName][dateKey].push({
                                 name: clientName,
                                 time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
                                 calculatedPay: calculatedPay
@@ -3439,8 +3462,11 @@
                         }
                     }
                     
+                    // Sort sessions by time within each day for each instructor
                     for (const instructor in instructorSchedules) {
-                        instructorSchedules[instructor].sort((a, b) => a.time.localeCompare(b.time));
+                        for (const dateKey in instructorSchedules[instructor]) {
+                            instructorSchedules[instructor][dateKey].sort((a, b) => a.time.localeCompare(b.time));
+                        }
                     }
 
                     // --- 3. Switch tab and render ---
