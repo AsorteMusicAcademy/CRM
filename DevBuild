@@ -2945,7 +2945,6 @@
                 const clientNames = Object.keys(clients);
                 const lastPayments = {};
 
-                // Create a map for client emails for easier lookup
                 const clientEmailMap = {};
                 clientNames.forEach(name => {
                     const firebaseData = clientFirebaseData[name];
@@ -2953,78 +2952,61 @@
                     clientEmailMap[name] = firebaseData?.email || calendarData?.studentEmail || null;
                 });
 
-                // 1. Fetch Stripe Payments
+                const oneHundredTwentyDaysAgo = new Date();
+                oneHundredTwentyDaysAgo.setDate(new Date().getDate() - 120);
+
+                let allPayments = [];
+
                 try {
                     const functions = getFunctions(app);
                     const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
-                    const endDate = new Date();
-                    const startDate = new Date();
-                    startDate.setDate(endDate.getDate() - 120); // Look back 120 days
-
                     const stripeResult = await getStripeFinancials({
-                        startDate: startDate.toISOString(),
-                        endDate: endDate.toISOString()
+                        startDate: oneHundredTwentyDaysAgo.toISOString(),
+                        endDate: new Date().toISOString()
                     });
-                    const stripePayments = stripeResult.data.payments || [];
-
-                    // Iterate through clients and find their latest stripe payment
-                    clientNames.forEach(name => {
-                        const clientEmail = clientEmailMap[name]?.toLowerCase();
-                        const clientNameLower = name.toLowerCase();
-
-                        const relevantPayments = stripePayments.filter(p => {
-                            const paymentCustomerLower = p.customer?.toLowerCase();
-                            const paymentEmailLower = p.email?.toLowerCase();
-                            
-                            return (paymentCustomerLower && paymentCustomerLower === clientNameLower) || 
-                                (clientEmail && paymentEmailLower && paymentEmailLower === clientEmail);
-                        });
-
-                        if (relevantPayments.length > 0) {
-                            relevantPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
-                            const latestPayment = relevantPayments[0];
-                            const paymentDate = new Date(latestPayment.date);
-
-                            lastPayments[name] = {
-                                date: paymentDate,
-                                text: `${paymentDate.toLocaleDateString('ro-RO')} - Stripe`
-                            };
-                        }
-                    });
-
+                    allPayments.push(...(stripeResult.data.payments || []));
                 } catch (error) {
                     console.error("Could not fetch Stripe payments:", error);
                 }
 
-                // 2. Fetch Cash Payments from Firestore and potentially override Stripe if newer
                 try {
-                    const oneHundredTwentyDaysAgo = new Date();
-                    oneHundredTwentyDaysAgo.setDate(new Date().getDate() - 120);
                     const paymentsRef = collection(db, "payments");
                     const q = query(paymentsRef, where("created", ">=", oneHundredTwentyDaysAgo.toISOString()));
                     const cashPaymentsSnapshot = await getDocs(q);
-
                     cashPaymentsSnapshot.forEach(doc => {
                         const data = doc.data();
-                        const clientName = data.clientName;
-                        if (clientNames.includes(clientName)) { // Only process for visible clients
-                            const paymentDate = new Date(data.created);
-                            if (!lastPayments[clientName] || paymentDate > lastPayments[clientName].date) {
-                                lastPayments[clientName] = {
-                                    date: paymentDate,
-                                    text: `${new Date(data.date).toLocaleDateString('ro-RO')} - Cash`
-                                };
-                            }
-                        }
+                        allPayments.push({
+                            id: doc.id,
+                            customer: data.clientName,
+                            email: 'N/A',
+                            amount: data.amount,
+                            date: data.created,
+                            displayDate: data.date,
+                            method: 'Cash'
+                        });
                     });
                 } catch (error) {
                     console.error("Could not fetch cash payments:", error);
                 }
 
-                // 3. Merge into state.clients
+                allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
                 clientNames.forEach(name => {
                     if (clients[name]) {
-                        clients[name].lastPayment = lastPayments[name] ? lastPayments[name].text : "Nici o plată încă";
+                        const clientEmail = clientEmailMap[name]?.toLowerCase();
+                        const clientNameLower = name.toLowerCase();
+                        
+                        const latestPayment = allPayments.find(p => 
+                            p.customer?.toLowerCase() === clientNameLower || 
+                            (clientEmail && p.email?.toLowerCase() === clientEmail)
+                        );
+
+                        if (latestPayment) {
+                            const paymentDisplayDate = latestPayment.method === 'Cash' ? new Date(latestPayment.displayDate).toLocaleDateString('ro-RO') : new Date(latestPayment.date).toLocaleDateString('ro-RO');
+                            clients[name].lastPayment = `${paymentDisplayDate} - ${latestPayment.method}`;
+                        } else {
+                            clients[name].lastPayment = "Nici o plată încă";
+                        }
                     }
                 });
                 console.log("Finished merging last payments.");
@@ -3397,9 +3379,18 @@
                     const paymentsRef = collection(db, "payments");
                     const q = query(paymentsRef, where("created", ">=", oneHundredTwentyDaysAgo.toISOString()));
                     const cashPaymentsSnapshot = await getDocs(q);
-
                     const cashPayments = [];
-                    cashPaymentsSnapshot.forEach(doc => cashPayments.push({ id: doc.id, ...doc.data() }));
+                    cashPaymentsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        cashPayments.push({
+                            id: doc.id,
+                            customer: data.clientName, // NORMALIZE
+                            email: 'N/A',
+                            amount: data.amount,
+                            date: data.created, // Use timestamp for sorting
+                            method: 'Cash'
+                        });
+                    });
 
                     const allPayments = [...stripePayments, ...cashPayments];
                     allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
