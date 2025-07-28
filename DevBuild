@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionare Sesiuni Clienți</title>
 
+    <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -60,18 +61,23 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
 
+    <!-- Container for the entire widget. -->
     <div id="client-tracker-widget" class="container mx-auto p-4 sm:p-6 lg:p-8">
 
         <header class="relative text-center mb-8">
             <h1 class="text-4xl sm:text-5xl font-bold text-gray-100">Gestionare Sesiuni Clienți</h1>
-            <p class="text-lg text-gray-400 mt-2">Gestionează sesiunile clienților din Google Calendar & Classroom</p>
+            <p class="text-lg text-gray-400 mt-2">Gestionează sesiunile clienților din Google Calendar</p>
         </header>
 
+        <!-- Main App View -->
         <div id="main-app-view">
+            <!-- Configuration Section -->
             <div id="config-section" class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
 
+                <!-- Authorization Section -->
                 <div id="auth-section">
-                    <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația pentru a accesa datele din Google Calendar și Classroom.</p>
+                    <!-- Google Sign-In Button -->
+                    <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația pentru a accesa datele din Google Calendar.</p>
                     <button id="authBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
                         <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24px" height="24px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
                         Autentificare și Autorizare cu Google
@@ -87,6 +93,7 @@
                         <a href="#" id="testing-mode-toggle" class="text-sm text-blue-400 hover:underline cursor-pointer">Intră în Modul de Testare</a>
                     </div>
 
+                    <!-- Manual Access Token Input for Testing -->
                     <div id="manual-auth-section" style="display: none;">
                         <p class="text-center text-gray-400 mb-4">Pentru testare, introdu un token de acces OAuth 2.0 de pe <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
                         <div class="flex items-center space-x-2">
@@ -114,17 +121,15 @@
 
                         <div id="tab-controls" class="space-y-4">
                              <div class="flex flex-wrap items-center justify-center gap-2">
-                                <button data-tab="dashboard" class="tab-button"></button>
-                                <button data-tab="add" class="tab-button"></button>
-                                <button data-tab="today" class="tab-button"></button>
-                                <button data-tab="tomorrow" class="tab-button"></button>
-                                <button data-tab="all" class="tab-button"></button>
-                                <button data-tab="instructors" class="tab-button"></button>
-                                <button data-tab="financials" class="tab-button"></button>
-                                <button data-tab="timesheet" class="tab-button"></button>
-                                <button data-tab="reports" class="tab-button"></button>
-                                <button data-tab="settings" class="tab-button"></button>
-                            </div>
+                                 <button data-tab="add" class="tab-button"></button>
+                                 <button data-tab="today" class="tab-button"></button>
+                                 <button data-tab="tomorrow" class="tab-button"></button>
+                                 <button data-tab="all" class="tab-button"></button>
+                                 <button data-tab="instructors" class="tab-button"></button>
+                                 <button data-tab="timesheet" class="tab-button"></button>
+                                 <button data-tab="financials" class="tab-button"></button>
+                                 <button data-tab="settings" class="tab-button"></button>
+                             </div>
                         </div>
 
                         <div class="relative filter-control">
@@ -133,12 +138,15 @@
                         </div>
 
                         <div class="flex flex-wrap gap-4 filter-control">
+                            <!-- Discipline Filter -->
                             <div class="flex-1 min-w-[200px]">
                                 <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
                                 <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    </select>
+                                    <!-- Options will be populated dynamically -->
+                                </select>
                             </div>
 
+                            <!-- Last Session Filter -->
                             <div class="flex items-end pb-1">
                                 <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
                                     <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
@@ -148,6 +156,9 @@
                         </div>
                         
                         <div class="mt-4 space-y-2">
+                            <button id="logTimesheetBtn" class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                                Înregistrează Pontaj Astăzi
+                            </button>
                             <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
                                 Incrementează Toate Sesiunile pentru Mâine
                             </button>
@@ -157,13 +168,18 @@
                 </div>
             </div>
 
+            <!-- Notification Area -->
             <div id="notification-area" class="max-w-7xl mx-auto mb-6"></div>
 
+            <!-- Results Area -->
             <div id="results-area" class="max-w-7xl mx-auto">
-                </div>
+                <!-- Loading spinner will be injected here -->
+                <!-- Client/Instructor/Settings/Add Appointment list will be injected here -->
+            </div>
         </div>
     </div>
 
+    <!-- Cancellation Modal -->
     <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <h3 class="text-2xl font-bold text-white mb-4">Confirmă Anularea</h3>
@@ -182,6 +198,7 @@
         </div>
     </div>
 
+    <!-- Create Event Modal -->
     <div id="create-event-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-lg transform scale-95">
             <div class="flex justify-between items-center mb-4">
@@ -212,7 +229,8 @@
                 <div>
                     <label for="event-discipline" class="block text-sm font-medium text-gray-300 mb-1">Disciplina</label>
                     <select id="event-discipline" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </select>
+                        <!-- Options will be populated dynamically -->
+                    </select>
                 </div>
                 <div class="flex justify-end pt-4">
                     <button type="submit" id="submit-event-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center">
@@ -224,6 +242,7 @@
         </div>
     </div>
 
+    <!-- Cash Payment Modal -->
     <div id="cash-payment-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <div class="flex justify-between items-center mb-4">
@@ -254,11 +273,12 @@
     </div>
 
 
+    <!-- Firebase SDKs and App Logic -->
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, onSnapshot, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
         // --- Firebase Configuration ---
@@ -297,17 +317,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Google Sign-In Configuration ---
             const GOOGLE_CLIENT_ID = '1042460892509-gmoih87sc14vmkc4td34bal6h8cbjgof.apps.googleusercontent.com';
-            const SCOPES = 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.courses.readonly';
+            const SCOPES = 'https://www.googleapis.com/auth/calendar';
 
             // --- STATE MANAGEMENT ---
             let state = {
                 accessToken: null,
                 calendarId: 'asorteoffice@gmail.com',
                 clients: {},
-                clientFirebaseData: {}, // Holds Firestore data for clients
-                courses: null,
+                clientFirebaseData: {},
                 instructors: [],
-                activeTab: 'dashboard',
+                activeTab: 'today',
                 searchQuery: '',
                 isLoading: false,
                 isSearching: false,
@@ -316,18 +335,19 @@
                 activeDiscipline: 'all',
                 filterLastSessionOnly: false,
                 cancellationContext: null,
-                cashPaymentContext: null, // NEW: Context for cash payments
-                initialInstructorsLoaded: false, // Flag to track initial instructor load
-                isSettingsExpanded: false, // For settings accordion
-                isWorkingHoursExpanded: false, // For working hours accordion
-                isDoubleBookingExpanded: false, // For double booking accordion
-                isApiKeysExpanded: false, // For API Keys accordion
-                financials: { // State for the financials tab
+                cashPaymentContext: null,
+                initialInstructorsLoaded: false,
+                isSettingsExpanded: false,
+                isWorkingHoursExpanded: false,
+                isDoubleBookingExpanded: false,
+                isApiKeysExpanded: false,
+                timesheetData: {}, // NEW: For timesheet tab
+                financials: {
                     allPayments: [],
                     filteredPayments: [],
                     searchQuery: ''
                 },
-                disciplinesForBooking: [ // Updated list for the new event form
+                disciplinesForBooking: [
                     'Chitară', 'Canto', 'Pian', 'Bas', 'Tobe', 'Productie'
                 ],
                 workingHours: {
@@ -338,10 +358,10 @@
                     'Vineri': { enabled: true, startTime: 9, endTime: 21 },
                     'Sâmbătă': { enabled: true, startTime: 9, endTime: 21 },
                 },
-                doubleBookingRules: { // Default rule
+                doubleBookingRules: {
                     'Miercuri': { enabled: true, startTime: 14, endTime: 21 }
                 },
-                messageTemplates: { // Default WhatsApp message templates
+                messageTemplates: {
                     notification: `Salut {Nume}! Te contactăm pentru a-ți confirma prezența la cursul de {Disciplina} programat pentru {Data}, la ora {Ora}. Îți mulțumim și te așteptăm cu drag!`,
                     lastSession: `Salut {Nume}! Îți reamintim cu drag că sesiunea de {Data} este ultima din abonamentul tău. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`,
                     newSubscription: `Salut {Nume}! Îți reamintim cu drag că următoarea ședință este prima dintr-un nou abonament și necesită o nouă plată. Poți face plata accesând acest link: https://www.asortemediaproductions.com/paginapreturi. O zi frumoasă!`,
@@ -357,6 +377,7 @@
                 calendarIdInput: document.getElementById('calendarId'),
                 searchQueryInput: document.getElementById('searchQuery'),
                 incrementAllBtn: document.getElementById('incrementAllBtn'),
+                logTimesheetBtn: document.getElementById('logTimesheetBtn'), // NEW
                 notificationArea: document.getElementById('notification-area'),
                 resultsArea: document.getElementById('results-area'),
                 tabControls: document.getElementById('tab-controls'),
@@ -374,7 +395,6 @@
                 createEventForm: document.getElementById('create-event-form'),
                 closeCreateModalBtn: document.getElementById('close-create-modal-btn'),
                 submitEventBtn: document.getElementById('submit-event-btn'),
-                // NEW: Cash Payment Modal elements
                 cashPaymentModal: document.getElementById('cash-payment-modal'),
                 cashPaymentForm: document.getElementById('cash-payment-form'),
                 closeCashModalBtn: document.getElementById('close-cash-modal-btn'),
@@ -402,8 +422,6 @@
 
             const sanitizeForFirestoreId = (text) => {
                 if (!text) return '';
-                // Replace characters that are invalid for Firestore document IDs.
-                // Most notably, forward slashes.
                 return text.replace(/\//g, '-');
             };
 
@@ -427,9 +445,9 @@
                     const docRef = doc(db, "clients", sanitizedName);
                     await setDoc(docRef, data, { merge: true });
                 },
-                async addInstructor(name, phone, percentage) {
+                async addInstructor(name, phone) {
                     if (!db || !name) return;
-                    await addDoc(collection(db, "instructors"), { name, phone, percentage: Number(percentage) || 0 });
+                    await addDoc(collection(db, "instructors"), { name, phone });
                 },
                 async updateInstructor(id, data) {
                     if (!db || !id) return;
@@ -518,22 +536,31 @@
                     if (!db) return;
                     const docRef = doc(db, "app-settings", "api-keys");
                     await setDoc(docRef, { [keyName]: keyValue }, { merge: true });
+                },
+                async logTimesheet(instructorId, dateString, clientNames) {
+                    if (!db || !instructorId || !dateString || !clientNames) return;
+                    const docRef = doc(db, `timesheets/${instructorId}/logs`, dateString);
+                    await setDoc(docRef, { date: dateString, clients: clientNames }, { merge: true });
+                },
+                async getInstructorTimesheet(instructorId) {
+                    if (!db || !instructorId) return [];
+                    const logsCollection = collection(db, `timesheets/${instructorId}/logs`);
+                    const q = query(logsCollection, orderBy("date", "desc"));
+                    const snapshot = await getDocs(q);
+                    const logs = [];
+                    snapshot.forEach(doc => {
+                        logs.push(doc.data());
+                    });
+                    return logs;
                 }
             };
 
             // --- Main App Initialization ---
             function initializeAppLogic() {
-                if (state.accessToken && !state.courses) {
-                    api.fetchCourses()
-                        .then(courses => { state.courses = courses; })
-                        .catch(err => renderNotification(`Eroare la preluarea cursurilor: ${err.message}`, 'error'));
-                }
-
                 attachAppEventListeners();
                 updateUI();
                 lucide.createIcons();
 
-                // Fetch instructors 
                 firestoreApi.getInstructors(instructors => {
                     state.instructors = instructors;
                     if (!state.initialInstructorsLoaded) {
@@ -545,7 +572,6 @@
                     }
                 });
                 
-                // Fetch message templates
                 firestoreApi.getMessageTemplates().then(templates => {
                     if (templates) {
                         state.messageTemplates = { ...state.messageTemplates, ...templates };
@@ -557,7 +583,6 @@
                     renderNotification("Nu s-au putut încărca șabloanele de mesaje.", "error");
                 });
 
-                // Fetch double booking rules
                 firestoreApi.getDoubleBookingRules().then(rules => {
                     if (rules) {
                         state.doubleBookingRules = rules;
@@ -569,7 +594,6 @@
                     renderNotification("Nu s-au putut încărca regulile de rezervare dublă.", "error");
                 });
 
-                // Fetch working hours
                 firestoreApi.getWorkingHours().then(hours => {
                     if (hours) {
                         state.workingHours = hours;
@@ -582,7 +606,7 @@
                 });
             }
 
-            // --- Google Calendar & Classroom API ---
+            // --- Google Calendar API ---
             const api = {
                 async getEventsForDateRange(startDate, endDate, showDeleted = false) {
                     const params = new URLSearchParams({
@@ -723,25 +747,6 @@
                     if (patchData.error) throw new Error(`Failed to update event: ${patchData.error.message}`);
                     return patchData;
                 },
-                async fetchCourses() {
-                    const response = await fetch('https://classroom.googleapis.com/v1/courses', { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
-                    const data = await response.json();
-                    if (data.error) throw new Error(data.error.message);
-                    return data.courses || [];
-                },
-                async postHomework({ courseId, studentEmail, discipline, homework }) {
-                    const title = `Temă (${new Date().toLocaleDateString('ro-RO')}) - ${discipline}`;
-                    const url = `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`;
-                    const body = { title, description: homework, workType: 'ASSIGNMENT', state: 'PUBLISHED', assigneeMode: 'INDIVIDUAL_STUDENTS', individualStudentsOptions: { studentIds: [studentEmail] } };
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${state.accessToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    });
-                    const data = await response.json();
-                    if (data.error) throw new Error(data.error.message);
-                    return data;
-                },
                 async getEventById(eventId) {
                     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events/${eventId}`;
                     const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
@@ -863,17 +868,11 @@
 
                 const displayTitle = getDisplayTitle();
                 const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details, clientFirebaseData[name])).join('');
-                
-                let headerExtras = '';
-                if (state.activeTab === 'today' && clientEntries.length > 0) {
-                    headerExtras = `<button id="generate-today-timesheet-btn" class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 flex items-center gap-2 text-sm"><i data-lucide="clipboard-list" class="h-4 w-4"></i>Generează Pontaj</button>`;
-                }
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
-                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600 flex flex-wrap justify-between items-center gap-4">
+                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
                             <h2 class="text-2xl font-bold text-gray-200">${displayTitle}</h2>
-                            <div>${headerExtras}</div>
                         </div>
                         <ul class="divide-y divide-gray-600">${clientListHTML}</ul>
                     </div>
@@ -883,7 +882,7 @@
             };
 
             const createClientListItemHTML = (name, details, clientData) => {
-                const { eventId, discipline, sessionNumber, phone, startTime, lastPayment, guestEmails } = details;
+                const { eventId, discipline, sessionNumber, phone, startTime, lastPayment } = details;
                 const subscriptionType = clientData?.subscription || '4';
                 const assignedInstructor = clientData?.assignedInstructor || '';
                 const isExpanded = state.expandedClient === name;
@@ -903,6 +902,7 @@
                 return `
                     <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
                         <div class="flex items-center justify-between flex-wrap cursor-pointer client-header" data-name="${name}">
+                            <!-- Client Info -->
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
                                     <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
@@ -916,12 +916,6 @@
                                     </span>
                                 </div>
                                 <p class="text-sm text-gray-400 mt-2">${discipline}</p>
-                                ${guestEmails && guestEmails.length > 0 ? `
-                                    <div class="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
-                                        <i data-lucide="at-sign" class="h-3 w-3 flex-shrink-0"></i>
-                                        <span>${guestEmails.join(', ')}</span>
-                                    </div>
-                                ` : ''}
                                 <div class="mt-2 flex flex-wrap items-center gap-2">
                                     <select class="subscription-select w-full max-w-[200px] text-sm px-2 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" data-name="${name}">
                                         <option value="4" ${subscriptionType === '4' ? 'selected' : ''}>Abonament de 4 sedinte</option>
@@ -942,6 +936,7 @@
                                 </div>
                                 ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment}</span></div>` : ''}
                             </div>
+                            <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-full sm:w-48">
                                 <div class="w-full text-right mb-2">
                                     <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
@@ -957,31 +952,9 @@
                             </div>
                         </div>
                         <div class="client-details w-full" style="display: ${isExpanded ? 'block' : 'none'};">
-                            </div>
-                    </li>
-                `;
-            };
-
-            const createHomeworkHTML = (name, client) => {
-                if (!client) return '';
-                if (!state.courses) return `<p>Se încarcă cursurile...</p>`;
-                if (state.courses.length === 0) return `<p class="text-red-500">Nu s-au găsit cursuri Google Classroom.</p>`;
-
-                const courseOptions = state.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-                return `
-                    <div class="mb-4 homework-form" data-name="${name}" data-discipline="${client.discipline}" data-session-number="${client.sessionNumber}">
-                        <h4 class="text-md font-semibold text-gray-200 mb-2">Temă pentru Acasă</h4>
-                        <div class="flex items-center space-x-2 mb-2">
-                            <label class="text-sm font-medium">Curs:</label>
-                            <select class="course-select block w-full rounded-md border-gray-600 bg-gray-700 shadow-sm sm:text-sm">${courseOptions}</select>
+                            <!-- Details will be loaded here -->
                         </div>
-                        <textarea rows="4" class="homework-text w-full p-2 border border-gray-600 bg-gray-700 rounded-md" placeholder="Scrie tema aici..."></textarea>
-                        <button class="post-homework-btn mt-2 flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-discipline="${client.discipline}" data-student-email="${client.studentEmail || ''}" ${!client.studentEmail ? 'disabled' : ''}>
-                            <i data-lucide="book" class="h-4 w-4 mr-1.5"></i><span>Postează Tema</span>
-                        </button>
-                        ${!client.studentEmail ? `<p class="text-xs text-red-500 mt-1">Nu s-a găsit e-mailul studentului.</p>` : ''}
-                    </div>
+                    </li>
                 `;
             };
 
@@ -1034,12 +1007,10 @@
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
                  if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
-                 if (state.activeTab === 'financials') return 'Date Financiare';
-                 if (state.activeTab === 'reports') return 'Rapoarte Avansate';
-                 if (state.activeTab === 'settings') return 'Setări Aplicație';
-                 if (state.activeTab === 'dashboard') return 'Dashboard';
-                 if (state.activeTab === 'add') return 'Adaugă Programare Nouă';
                  if (state.activeTab === 'timesheet') return 'Pontaj Instructori';
+                 if (state.activeTab === 'financials') return 'Date Financiare';
+                 if (state.activeTab === 'settings') return 'Setări Aplicație';
+                 if (state.activeTab === 'add') return 'Adaugă Programare Nouă';
                 return 'Sumar Toți Clienții';
             };
 
@@ -1053,16 +1024,13 @@
                             <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="text" id="newInstructorName" placeholder="Nume instructor nou" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <input type="text" id="newInstructorPhone" placeholder="Telefon (ex: +407...)" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <div class="relative">
-                                    <input type="number" id="newInstructorPercentage" placeholder="Procent %" class="w-full sm:w-32 px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-8">
-                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 text-sm">%</span>
-                                </div>
                                 <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex-shrink-0">
                                     <i data-lucide="plus" class="h-5 w-5"></i>
                                 </button>
                             </div>
                             <ul id="instructorList" class="divide-y divide-gray-600">
-                                </ul>
+                                <!-- Instructors will be rendered here -->
+                            </ul>
                         </div>
                     </div>
                 `;
@@ -1073,14 +1041,8 @@
                 if (!list) return;
                 list.innerHTML = state.instructors.map(inst => `
                     <li class="flex flex-wrap items-center justify-between py-3 gap-2">
-                        <span class="text-gray-300 font-semibold w-full sm:w-auto sm:min-w-[120px] mb-2 sm:mb-0">${inst.name}</span>
-                        <div class="flex-grow flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                            <input type="text" value="${inst.phone || ''}" placeholder="Telefon" data-id="${inst.id}" class="instructor-phone-input flex-1 min-w-[150px] px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                            <div class="relative flex-1 min-w-[100px]">
-                                 <input type="number" value="${inst.percentage || ''}" placeholder="Procent %" data-id="${inst.id}" class="instructor-percentage-input w-full px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-6">
-                                 <span class="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 text-sm">%</span>
-                            </div>
-                        </div>
+                        <span class="text-gray-300 font-semibold min-w-[120px]">${inst.name}</span>
+                        <input type="text" value="${inst.phone || ''}" data-id="${inst.id}" class="instructor-phone-input flex-1 min-w-[150px] px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                         <div class="flex items-center gap-2 flex-shrink-0">
                             <button class="notify-instructor-btn bg-cyan-600 text-white p-2 rounded-md hover:bg-cyan-700" data-id="${inst.id}" data-name="${inst.name}" data-phone="${inst.phone || ''}" title="Notifică pentru programul de mâine">
                                 <i data-lucide="send" class="h-4 w-4"></i>
@@ -1094,7 +1056,6 @@
                 lucide.createIcons();
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
-                attachInstructorPercentageInputListeners();
                 attachInstructorNotifyListeners();
             };
             
@@ -1272,79 +1233,6 @@
                 `;
             };
 
-            const renderDashboard = (dashboardData) => {
-                const { totalStudents, sessionsThisWeek, endingSubscriptions, disciplineBreakdown, dateRangeString } = dashboardData;
-
-                // Create Discipline Breakdown Chart
-                const maxCount = Math.max(1, ...Object.values(disciplineBreakdown)); // Avoid division by zero
-                const disciplineChartHTML = Object.entries(disciplineBreakdown).map(([discipline, count]) => `
-                    <div class="flex items-center text-sm">
-                        <span class="w-24 truncate" title="${discipline}">${discipline}</span>
-                        <div class="flex-1 bg-gray-700 rounded-full h-4 mx-2">
-                            <div class="bg-blue-600 h-4 rounded-full text-xs text-white flex items-center justify-center" style="width: ${(count / maxCount) * 100}%">
-                                <span>${count}</span>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-                const dashboardHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
-                        <div class="space-y-6">
-                            <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-400">Total Studenți Activi</p>
-                                    <p class="text-4xl font-bold text-white">${totalStudents}</p>
-                                </div>
-                                <div class="bg-purple-500/20 p-3 rounded-full">
-                                    <i data-lucide="users" class="h-8 w-8 text-purple-400"></i>
-                                </div>
-                            </div>
-
-                            <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-400">Ședințe Săptămâna Aceasta</p>
-                                    <p class="text-xs text-gray-500">${dateRangeString}</p>
-                                    <p class="text-4xl font-bold text-white mt-1">${sessionsThisWeek}</p>
-                                </div>
-                                <div class="bg-green-500/20 p-3 rounded-full">
-                                    <i data-lucide="calendar" class="h-8 w-8 text-green-400"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-6">
-                            <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
-                                <div class="flex items-center mb-4">
-                                    <i data-lucide="user-x" class="h-6 w-6 text-red-400 mr-3"></i>
-                                    <h3 class="text-lg font-semibold text-white">Abonamente pe terminate</h3>
-                                </div>
-                                <ul class="space-y-2 h-32 overflow-y-auto">
-                                    ${endingSubscriptions.length > 0 ? endingSubscriptions.map(client => `
-                                        <li class="text-sm text-gray-300 flex justify-between">
-                                            <span>${client.name}</span>
-                                            <span class="font-medium text-gray-400">${client.discipline}</span>
-                                        </li>
-                                    `).join('') : '<p class="text-sm text-gray-400">Niciun abonament pe terminate.</p>'}
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="md:col-span-2 bg-gray-800 p-6 rounded-xl shadow-lg">
-                            <div class="flex items-center mb-4">
-                                <i data-lucide="pie-chart" class="h-6 w-6 text-blue-400 mr-3"></i>
-                                <h3 class="text-lg font-semibold text-white">Distribuție pe Discipline</h3>
-                            </div>
-                            <div class="space-y-3">
-                                ${disciplineChartHTML || '<p class="text-sm text-gray-400">Nu sunt date despre discipline.</p>'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                dom.resultsArea.innerHTML = dashboardHTML;
-                lucide.createIcons();
-            };
-
             const renderAddAppointmentView = () => {
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
@@ -1353,7 +1241,8 @@
                         </div>
                         <div class="p-6">
                             <div id="availability-schedule" class="flex overflow-x-auto space-x-4 pb-4">
-                                </div>
+                                <!-- 14-day schedule will be rendered here -->
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1472,49 +1361,6 @@
                 }
             };
             
-            const renderReportsView = () => {
-                const today = new Date().toISOString().split('T')[0];
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-
-                dom.resultsArea.innerHTML = `
-                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
-                        <div id="attendance-report-section" class="report-section border border-gray-700 rounded-lg p-6">
-                            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                                <h3 class="text-xl font-bold text-white">Raport de Prezență</h3>
-                                <button id="export-attendance" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"><i data-lucide="download" class="h-4 w-4"></i>Exportă CSV</button>
-                            </div>
-                            <div class="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
-                                <div class="flex-grow">
-                                    <label for="attendance-start-date" class="block text-sm font-medium text-gray-300 mb-1">Data de început</label>
-                                    <input type="date" id="attendance-start-date" value="${thirtyDaysAgoStr}" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <div class="flex-grow">
-                                    <label for="attendance-end-date" class="block text-sm font-medium text-gray-300 mb-1">Data de sfârșit</label>
-                                    <input type="date" id="attendance-end-date" value="${today}" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <button id="generate-attendance-report" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex-shrink-0">Generează Raport</button>
-                            </div>
-                            <div id="attendance-report-results" class="overflow-x-auto"></div>
-                        </div>
-                        
-                        <div id="retention-report-section" class="report-section border border-gray-700 rounded-lg p-6">
-                            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
-                                <h3 class="text-xl font-bold text-white">Raport Retenție Clienți</h3>
-                                <button id="export-retention" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"><i data-lucide="download" class="h-4 w-4"></i>Exportă CSV</button>
-                            </div>
-                             <div class="flex flex-wrap gap-4 items-end mb-4">
-                                <button id="generate-retention-report" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Generează Raport de Retenție (Ultimele 90 de zile)</button>
-                            </div>
-                            <div id="retention-report-results" class="overflow-x-auto"></div>
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-                attachReportsEventListeners();
-            };
-
             const renderFinancialsView = () => {
                 const today = new Date().toISOString().split('T')[0];
                 const thirtyDaysAgo = new Date();
@@ -1523,6 +1369,7 @@
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
+                        <!-- Financial Stats -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-gray-700/50 p-6 rounded-xl flex items-center justify-between">
                                 <div>
@@ -1544,6 +1391,7 @@
                             </div>
                         </div>
 
+                        <!-- Payments List -->
                         <div id="payments-list-section" class="report-section border border-gray-700 rounded-lg p-6">
                              <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Istoric Plăți</h3>
@@ -1571,90 +1419,86 @@
                 attachFinancialsEventListeners();
             };
 
-            // --- TIMESHEET VIEW (MODIFIED) ---
-            const renderTimesheetView = (scheduleData = null) => {
-                let contentHTML = '';
-                const instructorsAndUnassigned = [...state.instructors, { name: 'Nealocat' }];
+            // --- TIMESHEET FUNCTIONS ---
+            const renderTimesheetView = async () => {
+                renderLoader('Se încarcă pontajul...');
+                try {
+                    const instructors = state.instructors;
+                    if (instructors.length === 0) {
+                        dom.resultsArea.innerHTML = `<p class="text-center text-gray-400 py-12">Nu sunt instructori adăugați. Mergeți la secțiunea Instructori pentru a adăuga.</p>`;
+                        return;
+                    }
 
-                if (scheduleData) {
-                    // Render the generated schedule
-                    contentHTML = instructorsAndUnassigned.map(inst => {
-                        const scheduleForInstructor = scheduleData[inst.name];
-                        // Check if there are any sessions for the instructor
-                        if (!scheduleForInstructor || Object.keys(scheduleForInstructor).length === 0) {
-                            return `
-                                <div class="bg-gray-700/50 rounded-lg p-4">
-                                    <h4 class="text-lg font-bold text-white mb-3">${inst.name}</h4>
-                                    <p class="text-sm text-gray-500 text-center p-2">Nicio sesiune programată.</p>
-                                </div>
-                            `;
-                        }
+                    const timesheetPromises = instructors.map(inst => firestoreApi.getInstructorTimesheet(inst.id));
+                    const timesheetResults = await Promise.all(timesheetPromises);
 
-                        // Sort dates chronologically before rendering
-                        const sortedDateKeys = Object.keys(scheduleForInstructor).sort((a, b) => {
-                            const dateAStr = a.split(' - ')[1];
-                            const dateBStr = b.split(' - ')[1];
-                            const dateA = new Date(dateAStr.split('.').reverse().join('-'));
-                            const dateB = new Date(dateBStr.split('.').reverse().join('-'));
-                            return dateA - dateB;
-                        });
+                    const timesheetData = instructors.reduce((acc, inst, index) => {
+                        acc[inst.id] = timesheetResults[index];
+                        return acc;
+                    }, {});
+                    state.timesheetData = timesheetData;
 
-                        const daysHTML = sortedDateKeys.map(dateKey => {
-                            const sessions = scheduleForInstructor[dateKey];
-                            const sessionsHTML = sessions.map(s => `
-                                <li class="flex justify-between items-center text-sm p-2 bg-gray-900/50 rounded-md">
-                                    <span>${s.name}</span>
-                                    <div class="flex items-center gap-x-4">
-                                        <span class="font-semibold text-green-400">${s.calculatedPay.toFixed(2)} RON</span>
-                                        <span class="font-semibold text-blue-400">${s.time}</span>
-                                    </div>
-                                </li>`).join('');
+                    const instructorCardsHTML = instructors.map(inst => createTimesheetCardHTML(inst, timesheetData[inst.id] || [])).join('');
 
-                            return `
-                                <div class="day-group bg-gray-800 rounded-md overflow-hidden">
-                                    <button class="day-header w-full flex justify-between items-center p-3 text-left hover:bg-gray-700 transition-colors focus:outline-none">
-                                        <span class="font-semibold text-gray-200">${dateKey}</span>
-                                        <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
-                                    </button>
-                                    <ul class="day-sessions px-3 pb-3 space-y-2" style="display: none;">
-                                        ${sessionsHTML}
-                                    </ul>
-                                </div>
-                            `;
-                        }).join('');
-
-                        return `
-                            <div class="bg-gray-700/50 rounded-lg p-4">
-                                <h4 class="text-lg font-bold text-white mb-3">${inst.name}</h4>
-                                <div class="space-y-2">${daysHTML}</div>
+                    dom.resultsArea.innerHTML = `
+                        <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                            <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                                <h2 class="text-2xl font-bold text-gray-200">Pontaj Instructori</h2>
                             </div>
-                        `;
-                    }).join('');
-
-                } else {
-                    // Render the initial empty/placeholder state
-                    contentHTML = instructorsAndUnassigned.map(inst => `
-                        <div class="bg-gray-700/50 rounded-lg p-4">
-                            <h4 class="text-lg font-bold text-white mb-3">${inst.name}</h4>
-                             <p class="text-sm text-gray-500 text-center p-2">Generează pontajul din tab-ul "Astăzi" pentru a vedea programul.</p>
+                            <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                ${instructorCardsHTML}
+                            </div>
                         </div>
-                    `).join('');
-                }
+                    `;
+                    lucide.createIcons();
+                    attachTimesheetEventListeners();
 
-                dom.resultsArea.innerHTML = `
-                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
-                        <div id="timesheet-section" class="report-section">
-                            <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                                <h3 class="text-xl font-bold text-white">Pontaj Instructori</h3>
+                } catch (err) {
+                    renderNotification(`Eroare la încărcarea pontajului: ${err.message}`, 'error');
+                    dom.resultsArea.innerHTML = '';
+                }
+            };
+
+            const createTimesheetCardHTML = (instructor, logs) => {
+                const logsHTML = logs.length > 0 ? logs.map(log => {
+                    const dayId = `${instructor.id}-${log.date}`;
+                    return `
+                        <div class="bg-gray-900/50 rounded-md">
+                            <button class="timesheet-day-header w-full flex justify-between items-center p-3 text-left" data-target="${dayId}">
+                                <span class="font-semibold text-blue-400">${formatDateForTimesheet(log.date)}</span>
+                                <span class="timesheet-chevron-wrapper inline-block transition-transform duration-300">
+                                    <i data-lucide="chevron-down" class="h-5 w-5"></i>
+                                </span>
+                            </button>
+                            <div id="${dayId}" class="timesheet-day-content hidden p-3 border-t border-gray-700">
+                                <ul class="list-disc list-inside space-y-1 text-sm text-gray-300">
+                                    ${log.clients.map(client => `<li>${client}</li>`).join('')}
+                                </ul>
                             </div>
-                            <div id="timesheet-report-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                ${contentHTML}
-                            </div>
+                        </div>
+                    `;
+                }).join('') : '<p class="text-sm text-gray-500 px-2">Nicio zi înregistrată.</p>';
+
+                return `
+                    <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col">
+                        <h3 class="text-xl font-bold text-white mb-4">${instructor.name}</h3>
+                        <div class="space-y-2 flex-grow">
+                            ${logsHTML}
                         </div>
                     </div>
                 `;
-                lucide.createIcons();
-                attachTimesheetEventListeners();
+            };
+
+            const formatDateForTimesheet = (dateString) => {
+                const date = new Date(dateString + 'T00:00:00'); // Ensure it's parsed as local time
+                let formatted = date.toLocaleDateString('ro-RO', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                formatted = formatted.replace(',', ' -');
+                return formatted.charAt(0).toUpperCase() + formatted.slice(1);
             };
 
             // --- EVENT HANDLERS ---
@@ -1667,24 +1511,16 @@
                     renderSettingsView();
                     return;
                 }
-                if (state.activeTab === 'dashboard') {
-                    handleDashboardLoad();
-                    return;
-                }
                 if (state.activeTab === 'add') {
                     renderAddAppointmentView();
                     return;
                 }
-                if (state.activeTab === 'reports') {
-                    renderReportsView();
+                if (state.activeTab === 'timesheet') {
+                    renderTimesheetView();
                     return;
                 }
                  if (state.activeTab === 'financials') {
                     renderFinancialsView();
-                    return;
-                }
-                if (state.activeTab === 'timesheet') {
-                    renderTimesheetView(); // Renders the initial empty state
                     return;
                 }
 
@@ -1719,69 +1555,6 @@
                 } finally {
                     state.isLoading = false;
                     updateUI();
-                }
-            };
-
-            const handleDashboardLoad = async () => {
-                renderLoader('Se calculează datele pentru dashboard...');
-                try {
-                    // Calculate date range: last Monday to next Sunday
-                    const today = new Date();
-                    const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-                    const lastMonday = new Date(today);
-                    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                    lastMonday.setDate(today.getDate() - diffToMonday);
-                    lastMonday.setHours(0, 0, 0, 0);
-
-                    const nextSunday = new Date(lastMonday);
-                    nextSunday.setDate(lastMonday.getDate() + 6);
-                    nextSunday.setHours(23, 59, 59, 999);
-                    
-                    const options = { day: 'numeric', month: 'long' };
-                    const dateRangeString = `${lastMonday.toLocaleDateString('ro-RO', options)} - ${nextSunday.toLocaleDateString('ro-RO', {...options, year: 'numeric'})}`;
-                    
-                    // Fetch events for the calculated week
-                    const weeklyEventsRaw = await api.getEventsForDateRange(lastMonday, nextSunday);
-                    
-                    const allClients = await api.getEvents('all');
-
-                    // 1. Total Active Students
-                    const totalStudents = Object.keys(allClients).length;
-
-                    // 2. Sessions This Week
-                    const sessionsThisWeek = weeklyEventsRaw.filter(event => event.status !== 'cancelled').length;
-
-                    // 3. Subscriptions Ending Soon
-                    const clientDataPromises = Object.keys(allClients).map(name => firestoreApi.getClientData(name));
-                    const allClientFirebaseData = await Promise.all(clientDataPromises);
-                    const endingSubscriptions = [];
-                    allClientFirebaseData.forEach(clientData => {
-                        const clientDetails = allClients[clientData.name];
-                        if (clientDetails) {
-                            const subType = parseInt(clientData.subscription || '4');
-                            if (clientDetails.sessionNumber === subType) {
-                                endingSubscriptions.push({ name: clientData.name, discipline: clientDetails.discipline });
-                            }
-                        }
-                    });
-
-                    // 4. Discipline Breakdown
-                    const disciplineBreakdown = Object.values(allClients).reduce((acc, client) => {
-                        acc[client.discipline] = (acc[client.discipline] || 0) + 1;
-                        return acc;
-                    }, {});
-
-                    renderDashboard({
-                        totalStudents,
-                        sessionsThisWeek,
-                        endingSubscriptions,
-                        disciplineBreakdown,
-                        dateRangeString
-                    });
-
-                } catch (err) {
-                    renderNotification(`Eroare la încărcarea datelor pentru dashboard: ${err.message}`, 'error');
-                    dom.resultsArea.innerHTML = '';
                 }
             };
 
@@ -1827,35 +1600,6 @@
                 const { eventId, name } = button.dataset;
                 state.cashPaymentContext = { eventId, name };
                 showCashPaymentModal(name, eventId);
-            };
-
-            const handlePostHomeworkClick = async (button) => {
-                const form = button.closest('.homework-form');
-                const { name } = form.dataset;
-                const { studentEmail, discipline } = button.dataset;
-                const courseId = form.querySelector('.course-select').value;
-                const homework = form.querySelector('.homework-text').value;
-
-                if (!homework || !studentEmail || !courseId) {
-                    renderNotification("Te rugăm să selectezi un curs, să te asiguri că studentul are un e-mail și să scrii tema.", "error");
-                    return;
-                }
-
-                button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i><span>Se postează...</span>`;
-                button.disabled = true;
-                lucide.createIcons();
-
-                try {
-                    await api.postHomework({ courseId, studentEmail, discipline, homework });
-                    renderNotification(`Tema a fost postată pentru ${name}`, 'success');
-                    form.querySelector('.homework-text').value = '';
-                } catch (err) {
-                    renderNotification(`Eroare la postarea temei: ${err.message}`, 'error');
-                } finally {
-                    button.innerHTML = `<i data-lucide="book" class="h-4 w-4 mr-1.5"></i><span>Postează Tema</span>`;
-                    button.disabled = false;
-                    lucide.createIcons();
-                }
             };
 
             const handleIncrementSessionClick = async (button) => {
@@ -2038,6 +1782,7 @@
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
+                dom.logTimesheetBtn.addEventListener('click', handleLogTimesheetClick); // NEW
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -2104,8 +1849,6 @@
             }
 
             const attachClientEventListeners = () => {
-                document.getElementById('generate-today-timesheet-btn')?.addEventListener('click', generateAndDisplayTodayTimesheet);
-
                 document.querySelectorAll('.client-header').forEach(header => {
                     header.addEventListener('click', (e) => {
                         if (e.target.closest('a')) {
@@ -2189,21 +1932,16 @@
                 container.innerHTML = `<div class="p-4 border-t border-gray-700 flex justify-center"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-gray-500"></i></div>`;
                 lucide.createIcons();
                 try {
-                    const client = state.clients[name];
                     const clientData = await firestoreApi.getClientData(name);
                     const history = await api.fetchHistory(name);
 
                     const historyHTML = createHistoryHTML(history);
                     const notesHTML = createNotesHTML(name, clientData.notes);
-                    const homeworkHTML = createHomeworkHTML(name, client);
 
                     container.innerHTML = `
                         <div class="p-6 border-t border-gray-700 space-y-6">
                             <div>
                                 ${notesHTML}
-                            </div>
-                             <div>
-                                ${homeworkHTML}
                             </div>
                             <div>
                                 <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Sesiuni (Ultimele 60 de zile)</h4>
@@ -2237,11 +1975,6 @@
                     notesTextarea.addEventListener('input', saveNotes);
                 }
 
-                container.querySelector('.post-homework-btn')?.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handlePostHomeworkClick(e.currentTarget);
-                });
-
                 container.querySelectorAll('.history-month-header').forEach(header => {
                     header.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -2258,17 +1991,14 @@
                 document.getElementById('addInstructorBtn')?.addEventListener('click', async () => {
                     const nameInput = document.getElementById('newInstructorName');
                     const phoneInput = document.getElementById('newInstructorPhone');
-                    const percentageInput = document.getElementById('newInstructorPercentage');
                     const name = nameInput.value.trim();
                     const phone = phoneInput.value.trim();
-                    const percentage = percentageInput.value.trim();
                     if (name) {
                         try {
-                            await firestoreApi.addInstructor(name, phone, percentage);
+                            await firestoreApi.addInstructor(name, phone);
                             renderNotification(`Instructorul "${name}" a fost adăugat.`, 'success');
                             nameInput.value = '';
                             phoneInput.value = '';
-                            percentageInput.value = '';
                         } catch (err) {
                             renderNotification(`Eroare la adăugarea instructorului: ${err.message}`, 'error');
                         }
@@ -2276,7 +2006,6 @@
                 });
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
-                attachInstructorPercentageInputListeners();
                 attachInstructorNotifyListeners();
             };
 
@@ -2293,22 +2022,6 @@
                         }
                     }, 1000);
                     input.addEventListener('input', savePhone);
-                });
-            };
-
-            const attachInstructorPercentageInputListeners = () => {
-                document.querySelectorAll('.instructor-percentage-input').forEach(input => {
-                    const savePercentage = debounce(async (e) => {
-                        const id = e.target.dataset.id;
-                        const percentage = e.target.value.trim();
-                        try {
-                            await firestoreApi.updateInstructor(id, { percentage: Number(percentage) || 0 });
-                            renderNotification('Procentul a fost actualizat.', 'success');
-                        } catch (err) {
-                            renderNotification(`Eroare la actualizarea procentului: ${err.message}`, 'error');
-                        }
-                    }, 1000);
-                    input.addEventListener('input', savePercentage);
                 });
             };
 
@@ -2508,52 +2221,51 @@
             };
 
             const attachTimesheetEventListeners = () => {
-                document.querySelectorAll('.day-header').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const sessionsList = button.nextElementSibling;
-                        const icon = button.querySelector('i[data-lucide="chevron-down"]');
-                        
-                        if (!sessionsList || !icon) return;
-
-                        const isVisible = sessionsList.style.display !== 'none';
-                        sessionsList.style.display = isVisible ? 'none' : 'block';
-                        icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+                document.querySelectorAll('.timesheet-day-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const targetId = header.dataset.target;
+                        const content = document.getElementById(targetId);
+                        const iconWrapper = header.querySelector('.timesheet-chevron-wrapper');
+                        if (content && iconWrapper) {
+                            content.classList.toggle('hidden');
+                            iconWrapper.classList.toggle('rotate-180');
+                        }
                     });
                 });
             };
 
             const updateUI = () => {
                 const tabConfig = {
-                    dashboard: { name: 'Dashboard', icon: 'layout-dashboard' },
                     add: { name: 'Adaugă Programare', icon: 'calendar-plus' },
                     today: { name: 'Astăzi', icon: 'calendar-check' },
                     tomorrow: { name: 'Mâine', icon: 'calendar-clock' },
                     all: { name: 'Toți Clienții', icon: 'users' },
                     instructors: { name: 'Instructori', icon: 'user-cog' },
-                    financials: { name: 'Financiar', icon: 'credit-card' },
                     timesheet: { name: 'Pontaj', icon: 'clipboard-list' },
-                    reports: { name: 'Rapoarte', icon: 'bar-chart-3' },
+                    financials: { name: 'Financiar', icon: 'credit-card' },
                     settings: { name: 'Setări', icon: 'settings' }
                 };
 
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
                     const config = tabConfig[tab];
-                    
-                    btn.innerHTML = `<i data-lucide="${config.icon}" class="h-4 w-4 mr-2"></i><span>${config.name}</span>`;
-                    
-                    const isSelected = tab === state.activeTab;
-                    const baseClasses = 'tab-button flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800';
-                    const selectedClasses = 'bg-blue-600 text-white shadow-md';
-                    const unselectedClasses = 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white';
-                    
-                    btn.className = `${baseClasses} ${isSelected ? selectedClasses : unselectedClasses}`;
+                    if (config) {
+                        btn.innerHTML = `<i data-lucide="${config.icon}" class="h-4 w-4 mr-2"></i><span>${config.name}</span>`;
+                        
+                        const isSelected = tab === state.activeTab;
+                        const baseClasses = 'tab-button flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800';
+                        const selectedClasses = 'bg-blue-600 text-white shadow-md';
+                        const unselectedClasses = 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white';
+                        
+                        btn.className = `${baseClasses} ${isSelected ? selectedClasses : unselectedClasses}`;
+                    }
                 });
                 
                 const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
                 document.querySelectorAll('.filter-control').forEach(el => el.style.display = isClientTab ? 'flex' : 'none');
                 
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
+                dom.logTimesheetBtn.style.display = state.activeTab === 'today' ? 'block' : 'none';
                 lucide.createIcons();
             };
 
@@ -2916,32 +2628,21 @@
                         if (phoneMatch) phone = phoneMatch[0];
                     }
                     
-                    const guestEmails = event.attendees
-                        ?.filter(a => !a.organizer)
-                        .map(a => a.email) || [];
-                    const studentEmail = guestEmails.length > 0 ? guestEmails[0] : null;
-
-                    if (name && discipline && (phone || studentEmail)) {
+                    if (name && discipline && phone) {
                         const sanitizedName = sanitizeForFirestoreId(name);
                         const existingData = existingClientsMap.get(sanitizedName);
-                        
-                        if (!existingData || existingData.discipline !== discipline || existingData.phone !== phone || existingData.email !== studentEmail) {
+                        if (!existingData || existingData.discipline !== discipline || existingData.phone !== phone) {
                             console.log(`Syncing data for ${sanitizedName}: New or changed.`);
                             firestoreApi.saveClientData(name, {
                                 name: name,
                                 discipline: discipline,
-                                phone: phone,
-                                email: studentEmail
+                                phone: phone
                             }).catch(err => console.error("Failed to save client info to Firestore:", err));
                         }
                     }
 
                     processedClients[name] = {
-                        eventId: event.id,
-                        discipline,
-                        sessionNumber,
-                        studentEmail,
-                        guestEmails,
+                        eventId: event.id, discipline, sessionNumber,
                         startTime: event.start?.dateTime,
                         phone: phone || processedClients[name]?.phone,
                         lastPayment: null, // This will be populated later
@@ -2957,263 +2658,86 @@
                 const clientNames = Object.keys(clients);
                 const lastPayments = {};
 
+                // Create a map for client emails for easier lookup
                 const clientEmailMap = {};
                 clientNames.forEach(name => {
                     const firebaseData = clientFirebaseData[name];
-                    const calendarData = clients[name];
-                    clientEmailMap[name] = firebaseData?.email || calendarData?.studentEmail || null;
+                    // Prioritize email from Firestore
+                    clientEmailMap[name] = firebaseData?.email || null;
                 });
 
-                const oneHundredTwentyDaysAgo = new Date();
-                oneHundredTwentyDaysAgo.setDate(new Date().getDate() - 120);
-
-                let allPayments = [];
-
+                // 1. Fetch Stripe Payments
                 try {
                     const functions = getFunctions(app);
                     const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(endDate.getDate() - 365); // Look back one year
+
                     const stripeResult = await getStripeFinancials({
-                        startDate: oneHundredTwentyDaysAgo.toISOString(),
-                        endDate: new Date().toISOString()
+                        startDate: startDate.toISOString(),
+                        endDate: endDate.toISOString()
                     });
-                    allPayments.push(...(stripeResult.data.payments || []));
+                    const stripePayments = stripeResult.data.payments || [];
+
+                    // Iterate through clients and find their latest stripe payment
+                    clientNames.forEach(name => {
+                        const clientEmail = clientEmailMap[name]?.toLowerCase();
+                        const clientNameLower = name.toLowerCase();
+
+                        const relevantPayments = stripePayments.filter(p => {
+                            const paymentCustomerLower = p.customer?.toLowerCase();
+                            const paymentEmailLower = p.email?.toLowerCase();
+                            
+                            return (paymentCustomerLower && paymentCustomerLower === clientNameLower) || 
+                                (clientEmail && paymentEmailLower && paymentEmailLower === clientEmail);
+                        });
+
+                        if (relevantPayments.length > 0) {
+                            // Find the most recent payment among the relevant ones
+                            relevantPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+                            const latestPayment = relevantPayments[0];
+                            const paymentDate = new Date(latestPayment.date);
+
+                            lastPayments[name] = {
+                                date: paymentDate,
+                                text: `${paymentDate.toLocaleDateString('ro-RO')} - Stripe`
+                            };
+                        }
+                    });
+
                 } catch (error) {
                     console.error("Could not fetch Stripe payments:", error);
                 }
 
+                // 2. Fetch Cash Payments from Firestore and potentially override Stripe if newer
                 try {
-                    const paymentsRef = collection(db, "payments");
-                    const q = query(paymentsRef, where("created", ">=", oneHundredTwentyDaysAgo.toISOString()));
-                    const cashPaymentsSnapshot = await getDocs(q);
+                    const cashPaymentsSnapshot = await getDocs(collection(db, "payments"));
                     cashPaymentsSnapshot.forEach(doc => {
                         const data = doc.data();
-                        allPayments.push({
-                            id: doc.id,
-                            customer: data.clientName,
-                            email: 'N/A',
-                            amount: data.amount,
-                            date: data.created,
-                            displayDate: data.date,
-                            method: 'Cash'
-                        });
+                        const clientName = data.clientName;
+                        if (clientNames.includes(clientName)) { // Only process for visible clients
+                            const paymentDate = new Date(data.created);
+                            if (!lastPayments[clientName] || paymentDate > lastPayments[clientName].date) {
+                                lastPayments[clientName] = {
+                                    date: paymentDate,
+                                    text: `${new Date(data.date).toLocaleDateString('ro-RO')} - Cash`
+                                };
+                            }
+                        }
                     });
                 } catch (error) {
                     console.error("Could not fetch cash payments:", error);
                 }
 
-                allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
-
+                // 3. Merge into state.clients
                 clientNames.forEach(name => {
                     if (clients[name]) {
-                        const clientEmail = clientEmailMap[name]?.toLowerCase();
-                        const clientNameLower = name.toLowerCase();
-                        
-                        const latestPayment = allPayments.find(p => 
-                            p.customer?.toLowerCase() === clientNameLower || 
-                            (clientEmail && p.email?.toLowerCase() === clientEmail)
-                        );
-
-                        if (latestPayment) {
-                            const paymentDisplayDate = latestPayment.method === 'Cash' ? new Date(latestPayment.displayDate).toLocaleDateString('ro-RO') : new Date(latestPayment.date).toLocaleDateString('ro-RO');
-                            clients[name].lastPayment = `${paymentDisplayDate} - ${latestPayment.method}`;
-                        } else {
-                            clients[name].lastPayment = "Nici o plată încă";
-                        }
+                        clients[name].lastPayment = lastPayments[name] ? lastPayments[name].text : "Nici o plată încă";
                     }
                 });
                 console.log("Finished merging last payments.");
             }
-
-
-            // --- Reports Logic ---
-            const attachReportsEventListeners = () => {
-                document.getElementById('generate-attendance-report')?.addEventListener('click', generateAttendanceReport);
-                document.getElementById('generate-retention-report')?.addEventListener('click', generateClientRetentionReport);
-            };
-
-            const generateAttendanceReport = async () => {
-                const resultsContainer = document.getElementById('attendance-report-results');
-                const startDateStr = document.getElementById('attendance-start-date').value;
-                const endDateStr = document.getElementById('attendance-end-date').value;
-                if (!startDateStr || !endDateStr) {
-                    renderNotification("Te rugăm să selectezi un interval de date.", "error");
-                    return;
-                }
-
-                resultsContainer.innerHTML = `<div class="flex items-center justify-center p-5"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-400"></i><span class="ml-3">Se generează raportul de prezență...</span></div>`;
-                lucide.createIcons();
-
-                try {
-                    const startDate = new Date(startDateStr);
-                    startDate.setHours(0,0,0,0);
-                    const endDate = new Date(endDateStr);
-                    endDate.setHours(23,59,59,999);
-
-                    const events = await api.getEventsForDateRange(startDate, endDate, true); // showDeleted = true
-                    
-                    const clientStats = {};
-
-                    for (const event of events) {
-                        if (!event.summary) continue;
-                        const parts = event.summary.split(' - ').map(p => p.trim());
-                        if (parts.length < 2) continue;
-                        const name = parts[0];
-
-                        if (!clientStats[name]) {
-                            clientStats[name] = { name, attended: 0, cancelledByClient: 0, cancelledByInstructor: 0, total: 0 };
-                        }
-
-                        clientStats[name].total++;
-
-                        const organizer = event.attendees?.find(a => a.organizer);
-                        const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
-
-                        if (event.status === 'cancelled' || isDeclinedByOrganizer) {
-                            clientStats[name].cancelledByClient++; 
-                        } else {
-                            clientStats[name].attended++;
-                        }
-                    }
-                    
-                    const reportData = Object.values(clientStats).sort((a,b) => a.name.localeCompare(b.name));
-
-                    if (reportData.length === 0) {
-                        resultsContainer.innerHTML = `<p class="text-center text-gray-400 py-4">Nu s-au găsit date pentru intervalul selectat.</p>`;
-                        return;
-                    }
-
-                    const reportHTML = reportData.map(client => {
-                        const attendanceRate = client.total > 0 ? (client.attended / client.total) * 100 : 0;
-                        let progressBarColor = 'bg-green-500';
-                        if (attendanceRate < 80) progressBarColor = 'bg-yellow-500';
-                        if (attendanceRate < 50) progressBarColor = 'bg-red-500';
-
-                        return `
-                            <div class="bg-gray-700/50 rounded-lg p-4 mb-3 transition-all hover:bg-gray-700">
-                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                    <div class="mb-3 sm:mb-0 min-w-0">
-                                        <p class="text-lg font-bold text-white truncate" title="${client.name}">${client.name}</p>
-                                    </div>
-                                    <div class="flex items-center gap-4 text-center">
-                                        <div>
-                                            <p class="text-xs text-gray-400">Prezent</p>
-                                            <p class="text-xl font-semibold text-green-400">${client.attended}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-gray-400">Anulat</p>
-                                            <p class="text-xl font-semibold text-red-400">${client.cancelledByClient}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-gray-400">Total</p>
-                                            <p class="text-xl font-semibold text-gray-300">${client.total}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-4">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-xs font-medium text-gray-400">Rată Prezență</span>
-                                        <span class="text-sm font-bold ${progressBarColor.replace('bg-', 'text-')}">${attendanceRate.toFixed(0)}%</span>
-                                    </div>
-                                    <div class="w-full bg-gray-600 rounded-full h-2.5">
-                                        <div class="${progressBarColor} h-2.5 rounded-full" style="width: ${attendanceRate}%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-
-                    resultsContainer.innerHTML = `<div class="space-y-3">${reportHTML}</div>`;
-                    document.getElementById('export-attendance').onclick = () => exportToCSV(reportData, 'raport_prezenta');
-
-                } catch (err) {
-                    resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la generarea raportului: ${err.message}</p>`;
-                }
-            };
-            
-            const generateClientRetentionReport = async () => {
-                const resultsContainer = document.getElementById('retention-report-results');
-                resultsContainer.innerHTML = `<div class="flex items-center justify-center p-5"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-400"></i><span class="ml-3">Se generează raportul de retenție...</span></div>`;
-                lucide.createIcons();
-
-                try {
-                    const ninetyDaysAgo = new Date();
-                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-                    const today = new Date();
-
-                    const events = await api.getEventsForDateRange(ninetyDaysAgo, today);
-
-                    const trialSessions = events.filter(e => e.summary?.toLowerCase().includes('sedinta de proba'));
-                    const regularSessions = events.filter(e => e.summary?.match(/sedinta \d+/i));
-
-                    let convertedCount = 0;
-                    const trialClients = new Set(trialSessions.map(e => e.summary.split(' - ')[0]));
-
-                    trialClients.forEach(clientName => {
-                        if (regularSessions.some(e => e.summary.startsWith(clientName))) {
-                            convertedCount++;
-                        }
-                    });
-
-                    const conversionRate = trialClients.size > 0 ? (convertedCount / trialClients.size) * 100 : 0;
-                    
-                    const reportData = [
-                        { metric: 'Ședințe de probă', value: trialClients.size },
-                        { metric: 'Clienți convertiți', value: convertedCount },
-                        { metric: 'Rata de conversie', value: `${conversionRate.toFixed(1)}%` },
-                    ];
-
-                    const tableHTML = `
-                        <table class="report-table min-w-full divide-y divide-gray-600">
-                            <thead class="bg-gray-700">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Metrică</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Valoare</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-gray-800 divide-y divide-gray-700">
-                                ${reportData.map(item => `
-                                    <tr>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-white">${item.metric}</td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-300">${item.value}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                    resultsContainer.innerHTML = tableHTML;
-                    document.getElementById('export-retention').onclick = () => exportToCSV(reportData, 'raport_retentie');
-
-                } catch (err) {
-                    resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la generarea raportului: ${err.message}</p>`;
-                }
-            };
-
-            const exportToCSV = (data, filename) => {
-                if (!data || data.length === 0) {
-                    renderNotification("Nu există date de exportat.", "error");
-                    return;
-                }
-                const headers = Object.keys(data[0]);
-                const csvRows = [
-                    headers.join(','),
-                    ...data.map(row => 
-                        headers.map(header => 
-                            JSON.stringify(row[header], (key, value) => value === undefined ? '' : value)
-                        ).join(',')
-                    )
-                ];
-                
-                const csvString = csvRows.join('\n');
-                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
 
             const attachFinancialsEventListeners = () => {
                 document.getElementById('generate-payments-list')?.addEventListener('click', fetchAndDisplayFinancials);
@@ -3366,120 +2890,56 @@
                 lucide.createIcons();
             }
 
-            // --- TIMESHEET LOGIC (MODIFIED) ---
-            const generateAndDisplayTodayTimesheet = async () => {
+            const handleLogTimesheetClick = async () => {
                 if (state.activeTab !== 'today' || Object.keys(state.clients).length === 0) {
-                    renderNotification("Funcționalitatea este disponibilă doar din tab-ul 'Astăzi' când există programări.", "error");
+                    renderNotification("Pontajul poate fi înregistrat doar din tab-ul 'Astăzi' când există clienți programați.", 'error');
                     return;
                 }
 
-                renderLoader('Se calculează pontajul...');
+                const button = dom.logTimesheetBtn;
+                button.disabled = true;
+                button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se înregistrează...`;
+                lucide.createIcons();
 
                 try {
-                    // --- 1. Fetch all payments to find the latest for each client ---
-                    const functions = getFunctions(app);
-                    const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
-                    const oneHundredTwentyDaysAgo = new Date();
-                    oneHundredTwentyDaysAgo.setDate(new Date().getDate() - 120);
-                    
-                    const stripeResult = await getStripeFinancials({ 
-                        startDate: oneHundredTwentyDaysAgo.toISOString(),
-                        endDate: new Date().toISOString()
-                    });
-                    const stripePayments = stripeResult.data.payments || [];
-
-                    const paymentsRef = collection(db, "payments");
-                    const q = query(paymentsRef, where("created", ">=", oneHundredTwentyDaysAgo.toISOString()));
-                    const cashPaymentsSnapshot = await getDocs(q);
-                    const cashPayments = [];
-                    cashPaymentsSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        cashPayments.push({
-                            id: doc.id,
-                            customer: data.clientName, // NORMALIZE
-                            email: 'N/A',
-                            amount: data.amount,
-                            date: data.created, // Use timestamp for sorting
-                            method: 'Cash'
-                        });
-                    });
-
-                    const allPayments = [...stripePayments, ...cashPayments];
-                    allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                    const lastPaymentMap = new Map();
-                    for (const clientName of Object.keys(state.clients)) {
-                        const clientEmail = state.clientFirebaseData[clientName]?.email?.toLowerCase();
-                        const clientNameLower = clientName.toLowerCase();
-                        const latestPayment = allPayments.find(p => 
-                            p.customer?.toLowerCase() === clientNameLower || 
-                            (clientEmail && p.email?.toLowerCase() === clientEmail)
-                        );
-                        if (latestPayment) {
-                            lastPaymentMap.set(clientName, latestPayment.amount);
-                        }
-                    }
-
-                    // --- 2. Build the schedule with calculations and group by date ---
-                    const instructorSchedules = {};
-                    state.instructors.forEach(inst => {
-                        instructorSchedules[inst.name] = {};
-                    });
-                    instructorSchedules['Nealocat'] = {};
-
-                    for (const [clientName, details] of Object.entries(state.clients)) {
+                    const clientsByInstructor = {};
+                    for (const clientName in state.clients) {
                         const clientData = state.clientFirebaseData[clientName];
-                        const instructorName = clientData?.assignedInstructor || 'Nealocat';
-                        
-                        // Group by formatted date string
-                        const sessionDate = new Date(details.startTime);
-                        const dayName = sessionDate.toLocaleDateString('ro-RO', { weekday: 'long' });
-                        const formattedDate = sessionDate.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                        const capitalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-                        const dateKey = `${capitalizedDayName} - ${formattedDate}`;
-
-                        if (!instructorSchedules[instructorName][dateKey]) {
-                            instructorSchedules[instructorName][dateKey] = [];
+                        const instructorName = clientData?.assignedInstructor;
+                        if (instructorName) {
+                            if (!clientsByInstructor[instructorName]) {
+                                clientsByInstructor[instructorName] = [];
+                            }
+                            clientsByInstructor[instructorName].push(clientName);
                         }
-                        
-                        let calculatedPay = 0;
-                        const lastPaymentAmount = lastPaymentMap.get(clientName) || 0;
-                        const subscriptionSessions = parseInt(clientData?.subscription || '4', 10);
+                    }
+
+                    if (Object.keys(clientsByInstructor).length === 0) {
+                        renderNotification("Niciun client de astăzi nu are un instructor alocat.", "success");
+                        return;
+                    }
+
+                    const today = new Date();
+                    const dateString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+                    const logPromises = [];
+                    for (const instructorName in clientsByInstructor) {
                         const instructor = state.instructors.find(inst => inst.name === instructorName);
-                        const instructorPercentage = instructor?.percentage || 0;
-
-                        if (lastPaymentAmount > 0 && subscriptionSessions > 0 && instructorPercentage > 0) {
-                            const pricePerSession = lastPaymentAmount / subscriptionSessions;
-                            calculatedPay = pricePerSession * (instructorPercentage / 100);
-                        }
-                        
-                        if (instructorSchedules.hasOwnProperty(instructorName)) {
-                            instructorSchedules[instructorName][dateKey].push({
-                                name: clientName,
-                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
-                                calculatedPay: calculatedPay
-                            });
-                        }
-                    }
-                    
-                    // Sort sessions by time within each day for each instructor
-                    for (const instructor in instructorSchedules) {
-                        for (const dateKey in instructorSchedules[instructor]) {
-                            instructorSchedules[instructor][dateKey].sort((a, b) => a.time.localeCompare(b.time));
+                        if (instructor) {
+                            logPromises.push(
+                                firestoreApi.logTimesheet(instructor.id, dateString, clientsByInstructor[instructorName])
+                            );
                         }
                     }
 
-                    // --- 3. Switch tab and render ---
-                    state.activeTab = 'timesheet';
-                    updateUI();
-                    renderTimesheetView(instructorSchedules);
+                    await Promise.all(logPromises);
+                    renderNotification(`Pontajul pentru ${Object.keys(clientsByInstructor).length} instructor(i) a fost înregistrat cu succes.`, 'success');
 
-                } catch (error) {
-                    renderNotification(`Eroare la generarea pontajului: ${error.message}`, 'error');
-                    // Switch back to today tab on error
-                    state.activeTab = 'today';
-                    updateUI();
-                    renderClients(state.clients, state.clientFirebaseData);
+                } catch (err) {
+                    renderNotification(`Eroare la înregistrarea pontajului: ${err.message}`, 'error');
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = 'Înregistrează Pontaj Astăzi';
                 }
             };
 
