@@ -67,10 +67,6 @@
                 <h1 class="text-4xl sm:text-5xl font-bold text-gray-100">Pontaj Instructori</h1>
                 <p class="text-lg text-gray-400 mt-2">Vizualizează și filtrează pontajul lunar pentru instructori.</p>
             </div>
-            <button id="logoutBtn" style="display: none;" class="absolute top-1/2 right-0 -translate-y-1/2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors flex items-center">
-                <i data-lucide="log-out" class="h-5 w-5 mr-2"></i>
-                <span>Deconectare</span>
-            </button>
         </header>
 
         <div id="auth-section" class="max-w-md mx-auto bg-gray-800 p-8 rounded-xl shadow-md text-center fade-in">
@@ -155,7 +151,6 @@
             resultsArea: document.getElementById('results-area'),
             loginForm: document.getElementById('login-form'),
             loginError: document.getElementById('login-error'),
-            logoutBtn: document.getElementById('logoutBtn'),
         };
         
         // --- FIRESTORE API (Read-only subset) ---
@@ -484,7 +479,6 @@
                     .then(() => {
                         dom.authSection.style.display = 'none';
                         dom.mainAppView.style.display = 'block';
-                        dom.logoutBtn.style.display = 'flex';
                         loadAndDisplayTimesheet();
                     })
                     .catch((error) => {
@@ -499,16 +493,7 @@
             }
         };
         
-        const handleLogout = () => {
-            state.loggedInInstructor = null;
-            dom.mainAppView.style.display = 'none';
-            dom.authSection.style.display = 'block';
-            dom.logoutBtn.style.display = 'none';
-            dom.loginForm.reset();
-        };
-
         dom.loginForm.addEventListener('submit', handleLogin);
-        dom.logoutBtn.addEventListener('click', handleLogout);
         
         window.onload = () => {
             lucide.createIcons();
