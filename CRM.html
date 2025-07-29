@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ro" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestionare Sesiuni Clienți</title>
 
-    <!-- Google Identity Services (GIS) Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,39 +19,60 @@
             font-family: 'Inter', sans-serif;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
+
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
         }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         /* Simple debounce status indicator */
-        .notes-status, .sub-status {
+        .notes-status,
+        .sub-status {
             transition: opacity 0.3s ease-in-out;
         }
+
         /* Modal styles */
         .modal-overlay {
             transition: opacity 0.3s ease;
         }
+
         .modal-content {
             transition: transform 0.3s ease;
         }
+
         /* Custom scrollbar for better aesthetics in dark mode */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
+
         ::-webkit-scrollbar-track {
-            background: #1f2937; /* gray-800 */
+            background: #1f2937;
+            /* gray-800 */
         }
+
         ::-webkit-scrollbar-thumb {
-            background: #4b5563; /* gray-600 */
+            background: #4b5563;
+            /* gray-600 */
             border-radius: 4px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* gray-500 */
+            background: #6b7280;
+            /* gray-500 */
         }
+
         /* Ensure table layout is fixed for reports */
         .report-table {
             table-layout: fixed;
@@ -59,9 +80,9 @@
         }
     </style>
 </head>
+
 <body class="bg-gray-900 text-gray-200">
 
-    <!-- Container for the entire widget. -->
     <div id="client-tracker-widget" class="container mx-auto p-4 sm:p-6 lg:p-8">
 
         <header class="relative text-center mb-8">
@@ -69,17 +90,30 @@
             <p class="text-lg text-gray-400 mt-2">Gestionează sesiunile clienților din Google Calendar & Classroom</p>
         </header>
 
-        <!-- Main App View -->
         <div id="main-app-view">
-            <!-- Configuration Section -->
             <div id="config-section" class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md space-y-4 mb-8">
 
-                <!-- Authorization Section -->
                 <div id="auth-section">
-                    <!-- Google Sign-In Button -->
-                    <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația pentru a accesa datele din Google Calendar și Classroom.</p>
-                    <button id="authBtn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
-                        <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24px" height="24px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                    <p class="text-center text-gray-400 mb-4">Te rugăm să te autentifici și să autorizezi aplicația
+                        pentru a accesa datele din Google Calendar și Classroom.</p>
+                    <button id="authBtn"
+                        class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all duration-300 ease-in-out flex items-center justify-center">
+                        <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"
+                            width="24px" height="24px">
+                            <path
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                fill="#4285F4" />
+                            <path
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                fill="#34A853" />
+                            <path
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                                fill="#FBBC05" />
+                            <path
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                fill="#EA4335" />
+                            <path d="M1 1h22v22H1z" fill="none" />
+                        </svg>
                         Autentificare și Autorizare cu Google
                     </button>
 
@@ -90,37 +124,45 @@
                     </div>
 
                     <div class="text-center mb-4">
-                        <a href="#" id="testing-mode-toggle" class="text-sm text-blue-400 hover:underline cursor-pointer">Intră în Modul de Testare</a>
+                        <a href="#" id="testing-mode-toggle"
+                            class="text-sm text-blue-400 hover:underline cursor-pointer">Intră în Modul de Testare</a>
                     </div>
 
-                    <!-- Manual Access Token Input for Testing -->
                     <div id="manual-auth-section" style="display: none;">
-                        <p class="text-center text-gray-400 mb-4">Pentru testare, introdu un token de acces OAuth 2.0 de pe <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
+                        <p class="text-center text-gray-400 mb-4">Pentru testare, introdu un token de acces OAuth 2.0 de
+                            pe <a href="https://developers.google.com/oauthplayground" target="_blank"
+                                class="text-blue-400 hover:underline">Google OAuth Playground</a>.</p>
                         <div class="flex items-center space-x-2">
-                            <input type="password" id="manualAccessToken" placeholder="Introdu Token-ul de Acces Aici" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button id="submitTokenBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                            <input type="password" id="manualAccessToken" placeholder="Introdu Token-ul de Acces Aici"
+                                class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="submitTokenBtn"
+                                class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
                                 Trimite
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <hr id="config-hr" class="border-gray-600" style="display: none;"/>
+                <hr id="config-hr" class="border-gray-600" style="display: none;" />
 
                 <div id="main-config-controls" style="display: none;">
                     <div class="space-y-6">
                         <div>
-                            <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">ID Google Calendar</label>
+                            <label for="calendarId" class="block text-sm font-medium text-gray-300 mb-1">ID Google
+                                Calendar</label>
                             <div class="flex items-center space-x-2">
-                                <input type="email" id="calendarId" value="asorteoffice@gmail.com" placeholder="ex: primary sau user@exemplu.com" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <button id="openCalendarBtn" title="Deschide Calendarul într-un Tab Nou" class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
+                                <input type="email" id="calendarId" value="asorteoffice@gmail.com"
+                                    placeholder="ex: primary sau user@exemplu.com"
+                                    class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="openCalendarBtn" title="Deschide Calendarul într-un Tab Nou"
+                                    class="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors">
                                     <i data-lucide="external-link" class="h-5 w-5"></i>
                                 </button>
                             </div>
                         </div>
 
                         <div id="tab-controls" class="space-y-4">
-                             <div class="flex flex-wrap items-center justify-center gap-2">
+                            <div class="flex flex-wrap items-center justify-center gap-2">
                                 <button data-tab="dashboard" class="tab-button"></button>
                                 <button data-tab="add" class="tab-button"></button>
                                 <button data-tab="today" class="tab-button"></button>
@@ -129,36 +171,46 @@
                                 <button data-tab="instructors" class="tab-button"></button>
                                 <button data-tab="financials" class="tab-button"></button>
                                 <button data-tab="reports" class="tab-button"></button>
+                                <button data-tab="timesheet" class="tab-button"></button>
                                 <button data-tab="settings" class="tab-button"></button>
                             </div>
                         </div>
 
                         <div class="relative filter-control">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
-                            <input type="text" id="searchQuery" placeholder="Caută client global..." class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><i
+                                    data-lucide="search" class="h-5 w-5 text-gray-400"></i></div>
+                            <input type="text" id="searchQuery" placeholder="Caută client global..."
+                                class="block w-full rounded-md border-gray-600 bg-gray-700 pl-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3">
                         </div>
 
                         <div class="flex flex-wrap gap-4 filter-control">
-                            <!-- Discipline Filter -->
                             <div class="flex-1 min-w-[200px]">
-                                <label for="disciplineFilter" class="block text-sm font-medium text-gray-300 mb-1">Filtrează după Disciplină</label>
-                                <select id="disciplineFilter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <!-- Options will be populated dynamically -->
+                                <label for="disciplineFilter"
+                                    class="block text-sm font-medium text-gray-300 mb-1">Filtrează după
+                                    Disciplină</label>
+                                <select id="disciplineFilter"
+                                    class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 </select>
                             </div>
 
-                            <!-- Last Session Filter -->
                             <div class="flex items-end pb-1">
                                 <label for="lastSessionFilter" class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" id="lastSessionFilter" class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
-                                    <span class="text-sm font-medium text-gray-300">Afișează doar clienții în ultima ședință</span>
+                                    <input type="checkbox" id="lastSessionFilter"
+                                        class="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm font-medium text-gray-300">Afișează doar clienții în ultima
+                                        ședință</span>
                                 </label>
                             </div>
                         </div>
-                        
+
                         <div class="mt-4 space-y-2">
-                            <button id="incrementAllBtn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                            <button id="incrementAllBtn"
+                                class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
                                 Incrementează Toate Sesiunile pentru Mâine
+                            </button>
+                            <button id="logTodaysSessionsBtn"
+                                class="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-300 disabled:bg-gray-400 transition-all duration-300 ease-in-out hidden">
+                                Înregistrează Pontajul de Azi
                             </button>
                         </div>
 
@@ -166,38 +218,37 @@
                 </div>
             </div>
 
-            <!-- Notification Area -->
             <div id="notification-area" class="max-w-7xl mx-auto mb-6"></div>
 
-            <!-- Results Area -->
             <div id="results-area" class="max-w-7xl mx-auto">
-                <!-- Loading spinner will be injected here -->
-                <!-- Client/Instructor/Settings/Add Appointment/Reports list will be injected here -->
             </div>
         </div>
     </div>
 
-    <!-- Cancellation Modal -->
-    <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+    <div id="cancel-modal"
+        class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <h3 class="text-2xl font-bold text-white mb-4">Confirmă Anularea</h3>
             <p class="text-gray-400 mb-6">Cine anulează această sesiune?</p>
             <div class="space-y-3">
-                <button id="cancel-by-instructor-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                <button id="cancel-by-instructor-btn"
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
                     Anulată de Instructor
                 </button>
-                <button id="cancel-by-client-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
+                <button id="cancel-by-client-btn"
+                    class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
                     Anulată de Client
                 </button>
             </div>
-            <button id="close-modal-btn" class="mt-6 w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
+            <button id="close-modal-btn"
+                class="mt-6 w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
                 Renunță
             </button>
         </div>
     </div>
 
-    <!-- Create Event Modal -->
-    <div id="create-event-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+    <div id="create-event-modal"
+        class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-lg transform scale-95">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold text-white">Adaugă Programare Nouă</h3>
@@ -209,29 +260,37 @@
                 <input type="hidden" id="event-start-time">
                 <input type="hidden" id="event-end-time">
                 <div>
-                    <label for="event-time-display" class="block text-sm font-medium text-gray-300 mb-1">Interval Orar</label>
-                    <input type="text" id="event-time-display" disabled class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm">
+                    <label for="event-time-display" class="block text-sm font-medium text-gray-300 mb-1">Interval
+                        Orar</label>
+                    <input type="text" id="event-time-display" disabled
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm">
                 </div>
                 <div>
                     <label for="client-name" class="block text-sm font-medium text-gray-300 mb-1">Nume Client</label>
-                    <input type="text" id="client-name" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="client-name" required
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label for="client-phone" class="block text-sm font-medium text-gray-300 mb-1">Telefon Client</label>
-                    <input type="tel" id="client-phone" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="client-phone" class="block text-sm font-medium text-gray-300 mb-1">Telefon
+                        Client</label>
+                    <input type="tel" id="client-phone" required
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label for="client-email" class="block text-sm font-medium text-gray-300 mb-1">Email Client</label>
-                    <input type="email" id="client-email" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="email" id="client-email" required
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label for="event-discipline" class="block text-sm font-medium text-gray-300 mb-1">Disciplina</label>
-                    <select id="event-discipline" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <!-- Options will be populated dynamically -->
+                    <label for="event-discipline"
+                        class="block text-sm font-medium text-gray-300 mb-1">Disciplina</label>
+                    <select id="event-discipline" required
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </select>
                 </div>
                 <div class="flex justify-end pt-4">
-                    <button type="submit" id="submit-event-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center">
+                    <button type="submit" id="submit-event-btn"
+                        class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex items-center">
                         <i data-lucide="plus-circle" class="h-5 w-5 mr-2"></i>
                         Creează Eveniment
                     </button>
@@ -240,8 +299,8 @@
         </div>
     </div>
 
-    <!-- Cash Payment Modal -->
-    <div id="cash-payment-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+    <div id="cash-payment-modal"
+        class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
         <div class="modal-content bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold text-white">Înregistrează Plată Cash</h3>
@@ -253,15 +312,20 @@
                 <input type="hidden" id="cash-client-name">
                 <input type="hidden" id="cash-event-id">
                 <div>
-                    <label for="cash-client-name-display" class="block text-sm font-medium text-gray-300 mb-1">Client</label>
-                    <input type="text" id="cash-client-name-display" disabled class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm">
+                    <label for="cash-client-name-display"
+                        class="block text-sm font-medium text-gray-300 mb-1">Client</label>
+                    <input type="text" id="cash-client-name-display" disabled
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm">
                 </div>
                 <div>
                     <label for="cash-amount" class="block text-sm font-medium text-gray-300 mb-1">Sumă (RON)</label>
-                    <input type="number" id="cash-amount" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ex: 250">
+                    <input type="number" id="cash-amount" required
+                        class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="ex: 250">
                 </div>
                 <div class="flex justify-end pt-4">
-                    <button type="submit" id="submit-cash-payment-btn" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-colors flex items-center">
+                    <button type="submit" id="submit-cash-payment-btn"
+                        class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-colors flex items-center">
                         <i data-lucide="save" class="h-5 w-5 mr-2"></i>
                         Salvează Plata
                     </button>
@@ -271,7 +335,6 @@
     </div>
 
 
-    <!-- Firebase SDKs and App Logic -->
     <script type="module">
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -325,6 +388,7 @@
                 clientFirebaseData: {}, // Holds Firestore data for clients
                 courses: null,
                 instructors: [],
+                instructorPercentages: {}, // Percentage for each instructor
                 activeTab: 'dashboard',
                 searchQuery: '',
                 isLoading: false,
@@ -335,6 +399,9 @@
                 filterLastSessionOnly: false,
                 cancellationContext: null,
                 cashPaymentContext: null, // NEW: Context for cash payments
+                timesheet: {}, // To store timesheet data by instructorId
+                timesheetFilter: { month: new Date().getMonth(), year: new Date().getFullYear() }, // NEW: Filter for timesheet
+                timesheetClientData: {}, //  To store client data for timesheet
                 initialInstructorsLoaded: false, // Flag to track initial instructor load
                 isSettingsExpanded: false, // For settings accordion
                 isWorkingHoursExpanded: false, // For working hours accordion
@@ -407,7 +474,7 @@
                     timeout = setTimeout(() => func.apply(this, args), delay);
                 };
             };
-            
+
             // --- HELPER FUNCTIONS ---
             const replacePlaceholders = (template, data) => {
                 if (!template) return '';
@@ -459,7 +526,7 @@
                     await deleteDoc(doc(db, "instructors", id));
                 },
                 getInstructors(callback) {
-                    if (!db) return () => {};
+                    if (!db) return () => { };
                     const q = collection(db, "instructors");
                     return onSnapshot(q, (querySnapshot) => {
                         const instructors = [];
@@ -484,6 +551,44 @@
                 async deleteCashPayment(paymentId) {
                     if (!db || !paymentId) return;
                     await deleteDoc(doc(db, "payments", paymentId));
+                },
+                async getTimesheetData() {
+                    if (!db) return {};
+                    const timesheets = {};
+                    const snapshot = await getDocs(collection(db, "timesheets"));
+                    snapshot.forEach(doc => {
+                        timesheets[doc.id] = doc.data();
+                    });
+                    return timesheets;
+                },
+                async logSession(instructorId, dateKey, sessionData) {
+                    if (!db || !instructorId || !dateKey || !sessionData) return;
+                    const docRef = doc(db, "timesheets", instructorId);
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        // Document exists, update the sessions map
+                        const sessions = docSnap.data().sessions || {};
+                        const daySessions = sessions[dateKey] || [];
+
+                        // Prevent duplicates
+                        const isAlreadyLogged = daySessions.some(s => s.clientName === sessionData.clientName && s.time === sessionData.time);
+
+                        if (!isAlreadyLogged) {
+                            await updateDoc(docRef, {
+                                [`sessions.${dateKey}`]: [...daySessions, sessionData]
+                            });
+                        }
+                    } else {
+                        // Document doesn't exist, create it
+                        const instructor = state.instructors.find(i => i.id === instructorId);
+                        await setDoc(docRef, {
+                            instructorName: instructor?.name || 'N/A',
+                            sessions: {
+                                [dateKey]: [sessionData]
+                            }
+                        });
+                    }
                 },
                 async getMessageTemplates() {
                     if (!db) return null;
@@ -536,7 +641,18 @@
                     if (!db) return;
                     const docRef = doc(db, "app-settings", "api-keys");
                     await setDoc(docRef, { [keyName]: keyValue }, { merge: true });
-                }
+                },
+                async getInstructorPercentages() {
+                    if (!db) return {};
+                    const docRef = doc(db, "app-settings", "instructor-percentages");
+                    const docSnap = await getDoc(docRef);
+                    return docSnap.exists() ? docSnap.data() : {};
+                },
+                async saveInstructorPercentages(percentages) {
+                    if (!db) return;
+                    const docRef = doc(db, "app-settings", "instructor-percentages");
+                    await setDoc(docRef, percentages);
+                },
             };
 
             // --- Main App Initialization ---
@@ -562,7 +678,7 @@
                         renderInstructorsView();
                     }
                 });
-                
+
                 // Fetch message templates
                 firestoreApi.getMessageTemplates().then(templates => {
                     if (templates) {
@@ -597,6 +713,19 @@
                 }).catch(err => {
                     console.error("Error fetching working hours:", err);
                     renderNotification("Nu s-au putut încărca setările pentru programul de lucru.", "error");
+                });
+                // Fetch instructor percentages
+                firestoreApi.getInstructorPercentages().then(percentages => {
+                    if (percentages) {
+                        state.instructorPercentages = percentages;
+                    }
+                    // Re-render instructors view if it's active, to show the loaded percentages
+                    if (state.activeTab === 'instructors') {
+                        renderInstructorsView();
+                    }
+                }).catch(err => {
+                    console.error("Error fetching instructor percentages:", err);
+                    renderNotification("Nu s-au putut încărca procentajele instructorilor.", "error");
                 });
             }
 
@@ -700,8 +829,8 @@
                     const cancelledEvents = allEvents.filter(e => e.isDeclinedByOrganizer);
 
                     const processedCancelledEvents = cancelledEvents.map(cancelledEvent => {
-                        const correspondingConfirmed = confirmedEvents.find(confirmedEvent => 
-                            confirmedEvent.summary === cancelledEvent.summary && 
+                        const correspondingConfirmed = confirmedEvents.find(confirmedEvent =>
+                            confirmedEvent.summary === cancelledEvent.summary &&
                             new Date(confirmedEvent.date) > new Date(cancelledEvent.date)
                         );
                         return { ...cancelledEvent, status: correspondingConfirmed ? 'rescheduled' : 'cancelled', rescheduledTo: correspondingConfirmed?.date };
@@ -727,7 +856,7 @@
                     if (!organizerEmail) throw new Error("Could not identify the event organizer.");
                     if (!eventData.attendees) throw new Error("Event has no attendees list to modify.");
 
-                    const updatedAttendees = eventData.attendees.map(attendee => 
+                    const updatedAttendees = eventData.attendees.map(attendee =>
                         attendee.email === organizerEmail ? { ...attendee, responseStatus: 'declined' } : attendee
                     );
 
@@ -806,7 +935,30 @@
                         throw new Error(data.error.message);
                     }
                     return data;
-                }
+                },
+                async getUpcomingEvents(clientName) {
+                    const timeMin = new Date().toISOString();
+                    const timeMax = new Date(new Date().setDate(new Date().getDate() + 30)).toISOString();
+
+                    const params = new URLSearchParams({
+                        q: `"${clientName}"`,
+                        singleEvents: 'true',
+                        orderBy: 'startTime',
+                        timeMin: timeMin,
+                        timeMax: timeMax,
+                        maxResults: '50'
+                    });
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(state.calendarId)}/events?${params.toString()}`;
+                    const response = await fetch(url, { headers: { 'Authorization': `Bearer ${state.accessToken}` } });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+
+                    return (data.items || []).filter(event => {
+                        if (event.status === 'cancelled') return false;
+                        const isDeclinedByOrganizer = event.attendees?.find(a => a.organizer)?.responseStatus === 'declined';
+                        return !isDeclinedByOrganizer;
+                    });
+                },
             };
 
             // --- RENDER & UI FUNCTIONS ---
@@ -874,7 +1026,7 @@
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
                     if (state.activeDiscipline !== 'all') message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
-                    if(state.filterLastSessionOnly) message += ` Afișând doar clienții în ultima ședință.`
+                    if (state.filterLastSessionOnly) message += ` Afișând doar clienții în ultima ședință.`
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">${message}</p></div>`;
                     return;
                 }
@@ -913,17 +1065,16 @@
                 const editUrl = `https://calendar.google.com/calendar/r/eventedit/${eventIdentifier}`;
 
                 return `
-                    <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
+                <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
                         <div class="flex items-center justify-between flex-wrap cursor-pointer client-header" data-name="${name}">
-                            <!-- Client Info -->
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
                                     <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
-                                    ${ (state.activeTab === 'today' || state.activeTab === 'tomorrow') ?
-                                    `<a href="${editUrl}" target="_blank" class="ml-3 p-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600" title="Editează Eveniment în Google Calendar">
+                                    ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') ?
+                        `<a href="${editUrl}" target="_blank" class="ml-3 p-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600" title="Editează Eveniment în Google Calendar">
                                         <i data-lucide="calendar-days" class="h-4 w-4"></i>
                                     </a>` : ''
-                                    }
+                    }
                                     <span class="chevron-icon-wrapper inline-block transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}">
                                         <i data-lucide="chevron-down" class="h-5 w-5 ml-2 text-gray-400"></i>
                                     </span>
@@ -949,7 +1100,6 @@
                                 </div>
                                 ${lastPayment ? `<div class="flex items-center mt-1 text-sm ${isPaymentOverdue(lastPayment) ? 'text-red-400 font-semibold' : 'text-gray-300'}"><i data-lucide="dollar-sign" class="h-4 w-4 mr-2"></i><span>Ultima Plată: ${lastPayment}</span></div>` : ''}
                             </div>
-                            <!-- Action Buttons -->
                             <div class="flex flex-col items-end space-y-2 w-full sm:w-48">
                                 <div class="w-full text-right mb-2">
                                     <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
@@ -965,8 +1115,7 @@
                             </div>
                         </div>
                         <div class="client-details w-full" style="display: ${isExpanded ? 'block' : 'none'};">
-                            <!-- Details will be loaded here -->
-                        </div>
+                            </div>
                     </li>
                 `;
             };
@@ -1018,16 +1167,16 @@
                         </div>
                         <ul class="history-month-list mt-2 pl-4 space-y-1" style="display: none;">
                             ${sessions.map(s => {
-                                const date = new Date(s.date);
-                                if (isNaN(date.getTime())) return ''; 
-                                const statusClass = s.status === 'cancelled' ? 'bg-red-900/50 text-red-300' : s.status === 'rescheduled' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-gray-600/50 text-gray-300';
-                                const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
-                                const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime()) 
-                                    ? `(Reprogramat pentru ${rescheduledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})`
-                                    : '';
-                                const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
-                                return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
-                            }).join('')}
+                    const date = new Date(s.date);
+                    if (isNaN(date.getTime())) return '';
+                    const statusClass = s.status === 'cancelled' ? 'bg-red-900/50 text-red-300' : s.status === 'rescheduled' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-gray-600/50 text-gray-300';
+                    const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
+                    const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime())
+                        ? `(Reprogramat pentru ${rescheduledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})`
+                        : '';
+                    const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
+                    return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
+                }).join('')}
                         </ul>
                     </li>
                 `).join('') + `</ul>`;
@@ -1042,34 +1191,34 @@
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     return `Sumar Clienți pentru Mâine (${tomorrow.toLocaleDateString('ro-RO', options)})`;
                 }
-                 if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
-                 if (state.activeTab === 'financials') return 'Date Financiare';
-                 if (state.activeTab === 'reports') return 'Rapoarte Avansate';
-                 if (state.activeTab === 'settings') return 'Setări Aplicație';
-                 if (state.activeTab === 'dashboard') return 'Dashboard';
-                 if (state.activeTab === 'add') return 'Adaugă Programare Nouă';
+                if (state.activeTab === 'instructors') return 'Gestionează Instructorii';
+                if (state.activeTab === 'financials') return 'Date Financiare';
+                if (state.activeTab === 'reports') return 'Rapoarte Avansate';
+                if (state.activeTab === 'settings') return 'Setări Aplicație';
+                if (state.activeTab === 'dashboard') return 'Dashboard';
+                if (state.activeTab === 'add') return 'Adaugă Programare Nouă';
                 return 'Sumar Toți Clienții';
             };
 
+            // REPLACED FUNCTION: renderInstructorsView
             const renderInstructorsView = () => {
                 dom.resultsArea.innerHTML = `
-                    <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
-                        <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
-                            <h2 class="text-2xl font-bold text-gray-200">Gestionează Instructorii</h2>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="text" id="newInstructorName" placeholder="Nume instructor nou" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" id="newInstructorPhone" placeholder="Telefon (ex: +407...)" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex-shrink-0">
-                                    <i data-lucide="plus" class="h-5 w-5"></i>
-                                </button>
-                            </div>
-                            <ul id="instructorList" class="divide-y divide-gray-600">
-                                <!-- Instructors will be rendered here -->
-                            </ul>
-                        </div>
+                <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
+                    <div class="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                       <h2 class="text-2xl font-bold text-gray-200">Gestionează Instructorii</h2>
                     </div>
+                    <div class="p-6 space-y-4">
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="newInstructorName" placeholder="Nume instructor nou" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="newInstructorPhone" placeholder="Telefon (ex: +407...)" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="addInstructorBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors flex-shrink-0">
+                                <i data-lucide="plus" class="h-5 w-5"></i>
+                            </button>
+                        </div>
+                        <ul id="instructorList" class="divide-y divide-gray-600">
+                            </ul>
+                    </div>
+                </div>
                 `;
                 lucide.createIcons();
                 attachInstructorEventListeners();
@@ -1077,25 +1226,34 @@
                 const list = document.getElementById('instructorList');
                 if (!list) return;
                 list.innerHTML = state.instructors.map(inst => `
-                    <li class="flex flex-wrap items-center justify-between py-3 gap-2">
-                        <span class="text-gray-300 font-semibold min-w-[120px]">${inst.name}</span>
-                        <input type="text" value="${inst.phone || ''}" data-id="${inst.id}" class="instructor-phone-input flex-1 min-w-[150px] px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <button class="notify-instructor-btn bg-cyan-600 text-white p-2 rounded-md hover:bg-cyan-700" data-id="${inst.id}" data-name="${inst.name}" data-phone="${inst.phone || ''}" title="Notifică pentru programul de mâine">
-                                <i data-lucide="send" class="h-4 w-4"></i>
-                            </button>
-                            <button class="delete-instructor-btn text-red-500 hover:text-red-400 p-2" data-id="${inst.id}">
-                                <i data-lucide="trash-2" class="h-4 w-4"></i>
-                            </button>
-                        </div>
-                    </li>
-                `).join('');
+        <li class="flex flex-wrap items-center justify-between py-3 gap-4">
+            <span class="text-gray-300 font-semibold min-w-[120px]">${inst.name}</span>
+            <div class="flex-1 flex items-center gap-2 min-w-[250px]">
+                <input type="text" value="${inst.phone || ''}" placeholder="Telefon" data-id="${inst.id}" class="instructor-phone-input w-full px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                <div class="relative w-28">
+                     <input type="number" value="${state.instructorPercentages[inst.id] || ''}" placeholder="Procentaj" data-id="${inst.id}" class="instructor-percentage-input w-full px-3 py-1 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span class="text-gray-400 text-sm">%</span>
+                     </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button class="notify-instructor-btn bg-cyan-600 text-white p-2 rounded-md hover:bg-cyan-700" data-id="${inst.id}" data-name="${inst.name}" data-phone="${inst.phone || ''}" title="Notifică pentru programul de mâine">
+                    <i data-lucide="send" class="h-4 w-4"></i>
+                </button>
+                <button class="delete-instructor-btn text-red-500 hover:text-red-400 p-2" data-id="${inst.id}">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
+            </div>
+        </li>
+    `).join('');
                 lucide.createIcons();
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
                 attachInstructorNotifyListeners();
+                attachInstructorPercentageListeners(); // NEW call
             };
-            
+
             const renderSettingsView = () => {
                 const settingsHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
@@ -1148,7 +1306,7 @@
 
             const createMessageSettingsHTML = () => {
                 const isExpanded = state.isSettingsExpanded;
-                 return `
+                return `
                     <div class="border border-gray-700 rounded-lg">
                         <button id="toggle-messages-btn" class="w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 ${isExpanded ? 'rounded-t-lg' : 'rounded-lg'} focus:outline-none">
                             <span class="text-lg font-semibold text-gray-200">Modifică Mesaje WhatsApp</span>
@@ -1288,9 +1446,7 @@
 
                 const dashboardHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
-                        <!-- Left Column -->
                         <div class="space-y-6">
-                            <!-- Widget: Total Active Students -->
                             <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-400">Total Studenți Activi</p>
@@ -1301,7 +1457,6 @@
                                 </div>
                             </div>
 
-                            <!-- Widget: Sessions This Week -->
                             <div class="bg-gray-800 p-6 rounded-xl shadow-lg flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-medium text-gray-400">Ședințe Săptămâna Aceasta</p>
@@ -1314,9 +1469,7 @@
                             </div>
                         </div>
 
-                        <!-- Right Column -->
                         <div class="space-y-6">
-                            <!-- Widget: Subscriptions Ending Soon -->
                             <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
                                 <div class="flex items-center mb-4">
                                     <i data-lucide="user-x" class="h-6 w-6 text-red-400 mr-3"></i>
@@ -1333,7 +1486,6 @@
                             </div>
                         </div>
 
-                        <!-- Full Width Widget: Discipline Breakdown -->
                         <div class="md:col-span-2 bg-gray-800 p-6 rounded-xl shadow-lg">
                             <div class="flex items-center mb-4">
                                 <i data-lucide="pie-chart" class="h-6 w-6 text-blue-400 mr-3"></i>
@@ -1357,8 +1509,7 @@
                         </div>
                         <div class="p-6">
                             <div id="availability-schedule" class="flex overflow-x-auto space-x-4 pb-4">
-                                <!-- 14-day schedule will be rendered here -->
-                            </div>
+                                </div>
                         </div>
                     </div>
                 `;
@@ -1379,7 +1530,7 @@
                     endDate.setDate(startDate.getDate() + 20); // Fetch a bit more to account for skipped days
 
                     const allEvents = await api.getEventsForDateRange(startDate, endDate, true);
-                    
+
                     let scheduleHTML = '';
                     let daysShown = 0;
                     let dayOffset = 0;
@@ -1465,7 +1616,7 @@
                             </div>
                         `;
                     }
-                    
+
                     container.innerHTML = scheduleHTML;
                     attachTimeSlotEventListeners();
 
@@ -1476,7 +1627,7 @@
                     lucide.createIcons();
                 }
             };
-            
+
             const renderReportsView = () => {
                 const today = new Date().toISOString().split('T')[0];
                 const thirtyDaysAgo = new Date();
@@ -1485,7 +1636,6 @@
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
-                        <!-- Attendance Report -->
                         <div id="attendance-report-section" class="report-section border border-gray-700 rounded-lg p-6">
                             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Raport de Prezență</h3>
@@ -1505,7 +1655,6 @@
                             <div id="attendance-report-results" class="overflow-x-auto"></div>
                         </div>
                         
-                        <!-- Client Retention Report -->
                         <div id="retention-report-section" class="report-section border border-gray-700 rounded-lg p-6">
                             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Raport Retenție Clienți</h3>
@@ -1530,7 +1679,6 @@
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in p-6 space-y-8">
-                        <!-- Financial Stats -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-gray-700/50 p-6 rounded-xl flex items-center justify-between">
                                 <div>
@@ -1552,7 +1700,6 @@
                             </div>
                         </div>
 
-                        <!-- Payments List -->
                         <div id="payments-list-section" class="report-section border border-gray-700 rounded-lg p-6">
                              <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
                                 <h3 class="text-xl font-bold text-white">Istoric Plăți</h3>
@@ -1580,7 +1727,181 @@
                 attachFinancialsEventListeners();
             };
 
+            // NEW FUNCTION 1: Fetches data and calls the renderer
+            const loadAndDisplayTimesheet = async () => {
+                state.isLoading = true;
+                renderLoader('Se încarcă pontajul...');
 
+                try {
+                    state.timesheet = await firestoreApi.getTimesheetData();
+
+                    renderLoader('Se încarcă datele financiare ale clienților...');
+                    const allClientNames = [...new Set(
+                        Object.values(state.timesheet).flatMap(ts =>
+                            Object.values(ts.sessions || {}).flat().map(s => s.clientName)
+                        )
+                    )];
+                    state.timesheetClientData = await getClientFinancialData(allClientNames);
+
+                    // Now that data is loaded into state, render the view
+                    renderFilteredTimesheet();
+
+                } catch (err) {
+                    renderNotification(`Eroare la încărcarea pontajului: ${err.message}`, 'error');
+                    dom.resultsArea.innerHTML = '';
+                } finally {
+                    state.isLoading = false;
+                }
+            };
+
+            // NEW FUNCTION 2: Renders the UI with filters
+            // REPLACED FUNCTION: renderFilteredTimesheet
+            const renderFilteredTimesheet = () => {
+                const instructors = state.instructors;
+                const clientFinancials = state.timesheetClientData;
+
+                if (instructors.length === 0) {
+                    dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">Nu sunt instructori de afișat.</p></div>`;
+                    return;
+                }
+
+                const allYears = [...new Set(
+                    Object.values(state.timesheet).flatMap(ts =>
+                        Object.keys(ts.sessions || {}).map(dateKey => new Date(dateKey).getFullYear())
+                    )
+                )].sort((a, b) => b - a);
+
+                const yearOptions = allYears.map(y => `<option value="${y}" ${y === state.timesheetFilter.year ? 'selected' : ''}>${y}</option>`).join('');
+                const monthOptions = [
+                    "Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie",
+                    "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"
+                ].map((m, i) => `<option value="${i}" ${i === state.timesheetFilter.month ? 'selected' : ''}>${m}</option>`).join('');
+
+                const filterHTML = `
+        <div class="bg-gray-800 shadow-xl rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center">
+            <h3 class="text-lg font-semibold text-white flex-shrink-0">Filtrează Pontaj</h3>
+            <div class="flex-grow flex gap-4 w-full sm:w-auto">
+                <select id="month-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    ${monthOptions}
+                </select>
+                <select id="year-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    ${yearOptions}
+                </select>
+            </div>
+        </div>
+    `;
+
+                const instructorCardsHTML = instructors.map(instructor => {
+                    const instructorTimesheet = state.timesheet[instructor.id] || { sessions: {} };
+                    const sortedDays = Object.keys(instructorTimesheet.sessions || {}).sort((a, b) => new Date(b) - new Date(a));
+                    const instructorPercent = parseFloat(state.instructorPercentages[instructor.id]) || 0;
+
+                    let totalMonthlyCommission = 0; // NEW: Initialize monthly total for the instructor
+
+                    const filteredDays = sortedDays.filter(dateKey => {
+                        const date = new Date(dateKey);
+                        return date.getFullYear() === state.timesheetFilter.year && date.getMonth() === state.timesheetFilter.month;
+                    });
+
+                    const dayCardsHTML = filteredDays.map(dateKey => {
+                        const sessions = instructorTimesheet.sessions[dateKey] || [];
+                        const date = new Date(dateKey);
+                        const dayName = date.toLocaleDateString('ro-RO', { weekday: 'long' });
+                        const formattedDate = date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const displayDate = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} - ${formattedDate}`;
+                        let dailyTotalCommission = 0;
+
+                        const sessionListHTML = sessions.map(session => {
+                            const clientData = clientFinancials[session.clientName];
+                            let commission = 0;
+                            if (clientData && instructorPercent > 0) {
+                                const lastPayment = clientData.lastPaymentAmount || 0;
+                                const subType = parseInt(clientData.subscription, 10) || 4;
+                                if (lastPayment > 0 && subType > 0) {
+                                    const sessionPrice = lastPayment / subType;
+                                    commission = (sessionPrice * instructorPercent) / 100 - (sessionPrice * 0.06); // Deduct 6% tax
+                                }
+                            }
+                            dailyTotalCommission += commission;
+                            return `
+                    <li class="flex justify-between items-center text-sm p-2 bg-gray-900/50 rounded">
+                        <div class="flex-1">
+                            <span>${session.clientName} - ${session.discipline}</span>
+                            <span class="block text-xs font-mono text-blue-300">${session.time}</span>
+                        </div>
+                        <span class="font-semibold text-lg ${commission > 0 ? 'text-green-400' : 'text-gray-500'} ml-4">
+                            ${commission.toFixed(2)} RON
+                        </span>
+                    </li>
+                `;
+                        }).join('');
+
+                        totalMonthlyCommission += dailyTotalCommission; // NEW: Add the daily total to the monthly total
+
+                        return `
+                <div class="day-card mt-2">
+                    <button class="day-header w-full flex justify-between items-center p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-left">
+                        <span class="font-semibold text-gray-100">${displayDate}</span>
+                        <div class="flex items-center">
+                            <span class="font-bold text-lg text-green-400 mr-4">${dailyTotalCommission.toFixed(2)} RON</span>
+                            <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
+                        </div>
+                    </button>
+                    <ul class="day-sessions-list mt-2 pl-4 space-y-1" style="display: none;">
+                        ${sessionListHTML}
+                    </ul>
+                </div>
+            `;
+                    }).join('');
+
+                    return `
+            <div class="bg-gray-800 shadow-lg rounded-xl overflow-hidden instructor-card mb-4">
+                    <button class="instructor-header w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 text-left">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-x-4">
+                         <h3 class="text-xl font-bold text-white">${instructor.name}</h3>
+                         <span class="text-sm font-semibold text-gray-300">Total Lunar: <span class="text-xl text-green-400 font-bold">${totalMonthlyCommission.toFixed(2)} RON</span></span>
+                    </div>
+                    <i data-lucide="chevron-down" class="h-6 w-6 text-gray-300 transition-transform flex-shrink-0"></i>
+                </button>
+                <div class="instructor-details p-4 border-t border-gray-600" style="display: none;">
+                    ${dayCardsHTML || `<p class="text-sm text-center text-gray-400 py-4">Nicio sesiune înregistrată pentru luna selectată.</p>`}
+                </div>
+            </div>
+        `;
+                }).join('');
+
+                dom.resultsArea.innerHTML = `
+        <div class="fade-in">
+            ${filterHTML}
+            <div id="instructor-cards-container">
+                ${instructorCardsHTML}
+            </div>
+        </div>
+    `;
+
+                document.getElementById('month-filter').addEventListener('change', (e) => {
+                    state.timesheetFilter.month = parseInt(e.target.value, 10);
+                    renderFilteredTimesheet();
+                });
+                document.getElementById('year-filter').addEventListener('change', (e) => {
+                    state.timesheetFilter.year = parseInt(e.target.value, 10);
+                    renderFilteredTimesheet();
+                });
+
+                document.querySelectorAll('.instructor-header, .day-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const content = header.nextElementSibling;
+                        const icon = header.querySelector('.lucide-chevron-down');
+                        if (content && icon) {
+                            const isVisible = content.style.display !== 'none';
+                            content.style.display = isVisible ? 'none' : 'block';
+                            icon.classList.toggle('rotate-180');
+                        }
+                    });
+                });
+
+                lucide.createIcons();
+            };
             // --- EVENT HANDLERS ---
             const handleTabChange = async () => {
                 if (state.activeTab === 'instructors') {
@@ -1589,6 +1910,10 @@
                 }
                 if (state.activeTab === 'settings') {
                     renderSettingsView();
+                    return;
+                }
+                if (state.activeTab === 'timesheet') {
+                    loadAndDisplayTimesheet(); // MODIFIED
                     return;
                 }
                 if (state.activeTab === 'dashboard') {
@@ -1603,7 +1928,7 @@
                     renderReportsView();
                     return;
                 }
-                 if (state.activeTab === 'financials') {
+                if (state.activeTab === 'financials') {
                     renderFinancialsView();
                     return;
                 }
@@ -1628,7 +1953,7 @@
                         }
                         return acc;
                     }, {});
-                    
+
                     await fetchAndMergeLastPayments(state.clients, state.clientFirebaseData);
 
                     populateDisciplineFilter(state.clients);
@@ -1656,13 +1981,13 @@
                     const nextSunday = new Date(lastMonday);
                     nextSunday.setDate(lastMonday.getDate() + 6);
                     nextSunday.setHours(23, 59, 59, 999);
-                    
+
                     const options = { day: 'numeric', month: 'long' };
-                    const dateRangeString = `${lastMonday.toLocaleDateString('ro-RO', options)} - ${nextSunday.toLocaleDateString('ro-RO', {...options, year: 'numeric'})}`;
-                    
+                    const dateRangeString = `${lastMonday.toLocaleDateString('ro-RO', options)} - ${nextSunday.toLocaleDateString('ro-RO', { ...options, year: 'numeric' })}`;
+
                     // Fetch events for the calculated week
                     const weeklyEventsRaw = await api.getEventsForDateRange(lastMonday, nextSunday);
-                    
+
                     const allClients = await api.getEvents('all');
 
                     // 1. Total Active Students
@@ -1707,7 +2032,7 @@
 
             const handleSearch = async () => {
                 if (state.searchQuery.trim().length < 3) {
-                    state.clients = {}; 
+                    state.clients = {};
                     renderClients({});
                     return;
                 }
@@ -1867,6 +2192,44 @@
                 renderNotification("Toate sesiunile pentru mâine au fost incrementate.", "success");
             };
 
+            const handleLogTodaysSessionsClick = async () => {
+                const button = document.getElementById('logTodaysSessionsBtn');
+                if (state.activeTab !== 'today' || Object.keys(state.clients).length === 0) {
+                    renderNotification("Nicio sesiune de înregistrat pentru azi.", "success");
+                    return;
+                }
+
+                button.disabled = true;
+                button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se înregistrează...`;
+                lucide.createIcons();
+
+                let loggedCount = 0;
+                const todayKey = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+                try {
+                    for (const [clientName, details] of Object.entries(state.clients)) {
+                        const clientData = state.clientFirebaseData[clientName];
+                        const instructorId = clientData?.assignedInstructor ? state.instructors.find(i => i.name === clientData.assignedInstructor)?.id : null;
+
+                        if (instructorId) {
+                            const sessionData = {
+                                clientName: clientName,
+                                discipline: details.discipline,
+                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
+                            };
+                            await firestoreApi.logSession(instructorId, todayKey, sessionData);
+                            loggedCount++;
+                        }
+                    }
+                    renderNotification(`${loggedCount} sesiuni au fost înregistrate în pontaj.`, 'success');
+                } catch (err) {
+                    renderNotification(`Eroare la înregistrarea pontajului: ${err.message}`, 'error');
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = `Înregistrează Pontajul de Azi`;
+                }
+            };
+
             const handleReportToInstructors = () => {
                 if (state.activeTab !== 'tomorrow') return;
                 const clientsByInstructor = {};
@@ -1906,7 +2269,7 @@
                 if (instructorsWithoutPhone.length > 0) {
                     renderNotification(`Nu s-a putut trimite raportul pentru: ${instructorsWithoutPhone.join(', ')} (lipsește numărul de telefon).`, 'error');
                 }
-                if(reportsSent === 0 && instructorsWithoutPhone.length === 0) {
+                if (reportsSent === 0 && instructorsWithoutPhone.length === 0) {
                     renderNotification('Niciun client alocat instructorilor pentru mâine.', 'success');
                 }
             };
@@ -1958,6 +2321,7 @@
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
+                document.getElementById('logTodaysSessionsBtn').addEventListener('click', handleLogTodaysSessionsClick);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -2011,14 +2375,14 @@
                 // New event modal listeners
                 dom.closeCreateModalBtn.addEventListener('click', () => hideModal(dom.createEventModal));
                 dom.createEventModal.addEventListener('click', (e) => {
-                    if(e.target === dom.createEventModal) hideModal(dom.createEventModal);
+                    if (e.target === dom.createEventModal) hideModal(dom.createEventModal);
                 });
                 dom.createEventForm.addEventListener('submit', handleCreateEventSubmit);
 
                 // Cash payment modal listeners
                 dom.closeCashModalBtn.addEventListener('click', () => hideModal(dom.cashPaymentModal));
                 dom.cashPaymentModal.addEventListener('click', (e) => {
-                    if(e.target === dom.cashPaymentModal) hideModal(dom.cashPaymentModal);
+                    if (e.target === dom.cashPaymentModal) hideModal(dom.cashPaymentModal);
                 });
                 dom.cashPaymentForm.addEventListener('submit', handleCashPaymentSubmit);
             }
@@ -2083,7 +2447,7 @@
                         const statusEl = e.target.parentElement.querySelector('.sub-status');
                         let dataToSave = {};
 
-                        if(e.target.classList.contains('subscription-select')) {
+                        if (e.target.classList.contains('subscription-select')) {
                             dataToSave = { subscription: e.target.value };
                             state.clientFirebaseData[clientName].subscription = e.target.value;
                         } else {
@@ -2103,32 +2467,82 @@
                 });
             };
 
-            const renderClientDetails = async (name, container) => {
+            // NEW HELPER FUNCTION
+            const createUpcomingEventsHTML = (events, client) => {
+                if (events.length === 0) {
+                    return `<p class="text-sm text-gray-400">Nicio programare viitoare în următoarele 30 de zile.</p>`;
+                }
+                return `<ul class="space-y-3">` + events.map(event => {
+                    const startDate = new Date(event.start.dateTime || event.start.date);
+                    const formattedDate = startDate.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+                    const formattedTime = startDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+                    const discipline = event.summary.split(' - ')[1] || client.discipline;
+                    const editUrl = getGoogleCalendarEditUrl(event.id);
+
+                    return `
+            <li class="p-3 bg-gray-900/50 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <p class="font-semibold text-gray-200">${event.summary}</p>
+                    <p class="text-sm text-blue-400">${formattedDate} la ${formattedTime}</p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <a href="${editUrl}" target="_blank" class="upcoming-reschedule-btn bg-yellow-600 text-white p-2 rounded-md hover:bg-yellow-700" title="Reprogramează în Google Calendar">
+                        <i data-lucide="calendar-days" class="h-4 w-4"></i>
+                    </a>
+                    <button class="upcoming-cancel-btn bg-red-600 text-white p-2 rounded-md hover:bg-red-700" 
+                        data-event-id="${event.id}" 
+                        data-name="${client.name}" 
+                        data-discipline="${discipline}"
+                        data-phone="${client.phone}"
+                        title="Anulează Sesiunea">
+                        <i data-lucide="calendar-x" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            </li>
+        `;
+                }).join('') + `</ul>`;
+            };
+
+            // REPLACED FUNCTION
+           const renderClientDetails = async (name, container) => {
                 container.innerHTML = `<div class="p-4 border-t border-gray-700 flex justify-center"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-gray-500"></i></div>`;
                 lucide.createIcons();
                 try {
                     const client = state.clients[name];
-                    const clientData = await firestoreApi.getClientData(name);
-                    const history = await api.fetchHistory(name);
+                    const clientDataPromise = firestoreApi.getClientData(name);
+                    const historyPromise = api.fetchHistory(name);
+                    const upcomingEventsPromise = api.getUpcomingEvents(name);
+
+                    const [clientData, history, upcomingEvents] = await Promise.all([clientDataPromise, historyPromise, upcomingEventsPromise]);
 
                     const historyHTML = createHistoryHTML(history);
                     const notesHTML = createNotesHTML(name, clientData.notes);
                     const homeworkHTML = createHomeworkHTML(name, client);
+                    const upcomingEventsHTML = createUpcomingEventsHTML(upcomingEvents, { name, phone: client.phone, discipline: client.discipline });
 
                     container.innerHTML = `
-                        <div class="p-6 border-t border-gray-700 space-y-6">
-                            <div>
-                                ${notesHTML}
-                            </div>
-                             <div>
-                                ${homeworkHTML}
-                            </div>
-                            <div>
-                                <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Sesiuni (Ultimele 60 de zile)</h4>
-                                ${historyHTML}
-                            </div>
-                        </div>
-                    `;
+            <div class="p-6 border-t border-gray-700 space-y-8">
+                <div>
+                    <button class="upcoming-events-header flex items-center justify-between w-full p-2 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer">
+                        <span class="text-lg font-semibold text-gray-200">Programări Viitoare (30 zile)</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
+                    </button>
+                    <div class="upcoming-events-list mt-2 pl-4" style="display: none;">
+                        ${upcomingEventsHTML}
+                    </div>
+                </div>
+                <div>
+                    ${notesHTML}
+                </div>
+                <div>
+                    ${homeworkHTML}
+                </div>
+                <div>
+                    <h4 class="text-md font-semibold text-gray-200 mb-2">Istoric Sesiuni (Ultimele 60 de zile)</h4>
+                    ${historyHTML}
+                </div>
+            </div>
+        `;
                     lucide.createIcons();
                     attachDetailEventListeners(container);
                 } catch (err) {
@@ -2170,6 +2584,27 @@
                         iconWrapper?.classList.toggle('rotate-180', !isVisible);
                     });
                 });
+
+                container.querySelectorAll('.upcoming-cancel-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleDeclineClick(e.currentTarget);
+                    });
+                });
+
+                // NEW: Add listener for the upcoming events accordion
+                container.querySelectorAll('.upcoming-events-header').forEach(header => {
+                    header.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const list = header.nextElementSibling;
+                        const icon = header.querySelector('.lucide-chevron-down');
+                        if (list && icon) {
+                            const isVisible = list.style.display !== 'none';
+                            list.style.display = isVisible ? 'none' : 'block';
+                            icon.classList.toggle('rotate-180', !isVisible);
+                        }
+                    });
+                });
             };
 
             const attachInstructorEventListeners = () => {
@@ -2189,9 +2624,11 @@
                         }
                     }
                 });
+                
                 attachInstructorDeleteListeners();
                 attachInstructorPhoneInputListeners();
                 attachInstructorNotifyListeners();
+                attachInstructorPercentageListeners();
             };
 
             const attachInstructorPhoneInputListeners = () => {
@@ -2209,18 +2646,35 @@
                     input.addEventListener('input', savePhone);
                 });
             };
+            // NEW FUNCTION
+            const attachInstructorPercentageListeners = () => {
+                document.querySelectorAll('.instructor-percentage-input').forEach(input => {
+                    const savePercentage = debounce(async (e) => {
+                        const id = e.target.dataset.id;
+                        const percentage = e.target.value.trim();
+                        state.instructorPercentages[id] = percentage; // Update state immediately
+                        try {
+                            await firestoreApi.saveInstructorPercentages(state.instructorPercentages);
+                            renderNotification('Procentajul a fost salvat.', 'success');
+                        } catch (err) {
+                            renderNotification(`Eroare la salvarea procentajului: ${err.message}`, 'error');
+                        }
+                    }, 1000);
+                    input.addEventListener('input', savePercentage);
+                });
+            };
 
             const attachInstructorDeleteListeners = () => {
-                 document.querySelectorAll('.delete-instructor-btn').forEach(button => {
+                document.querySelectorAll('.delete-instructor-btn').forEach(button => {
                     const newButton = button.cloneNode(true);
                     button.parentNode.replaceChild(newButton, button);
                     newButton.addEventListener('click', async (e) => {
                         const id = e.currentTarget.closest('button').dataset.id;
                         try {
-                           await firestoreApi.deleteInstructor(id);
-                           renderNotification('Instructor eliminat.', 'success');
+                            await firestoreApi.deleteInstructor(id);
+                            renderNotification('Instructor eliminat.', 'success');
                         } catch (err) {
-                           renderNotification(`Eroare la eliminarea instructorului: ${err.message}`, 'error');
+                            renderNotification(`Eroare la eliminarea instructorului: ${err.message}`, 'error');
                         }
                     });
                 });
@@ -2246,7 +2700,7 @@
                     renderSettingsView();
                 });
 
-                 document.getElementById('toggle-double-booking-btn')?.addEventListener('click', () => {
+                document.getElementById('toggle-double-booking-btn')?.addEventListener('click', () => {
                     state.isDoubleBookingExpanded = !state.isDoubleBookingExpanded;
                     renderSettingsView();
                 });
@@ -2415,27 +2869,34 @@
                     instructors: { name: 'Instructori', icon: 'user-cog' },
                     financials: { name: 'Financiar', icon: 'credit-card' },
                     reports: { name: 'Rapoarte', icon: 'bar-chart-3' },
+                    timesheet: { name: 'Pontaj', icon: 'clock' },
                     settings: { name: 'Setări', icon: 'settings' }
                 };
 
                 dom.tabButtons.forEach(btn => {
                     const tab = btn.dataset.tab;
                     const config = tabConfig[tab];
-                    
+
                     btn.innerHTML = `<i data-lucide="${config.icon}" class="h-4 w-4 mr-2"></i><span>${config.name}</span>`;
-                    
+
                     const isSelected = tab === state.activeTab;
                     const baseClasses = 'tab-button flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800';
                     const selectedClasses = 'bg-blue-600 text-white shadow-md';
                     const unselectedClasses = 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white';
-                    
+
                     btn.className = `${baseClasses} ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
-                
+
                 const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
                 document.querySelectorAll('.filter-control').forEach(el => el.style.display = isClientTab ? 'flex' : 'none');
-                
+
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
+
+                const logSessionsBtn = document.getElementById('logTodaysSessionsBtn');
+                if (logSessionsBtn) {
+                    logSessionsBtn.style.display = state.activeTab === 'today' ? 'block' : 'none';
+                }
+
                 lucide.createIcons();
             };
 
@@ -2469,9 +2930,9 @@
                 const end = new Date(endTime);
                 document.getElementById('event-start-time').value = startTime;
                 document.getElementById('event-end-time').value = endTime;
-                document.getElementById('event-time-display').value = 
+                document.getElementById('event-time-display').value =
                     `${start.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' })} la ${start.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}`;
-                
+
                 const disciplineSelect = document.getElementById('event-discipline');
                 disciplineSelect.innerHTML = state.disciplinesForBooking
                     .map(d => `<option value="${d}">${d}</option>`)
@@ -2521,7 +2982,7 @@
                     };
 
                     await api.createEvent(eventData);
-                    
+
                     await firestoreApi.saveClientData(name, { name, phone, email, discipline, subscription: '4', assignedInstructor: '' });
 
                     renderNotification(`Programarea pentru ${name} a fost creată cu succes!`, 'success');
@@ -2606,7 +3067,7 @@
 
                     const messageData = { name, discipline, date: formattedDate, time: formattedTime };
                     const message = replacePlaceholders(state.messageTemplates.cancelByInstructor, messageData);
-                    
+
                     const link = getWhatsAppLink(phone, message);
                     if (link) {
                         window.open(link, '_blank');
@@ -2633,11 +3094,11 @@
                     const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
                     const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
                     const formattedDate = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : dayText;
-                    
+
                     await api.cancelEvent(eventId);
                     renderNotification(`Evenimentul pentru ${name} a fost anulat de client.`, 'success');
                     document.getElementById(`client-${eventId}`)?.remove();
-                    
+
                     const messageData = { name, discipline, date: formattedDate, time: formattedTime };
                     const message = replacePlaceholders(state.messageTemplates.cancelByClient, messageData);
 
@@ -2687,7 +3148,7 @@
                     });
                 }
 
-                let tokenClient; 
+                let tokenClient;
                 function handleAuthClick() {
                     if (tokenClient) {
                         tokenClient.requestAccessToken();
@@ -2697,7 +3158,7 @@
                 }
 
                 const authBtn = document.getElementById('authBtn');
-                if(authBtn) {
+                if (authBtn) {
                     authBtn.addEventListener('click', handleAuthClick);
                 }
 
@@ -2725,15 +3186,67 @@
             };
 
             // --- Helper Functions ---
+            const getClientFinancialData = async (clientNames) => {
+                if (clientNames.length === 0) return {};
+
+                const clientDataMap = {};
+                const firestorePromises = clientNames.map(name => firestoreApi.getClientData(name));
+                const firestoreResults = await Promise.all(firestorePromises);
+
+                firestoreResults.forEach(data => {
+                    if (data.name) {
+                        clientDataMap[data.name] = {
+                            subscription: data.subscription || '4',
+                            email: data.email || null,
+                            lastPaymentAmount: 0 // Default
+                        };
+                    }
+                });
+
+                // Simplified payment fetching for performance
+                try {
+                    const functions = getFunctions(app);
+                    const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
+                    const ninetyDaysAgo = new Date();
+                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+                    const stripeResult = await getStripeFinancials({
+                        startDate: ninetyDaysAgo.toISOString(),
+                        endDate: new Date().toISOString()
+                    });
+                    const allPayments = stripeResult.data.payments || [];
+
+                    clientNames.forEach(name => {
+                        const clientInfo = clientDataMap[name];
+                        if (clientInfo) {
+                            const clientNameLower = name.toLowerCase();
+                            const clientEmailLower = clientInfo.email ? clientInfo.email.toLowerCase() : null;
+
+                            const relevantPayments = allPayments.filter(p =>
+                                (p.customer?.toLowerCase() === clientNameLower) ||
+                                (clientEmailLower && p.email?.toLowerCase() === clientEmailLower)
+                            ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                            if (relevantPayments.length > 0) {
+                                clientDataMap[name].lastPaymentAmount = relevantPayments[0].net;
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error("Could not fetch limited Stripe payments for timesheet:", error);
+                }
+
+                return clientDataMap;
+            };
             const getWhatsAppLink = (phone, text = '') => {
                 if (!phone) return null;
                 let cleanPhoneNumber = phone.trim().replace(/[\s-()]/g, '');
                 if (cleanPhoneNumber.startsWith('+')) {
                     cleanPhoneNumber = cleanPhoneNumber.substring(1);
-                } 
+                }
                 else if (cleanPhoneNumber.startsWith('0')) {
                     cleanPhoneNumber = '40' + cleanPhoneNumber.substring(1);
-                } 
+                }
                 else if (!cleanPhoneNumber.startsWith('40') && !cleanPhoneNumber.startsWith('380')) {
                     cleanPhoneNumber = '40' + cleanPhoneNumber;
                 }
@@ -2741,13 +3254,19 @@
                 if (text) link += `?text=${encodeURIComponent(text)}`;
                 return link;
             };
+            // NEW HELPER FUNCTION
+            const getGoogleCalendarEditUrl = (eventId) => {
+                if (!eventId || !state.calendarId) return '#';
+                const eventIdentifier = btoa(`${eventId} ${state.calendarId}`).replace(/=/g, '');
+                return `https://calendar.google.com/calendar/r/eventedit/${eventIdentifier}`;
+            };
 
             const isPaymentOverdue = (paymentDateStr) => {
                 if (!paymentDateStr || paymentDateStr === "Nici o plată încă") return false;
-                
+
                 const datePart = paymentDateStr.split(' - ')[0];
                 const parts = datePart.split('.');
-                if (parts.length !== 3) return false; 
+                if (parts.length !== 3) return false;
 
                 const paymentDate = new Date(parts[2], parts[1] - 1, parts[0]);
 
@@ -2755,10 +3274,10 @@
 
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                
+
                 const timeDifference = today.getTime() - paymentDate.getTime();
                 const daysDifference = timeDifference / (1000 * 3600 * 24);
-                
+
                 return daysDifference > 30;
             };
 
@@ -2778,7 +3297,7 @@
                 for (const event of filteredItems) {
                     if (!event.summary) continue;
                     const parts = event.summary.split(' - ').map(p => p.trim());
-                    if (parts.length < 2) continue; 
+                    if (parts.length < 2) continue;
 
                     const name = parts[0];
                     const discipline = parts[1];
@@ -2860,8 +3379,8 @@
                         const relevantPayments = stripePayments.filter(p => {
                             const paymentCustomerLower = p.customer?.toLowerCase();
                             const paymentEmailLower = p.email?.toLowerCase();
-                            
-                            return (paymentCustomerLower && paymentCustomerLower === clientNameLower) || 
+
+                            return (paymentCustomerLower && paymentCustomerLower === clientNameLower) ||
                                 (clientEmail && paymentEmailLower && paymentEmailLower === clientEmail);
                         });
 
@@ -2932,12 +3451,12 @@
 
                 try {
                     const startDate = new Date(startDateStr);
-                    startDate.setHours(0,0,0,0);
+                    startDate.setHours(0, 0, 0, 0);
                     const endDate = new Date(endDateStr);
-                    endDate.setHours(23,59,59,999);
+                    endDate.setHours(23, 59, 59, 999);
 
                     const events = await api.getEventsForDateRange(startDate, endDate, true); // showDeleted = true
-                    
+
                     const clientStats = {};
 
                     for (const event of events) {
@@ -2956,13 +3475,13 @@
                         const isDeclinedByOrganizer = organizer?.responseStatus === 'declined';
 
                         if (event.status === 'cancelled' || isDeclinedByOrganizer) {
-                            clientStats[name].cancelledByClient++; 
+                            clientStats[name].cancelledByClient++;
                         } else {
                             clientStats[name].attended++;
                         }
                     }
-                    
-                    const reportData = Object.values(clientStats).sort((a,b) => a.name.localeCompare(b.name));
+
+                    const reportData = Object.values(clientStats).sort((a, b) => a.name.localeCompare(b.name));
 
                     if (reportData.length === 0) {
                         resultsContainer.innerHTML = `<p class="text-center text-gray-400 py-4">Nu s-au găsit date pentru intervalul selectat.</p>`;
@@ -3016,7 +3535,7 @@
                     resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la generarea raportului: ${err.message}</p>`;
                 }
             };
-            
+
             const generateClientRetentionReport = async () => {
                 const resultsContainer = document.getElementById('retention-report-results');
                 resultsContainer.innerHTML = `<div class="flex items-center justify-center p-5"><i data-lucide="loader-2" class="h-6 w-6 animate-spin text-blue-400"></i><span class="ml-3">Se generează raportul de retenție...</span></div>`;
@@ -3042,7 +3561,7 @@
                     });
 
                     const conversionRate = trialClients.size > 0 ? (convertedCount / trialClients.size) * 100 : 0;
-                    
+
                     const reportData = [
                         { metric: 'Ședințe de probă', value: trialClients.size },
                         { metric: 'Clienți convertiți', value: convertedCount },
@@ -3083,13 +3602,13 @@
                 const headers = Object.keys(data[0]);
                 const csvRows = [
                     headers.join(','),
-                    ...data.map(row => 
-                        headers.map(header => 
+                    ...data.map(row =>
+                        headers.map(header =>
                             JSON.stringify(row[header], (key, value) => value === undefined ? '' : value)
                         ).join(',')
                     )
                 ];
-                
+
                 const csvString = csvRows.join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
@@ -3105,7 +3624,7 @@
             const attachFinancialsEventListeners = () => {
                 document.getElementById('generate-payments-list')?.addEventListener('click', fetchAndDisplayFinancials);
                 document.getElementById('financial-client-search')?.addEventListener('input', debounce(filterAndRenderPayments, 300));
-                
+
                 const resultsContainer = document.getElementById('payments-list-results');
                 if (resultsContainer) {
                     resultsContainer.addEventListener('click', async (e) => {
@@ -3151,7 +3670,7 @@
                     // Fetch Stripe payments from Cloud Function
                     const functions = getFunctions(app);
                     const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
-                    const stripeResult = await getStripeFinancials({ 
+                    const stripeResult = await getStripeFinancials({
                         startDate: new Date(startDateStr).toISOString(),
                         endDate: new Date(endDateStr).toISOString()
                     });
@@ -3165,7 +3684,7 @@
                         const paymentDate = new Date(data.date);
                         const rangeStart = new Date(startDateStr);
                         const rangeEnd = new Date(endDateStr);
-                        if(paymentDate >= rangeStart && paymentDate <= rangeEnd) {
+                        if (paymentDate >= rangeStart && paymentDate <= rangeEnd) {
                             cashPayments.push({
                                 id: doc.id, // Store document ID for deletion
                                 customer: data.clientName,
@@ -3183,7 +3702,7 @@
                     const combinedPayments = [...stripePayments, ...cashPayments];
                     combinedPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
                     state.financials.allPayments = combinedPayments;
-                    
+
                     // Update stats based on the full dataset for the date range
                     const revenueStatEl = document.getElementById('revenue-stat');
                     const avgSpendStatEl = document.getElementById('avg-spend-stat');
@@ -3204,12 +3723,12 @@
                     resultsContainer.innerHTML = `<p class="text-red-400 p-4">Eroare la preluarea datelor financiare: ${error.message}</p>`;
                 }
             };
-            
+
             const filterAndRenderPayments = () => {
                 const resultsContainer = document.getElementById('payments-list-results');
                 const searchQuery = document.getElementById('financial-client-search').value.toLowerCase();
 
-                const filteredPayments = state.financials.allPayments.filter(p => 
+                const filteredPayments = state.financials.allPayments.filter(p =>
                     p.customer.toLowerCase().includes(searchQuery) ||
                     p.email.toLowerCase().includes(searchQuery)
                 );
@@ -3256,4 +3775,5 @@
         });
     </script>
 </body>
+
 </html>
