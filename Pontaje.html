@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ro" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pontaj Instructori</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Custom scrollbar for better aesthetics in dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+            /* gray-800 */
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            /* gray-600 */
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+            /* gray-500 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200">
+
+    <div id="timesheet-app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <header class="relative text-center mb-8 flex justify-between items-center">
+            <div></div> 
+            <div>
+                <h1 class="text-4xl sm:text-5xl font-bold text-gray-100">Pontaj Instructori</h1>
+                <p class="text-lg text-gray-400 mt-2">Vizualizează și filtrează pontajul lunar pentru instructori.</p>
+            </div>
+            <button id="logoutBtn" style="display: none;" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors flex items-center">
+                <i data-lucide="log-out" class="h-5 w-5 mr-2"></i>
+                <span>Deconectare</span>
+            </button>
+        </header>
+
+        <div id="auth-section" class="max-w-md mx-auto bg-gray-800 p-8 rounded-xl shadow-md text-center fade-in">
+             <h2 class="text-2xl font-bold text-white mb-6">Autentificare</h2>
+             <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username" class="sr-only">Utilizator</label>
+                    <input type="text" id="username" name="username" required placeholder="Nume utilizator" class="w-full px-4 py-3 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                </div>
+                 <div>
+                    <label for="password" class="sr-only">Parolă</label>
+                    <input type="password" id="password" name="password" required placeholder="Parolă" class="w-full px-4 py-3 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                </div>
+                <button type="submit" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 transition-colors">
+                    Intră în cont
+                </button>
+             </form>
+             <p id="login-error" class="text-red-400 text-sm mt-4" style="display: none;">Nume de utilizator sau parolă incorectă.</p>
+        </div>
+
+        <div id="main-app-view" style="display: none;">
+            <div id="notification-area" class="max-w-7xl mx-auto mb-6"></div>
+            <div id="results-area" class="max-w-7xl mx-auto">
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+        // --- Hardcoded Accounts ---
+        const hardcodedAccounts = {
+            andra: { password: 'youtube', instructorName: 'Andra' },
+            george: { password: 'chitara', instructorName: 'George' },
+            florin: { password: 'deejay', instructorName: 'Florin' },
+            ava: { password: 'instructor', instructorName: 'Ava' }
+        };
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
+            authDomain: "asorte-crm.firebaseapp.com",
+            projectId: "asorte-crm",
+            storageBucket: "asorte-crm.appspot.com",
+            messagingSenderId: "848279125018",
+            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
+        };
+
+        // --- Firebase Initialization ---
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            renderNotification("Firebase initialization failed. Please check your configuration.", "error");
+        }
+        
+        // --- STATE MANAGEMENT ---
+        let state = {
+            loggedInInstructor: null, // NEW: To store the name of the logged-in instructor
+            instructors: [],
+            instructorPercentages: {},
+            timesheet: {}, 
+            timesheetFilter: { month: new Date().getMonth(), year: new Date().getFullYear() },
+            timesheetClientData: {},
+            isLoading: false,
+        };
+
+        // --- DOM ELEMENT REFERENCES ---
+        const dom = {
+            authSection: document.getElementById('auth-section'),
+            mainAppView: document.getElementById('main-app-view'),
+            notificationArea: document.getElementById('notification-area'),
+            resultsArea: document.getElementById('results-area'),
+            loginForm: document.getElementById('login-form'),
+            loginError: document.getElementById('login-error'),
+            logoutBtn: document.getElementById('logoutBtn'),
+        };
+        
+        // --- FIRESTORE API (Read-only subset) ---
+        const firestoreApi = {
+            async getClientData(clientName) {
+                if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
+                const sanitizedName = clientName.replace(/\//g, '-');
+                const docRef = doc(db, "clients", sanitizedName);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    return { name: clientName, ...data, subscription: data.subscription || '4', assignedInstructor: data.assignedInstructor || '' };
+                } else {
+                    return { name: clientName, notes: '', subscription: '4', assignedInstructor: '' };
+                }
+            },
+            getInstructors(callback) {
+                if (!db) return () => { };
+                const q = collection(db, "instructors");
+                return onSnapshot(q, (querySnapshot) => {
+                    const instructors = [];
+                    querySnapshot.forEach((doc) => {
+                        instructors.push({ id: doc.id, ...doc.data() });
+                    });
+                    callback(instructors);
+                });
+            },
+            async getTimesheetData() {
+                if (!db) return {};
+                const timesheets = {};
+                const snapshot = await getDocs(collection(db, "timesheets"));
+                snapshot.forEach(doc => {
+                    timesheets[doc.id] = doc.data();
+                });
+                return timesheets;
+            },
+             async getInstructorPercentages() {
+                if (!db) return {};
+                const docRef = doc(db, "app-settings", "instructor-percentages");
+                const docSnap = await getDoc(docRef);
+                return docSnap.exists() ? docSnap.data() : {};
+            },
+        };
+
+        // --- RENDER & UI FUNCTIONS ---
+        const renderNotification = (message, type = 'success') => {
+            const colors = {
+                error: { bg: 'bg-red-900/50', border: 'border-red-700', text: 'text-red-300', icon: 'shield-alert' },
+                success: { bg: 'bg-green-900/50', border: 'border-green-700', text: 'text-green-300', icon: 'info' },
+            };
+            const selected = colors[type];
+            dom.notificationArea.innerHTML = `
+                <div class="fade-in ${selected.bg} border-l-4 ${selected.border} ${selected.text} p-4 rounded-md shadow-md relative" role="alert">
+                    <div class="flex">
+                        <div class="py-1"><i data-lucide="${selected.icon}" class="h-6 w-6 mr-4"></i></div>
+                        <div>
+                            <p class="font-bold">${type.charAt(0).toUpperCase() + type.slice(1)}</p>
+                            <p class="text-sm">${message}</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('notification-area').innerHTML = ''" class="absolute top-2 right-2 text-gray-400 hover:text-white">
+                        <i data-lucide="x-circle" class="h-5 w-5"></i>
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        const renderLoader = (message) => {
+            dom.resultsArea.innerHTML = `<div class="flex items-center justify-center p-10"><i data-lucide="loader-2" class="h-8 w-8 animate-spin text-blue-400"></i><span class="ml-3 text-lg">${message}</span></div>`;
+            lucide.createIcons();
+        };
+
+        const loadAndDisplayTimesheet = async () => {
+            state.isLoading = true;
+            renderLoader('Se încarcă pontajul...');
+
+            try {
+                // Fetch all instructors to find the logged-in user's ID
+                state.instructors = await new Promise(resolve => firestoreApi.getInstructors(resolve));
+                state.instructorPercentages = await firestoreApi.getInstructorPercentages();
+                
+                state.timesheet = await firestoreApi.getTimesheetData();
+
+                renderLoader('Se încarcă datele financiare ale clienților...');
+                const allClientNames = [...new Set(
+                    Object.values(state.timesheet).flatMap(ts =>
+                        Object.values(ts.sessions || {}).flat().map(s => s.clientName)
+                    )
+                )];
+                state.timesheetClientData = await getClientFinancialData(allClientNames);
+
+                renderFilteredTimesheet();
+
+            } catch (err) {
+                renderNotification(`Eroare la încărcarea pontajului: ${err.message}`, 'error');
+                dom.resultsArea.innerHTML = '';
+            } finally {
+                state.isLoading = false;
+            }
+        };
+
+        const renderFilteredTimesheet = () => {
+             // Filter to get only the logged-in instructor
+            const loggedInInstructor = state.instructors.find(inst => inst.name === state.loggedInInstructor);
+            const instructors = loggedInInstructor ? [loggedInInstructor] : [];
+
+            const clientFinancials = state.timesheetClientData;
+
+            if (instructors.length === 0) {
+                dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">Instructorul '${state.loggedInInstructor}' nu a fost găsit în baza de date.</p></div>`;
+                return;
+            }
+
+            const allYears = [...new Set(
+                Object.values(state.timesheet).flatMap(ts =>
+                    Object.keys(ts.sessions || {}).map(dateKey => new Date(dateKey).getFullYear())
+                )
+            )].sort((a, b) => b - a);
+            
+            if (allYears.length === 0) {
+                 allYears.push(new Date().getFullYear());
+            }
+
+            const yearOptions = allYears.map(y => `<option value="${y}" ${y === state.timesheetFilter.year ? 'selected' : ''}>${y}</option>`).join('');
+            const monthOptions = [
+                "Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie",
+                "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"
+            ].map((m, i) => `<option value="${i}" ${i === state.timesheetFilter.month ? 'selected' : ''}>${m}</option>`).join('');
+
+            const filterHTML = `
+                <div class="bg-gray-800 shadow-xl rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center">
+                    <h3 class="text-lg font-semibold text-white flex-shrink-0">Filtrează Pontaj</h3>
+                    <div class="flex-grow flex gap-4 w-full sm:w-auto">
+                        <select id="month-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            ${monthOptions}
+                        </select>
+                        <select id="year-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            ${yearOptions}
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            const instructorCardsHTML = instructors.map(instructor => {
+                const instructorTimesheet = state.timesheet[instructor.id] || { sessions: {} };
+                const sortedDays = Object.keys(instructorTimesheet.sessions || {}).sort((a, b) => new Date(a) - new Date(b));
+                const instructorPercent = parseFloat(state.instructorPercentages[instructor.id]) || 0;
+
+                let totalMonthlyCommission = 0;
+
+                const filteredDays = sortedDays.filter(dateKey => {
+                    const date = new Date(dateKey);
+                    return date.getFullYear() === state.timesheetFilter.year && date.getMonth() === state.timesheetFilter.month;
+                });
+
+                const dayCardsHTML = filteredDays.map(dateKey => {
+                    const sessions = instructorTimesheet.sessions[dateKey] || [];
+                    const date = new Date(dateKey);
+                    const dayName = date.toLocaleDateString('ro-RO', { weekday: 'long' });
+                    const formattedDate = date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const displayDate = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} - ${formattedDate}`;
+                    let dailyTotalCommission = 0;
+
+                    const sessionListHTML = sessions.map(session => {
+                        const clientData = clientFinancials[session.clientName];
+                        let commission = 0;
+                        if (clientData && instructorPercent > 0) {
+                            const lastPayment = clientData.lastPaymentAmount || 0;
+                            const subType = parseInt(clientData.subscription, 10) || 4;
+                            if (lastPayment > 0 && subType > 0) {
+                                const sessionPrice = lastPayment / subType;
+                                commission = (sessionPrice * instructorPercent) / 100 - (sessionPrice * 0.06); // Deduct 6% tax
+                            }
+                        }
+                        dailyTotalCommission += commission;
+                        return `
+                            <li class="flex justify-between items-center text-sm p-2 bg-gray-900/50 rounded">
+                                <div class="flex-1">
+                                    <span>${session.clientName} - ${session.discipline}</span>
+                                    <span class="block text-xs font-mono text-blue-300">${session.time}</span>
+                                </div>
+                                <span class="font-semibold text-lg ${commission > 0 ? 'text-green-400' : 'text-gray-500'} ml-4">
+                                    ${commission.toFixed(2)} RON
+                                </span>
+                            </li>
+                        `;
+                    }).join('');
+
+                    totalMonthlyCommission += dailyTotalCommission;
+
+                    return `
+                        <div class="day-card mt-2">
+                            <button class="day-header w-full flex justify-between items-center p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-left">
+                                <span class="font-semibold text-gray-100">${displayDate}</span>
+                                <div class="flex items-center">
+                                    <span class="font-bold text-lg text-green-400 mr-4">${dailyTotalCommission.toFixed(2)} RON</span>
+                                    <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
+                                </div>
+                            </button>
+                            <ul class="day-sessions-list mt-2 pl-4 space-y-1" style="display: none;">
+                                ${sessionListHTML}
+                            </ul>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-gray-800 shadow-lg rounded-xl overflow-hidden instructor-card mb-4">
+                        <div class="instructor-header w-full flex justify-between items-center p-4 bg-gray-700/50 text-left">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-x-4">
+                           <h3 class="text-xl font-bold text-white">${instructor.name}</h3>
+                           <span class="text-sm font-semibold text-gray-300">Total Lunar: <span class="text-xl text-green-400 font-bold">${totalMonthlyCommission.toFixed(2)} RON</span></span>
+                        </div>
+                        </div>
+                        <div class="instructor-details p-4 border-t border-gray-600">
+                            ${dayCardsHTML || `<p class="text-sm text-center text-gray-400 py-4">Nicio sesiune înregistrată pentru luna selectată.</p>`}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            dom.resultsArea.innerHTML = `
+                <div class="fade-in">
+                    ${filterHTML}
+                    <div id="instructor-cards-container">
+                        ${instructorCardsHTML}
+                    </div>
+                </div>
+            `;
+            
+            // Re-attach event listeners for the new elements
+            document.getElementById('month-filter').addEventListener('change', (e) => {
+                state.timesheetFilter.month = parseInt(e.target.value, 10);
+                renderFilteredTimesheet();
+            });
+            document.getElementById('year-filter').addEventListener('change', (e) => {
+                state.timesheetFilter.year = parseInt(e.target.value, 10);
+                renderFilteredTimesheet();
+            });
+
+            document.querySelectorAll('.day-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('.lucide-chevron-down');
+                    if (content && icon) {
+                        const isVisible = content.style.display !== 'none';
+                        content.style.display = isVisible ? 'none' : 'block';
+                        icon.classList.toggle('rotate-180', !isVisible);
+                    }
+                });
+            });
+
+            lucide.createIcons();
+        };
+
+        // --- Helper Functions ---
+        const getClientFinancialData = async (clientNames) => {
+            if (clientNames.length === 0) return {};
+
+            const clientDataMap = {};
+            const firestorePromises = clientNames.map(name => firestoreApi.getClientData(name));
+            const firestoreResults = await Promise.all(firestorePromises);
+
+            firestoreResults.forEach(data => {
+                if (data.name) {
+                    clientDataMap[data.name] = {
+                        subscription: data.subscription || '4',
+                        email: data.email || null,
+                        lastPaymentAmount: 0 // Default
+                    };
+                }
+            });
+
+            try {
+                const functions = getFunctions(app);
+                const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
+                const ninetyDaysAgo = new Date();
+                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+                const stripeResult = await getStripeFinancials({
+                    startDate: ninetyDaysAgo.toISOString(),
+                    endDate: new Date().toISOString()
+                });
+                const allPayments = stripeResult.data.payments || [];
+
+                clientNames.forEach(name => {
+                    const clientInfo = clientDataMap[name];
+                    if (clientInfo) {
+                        const clientNameLower = name.toLowerCase();
+                        const clientEmailLower = clientInfo.email ? clientInfo.email.toLowerCase() : null;
+
+                        const relevantPayments = allPayments.filter(p =>
+                            (p.customer?.toLowerCase() === clientNameLower) ||
+                            (clientEmailLower && p.email?.toLowerCase() === clientEmailLower)
+                        ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                        if (relevantPayments.length > 0) {
+                            clientDataMap[name].lastPaymentAmount = relevantPayments[0].net;
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Could not fetch limited Stripe payments for timesheet:", error);
+            }
+
+            return clientDataMap;
+        };
+        
+        // --- AUTH & INITIALIZATION ---
+        const handleLogin = (e) => {
+            e.preventDefault();
+            dom.loginError.style.display = 'none';
+            const username = dom.loginForm.username.value.toLowerCase().trim();
+            const password = dom.loginForm.password.value;
+
+            const account = hardcodedAccounts[username];
+
+            if (account && account.password === password) {
+                // Successful login
+                console.log(`Logged in as ${account.instructorName}`);
+                state.loggedInInstructor = account.instructorName;
+                
+                // Anonymously sign in to Firebase to allow data fetching
+                signInAnonymously(auth)
+                    .then(() => {
+                        dom.authSection.style.display = 'none';
+                        dom.mainAppView.style.display = 'block';
+                        dom.logoutBtn.style.display = 'flex';
+                        loadAndDisplayTimesheet();
+                    })
+                    .catch((error) => {
+                        console.error("Firebase anonymous sign-in failed:", error);
+                        dom.loginError.textContent = "A apărut o eroare la conectarea la server.";
+                        dom.loginError.style.display = 'block';
+                    });
+
+            } else {
+                // Failed login
+                dom.loginError.style.display = 'block';
+            }
+        };
+        
+        const handleLogout = () => {
+            state.loggedInInstructor = null;
+            dom.mainAppView.style.display = 'none';
+            dom.authSection.style.display = 'block';
+            dom.logoutBtn.style.display = 'none';
+            dom.loginForm.reset();
+        };
+
+        dom.loginForm.addEventListener('submit', handleLogin);
+        dom.logoutBtn.addEventListener('click', handleLogout);
+        
+        window.onload = () => {
+            lucide.createIcons();
+        };
+
+    </script>
+</body>
+
+</html>
