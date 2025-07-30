@@ -3189,21 +3189,23 @@
             const getClientFinancialData = async (clientNames) => {
                 if (clientNames.length === 0) return {};
 
+                // 1. Fetch basic client info from Firestore (subscription type, email, etc.)
                 const clientDataMap = {};
                 const firestorePromises = clientNames.map(name => firestoreApi.getClientData(name));
                 const firestoreResults = await Promise.all(firestorePromises);
-
                 firestoreResults.forEach(data => {
                     if (data.name) {
                         clientDataMap[data.name] = {
                             subscription: data.subscription || '4',
                             email: data.email || null,
-                            lastPaymentAmount: 0 // Default
+                            lastPaymentAmount: 0 // Default value
                         };
                     }
                 });
 
-                // Simplified payment fetching for performance
+                let allPayments = [];
+
+                // 2. Fetch Stripe Payments from Cloud Function
                 try {
                     const functions = getFunctions(app);
                     const getStripeFinancials = httpsCallable(functions, 'getStripeFinancials');
@@ -3214,27 +3216,56 @@
                         startDate: ninetyDaysAgo.toISOString(),
                         endDate: new Date().toISOString()
                     });
-                    const allPayments = stripeResult.data.payments || [];
 
-                    clientNames.forEach(name => {
-                        const clientInfo = clientDataMap[name];
-                        if (clientInfo) {
-                            const clientNameLower = name.toLowerCase();
-                            const clientEmailLower = clientInfo.email ? clientInfo.email.toLowerCase() : null;
+                    // Standardize Stripe payment objects
+                    const stripePayments = (stripeResult.data.payments || []).map(p => ({
+                        clientName: p.customer,
+                        email: p.email,
+                        date: new Date(p.date),
+                        amount: p.net, // Use net amount for commission
+                        method: 'Stripe'
+                    }));
+                    allPayments.push(...stripePayments);
+                } catch (error) {
+                    console.error("Could not fetch Stripe payments for timesheet:", error);
+                }
 
-                            const relevantPayments = allPayments.filter(p =>
-                                (p.customer?.toLowerCase() === clientNameLower) ||
-                                (clientEmailLower && p.email?.toLowerCase() === clientEmailLower)
-                            ).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                            if (relevantPayments.length > 0) {
-                                clientDataMap[name].lastPaymentAmount = relevantPayments[0].net;
-                            }
-                        }
+                // 3. Fetch Cash Payments from Firestore
+                try {
+                    const cashPaymentsSnapshot = await getDocs(collection(db, "payments"));
+                    cashPaymentsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        // Standardize cash payment objects
+                        allPayments.push({
+                            clientName: data.clientName,
+                            email: null, // Cash payments don't have an email stored
+                            date: new Date(data.created), // Use 'created' timestamp for accurate sorting
+                            amount: data.amount,
+                            method: 'Cash'
+                        });
                     });
                 } catch (error) {
-                    console.error("Could not fetch limited Stripe payments for timesheet:", error);
+                    console.error("Could not fetch cash payments for timesheet:", error);
                 }
+
+                // 4. For each client, find their single most recent payment from the combined list
+                clientNames.forEach(name => {
+                    const clientInfo = clientDataMap[name];
+                    if (clientInfo) {
+                        const clientNameLower = name.toLowerCase();
+                        const clientEmailLower = clientInfo.email ? clientInfo.email.toLowerCase() : null;
+
+                        const relevantPayments = allPayments.filter(p =>
+                            (p.clientName?.toLowerCase() === clientNameLower) ||
+                            (clientEmailLower && p.email?.toLowerCase() === clientEmailLower)
+                        ).sort((a, b) => b.date - a.date); // Sort all payments for the client, descending by date
+
+                        if (relevantPayments.length > 0) {
+                            // The first payment in the sorted list is the most recent one
+                            clientDataMap[name].lastPaymentAmount = relevantPayments[0].amount;
+                        }
+                    }
+                });
 
                 return clientDataMap;
             };
