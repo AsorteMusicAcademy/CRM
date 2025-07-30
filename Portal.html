@@ -362,16 +362,12 @@
             let sectionsHTML = '';
 
             // Classroom Section
-            if (state.googleAccessToken && courseId) {
-                sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
-                    <div id="classroom-loader" class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin mx-auto"></i></div>
-                    <div id="classroom-content" class="hidden"></div>
-                `);
-            } else {
-                 sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
+            const isClassroomDisabled = !(state.googleAccessToken && courseId);
+            sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
+                <div id="classroom-content-wrapper">
                     <p class="p-4 text-sm text-gray-400">Pentru a accesa Google Classroom, te rugăm să te deconectezi și să te autentifici folosind contul tău de Google.</p>
-                `, true); // disabled
-            }
+                </div>
+            `, isClassroomDisabled);
 
             // YouTube Playlist Section
             sectionsHTML += createCollapsibleSectionHTML('playlist', 'Rehearsal Playlist', 'youtube', `
@@ -388,9 +384,10 @@
         };
 
         const createCollapsibleSectionHTML = (id, title, icon, content, disabled = false) => {
+            const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
             return `
                 <div class="bg-gray-800 rounded-xl shadow-lg">
-                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left" aria-expanded="false" aria-controls="${id}-section-content" ${disabled ? 'disabled class="opacity-50 cursor-not-allowed"' : ''}>
+                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left ${disabledClasses}" aria-expanded="false" aria-controls="${id}-section-content">
                         <span class="flex items-center text-xl font-bold text-white">
                             <i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>
                             ${title}
@@ -405,11 +402,9 @@
         };
         
         const renderClassroomContent = async (courseId) => {
-            const loader = document.getElementById('classroom-loader');
-            const content = document.getElementById('classroom-content');
-            content.innerHTML = `<div id="classroom-loader" class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin mx-auto"></i></div>`;
+            const contentWrapper = document.getElementById('classroom-content-wrapper');
+            contentWrapper.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin mx-auto"></i></div>`;
             lucide.createIcons();
-
 
             try {
                 const [announcements, coursework] = await Promise.all([
@@ -431,7 +426,7 @@
                     </div>
                 `).join('');
 
-                content.innerHTML = `
+                contentWrapper.innerHTML = `
                     <div class="flex border-b border-gray-600 px-4">
                         <button class="tab-btn p-3 text-sm font-medium border-b-2 border-blue-500 text-white" data-tab="announcements">Anunțuri</button>
                         <button class="tab-btn p-3 text-sm font-medium border-b-2 border-transparent text-gray-400" data-tab="coursework">Teme</button>
@@ -443,7 +438,7 @@
                 `;
                 attachClassroomTabListeners();
             } catch (error) {
-                content.innerHTML = `<p class="text-red-400 p-4">Eroare la încărcarea datelor din Classroom.</p>`;
+                contentWrapper.innerHTML = `<p class="text-red-400 p-4">Eroare la încărcarea datelor din Classroom.</p>`;
             }
         };
         
@@ -478,9 +473,8 @@
                 <div class="space-y-1">${playlistItemsHTML || '<p class="text-sm text-gray-400">Playlist-ul tău este gol.</p>'}</div>
             `;
             
-            // If the playlist is now empty but a player exists, destroy it.
             if (videoIds.length === 0 && state.ytPlayer) {
-                state.ytPlayer.destroy();
+                if (state.ytPlayer.destroy) state.ytPlayer.destroy();
                 state.ytPlayer = null;
             }
             
@@ -505,13 +499,21 @@
                 header.addEventListener('click', () => {
                     const content = document.getElementById(header.getAttribute('aria-controls'));
                     const isExpanded = header.getAttribute('aria-expanded') === 'true';
+                    
+                    // Do nothing if the button has the disabled-style classes
+                    if (header.classList.contains('opacity-50')) {
+                        // Still toggle to show the message
+                         header.setAttribute('aria-expanded', !isExpanded);
+                         content.classList.toggle('hidden');
+                        return;
+                    }
+
                     header.setAttribute('aria-expanded', !isExpanded);
                     content.classList.toggle('hidden');
                     
-                    // Lazy load content
                     if (!isExpanded) {
                         const sectionId = header.id.split('-')[0];
-                        if (sectionId === 'classroom' && state.clientData.courseId && state.googleAccessToken) {
+                        if (sectionId === 'classroom') {
                             renderClassroomContent(state.clientData.courseId);
                         } else if (sectionId === 'playlist') {
                             renderPlaylistContent(state.clientData.youtubePlaylist);
@@ -522,8 +524,8 @@
         };
         
         const attachClassroomTabListeners = () => {
-            const tabButtons = document.querySelectorAll('#classroom-content .tab-btn');
-            const tabContents = document.querySelectorAll('#classroom-content .tab-content');
+            const tabButtons = document.querySelectorAll('#classroom-content-wrapper .tab-btn');
+            const tabContents = document.querySelectorAll('#classroom-content-wrapper .tab-content');
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     tabButtons.forEach(btn => {
