@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ro" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Client</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .section-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .section-header[aria-expanded="true"] .section-toggle-icon {
+            transform: rotate(180deg);
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* gray-500 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200">
+
+    <div id="portal-app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ===== Authentication View ===== -->
+        <div id="auth-view" class="max-w-md mx-auto mt-10">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white">Portal Client</h1>
+                <p class="text-gray-400">Accesează contul tău</p>
+            </div>
+            
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg">
+                <!-- Google Sign-In Button -->
+                <button id="google-signin-btn" class="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-4 focus:ring-gray-300 transition-all duration-300 flex items-center justify-center shadow-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24px" height="24px">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+                        <path d="M1 1h22v22H1z" fill="none"></path>
+                    </svg>
+                    Continuă cu Google
+                </button>
+
+                <div class="relative flex py-5 items-center">
+                    <div class="flex-grow border-t border-gray-600"></div>
+                    <span class="flex-shrink mx-4 text-gray-400 text-sm">SAU</span>
+                    <div class="flex-grow border-t border-gray-600"></div>
+                </div>
+
+                <!-- Email/Password Form -->
+                <form id="email-login-form" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                        <input type="email" id="email" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Parola</label>
+                        <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div id="auth-error" class="text-red-400 text-sm hidden"></div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                        Autentificare
+                    </button>
+                </form>
+                 <p class="text-center text-sm text-gray-400 mt-6">
+                    Nu ai cont? <a href="#" id="show-register-link" class="font-medium text-blue-400 hover:underline">Creează unul acum</a>
+                </p>
+            </div>
+        </div>
+        
+        <!-- ===== Registration View ===== -->
+        <div id="register-view" class="max-w-md mx-auto mt-10 hidden">
+             <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white">Creează Cont</h1>
+                <p class="text-gray-400">Introdu datele pentru a te înregistra</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg">
+                 <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                        <input type="email" id="register-email" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-gray-300 mb-1">Parola</label>
+                        <input type="password" id="register-password" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div id="register-error" class="text-red-400 text-sm hidden"></div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                        Înregistrare
+                    </button>
+                </form>
+                 <p class="text-center text-sm text-gray-400 mt-6">
+                    Ai deja cont? <a href="#" id="show-login-link" class="font-medium text-blue-400 hover:underline">Autentifică-te</a>
+                </p>
+            </div>
+        </div>
+
+
+        <!-- ===== Main App View (Dashboard) ===== -->
+        <div id="app-view" class="hidden">
+            <header class="flex justify-between items-center mb-8">
+                <h1 id="welcome-header" class="text-3xl font-bold text-white"></h1>
+                <button id="signout-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
+                    Deconectare
+                </button>
+            </header>
+
+            <div id="app-content" class="space-y-8">
+                <!-- Loader -->
+                <div id="app-loader" class="text-center p-10">
+                    <i data-lucide="loader-2" class="h-12 w-12 animate-spin text-blue-400 mx-auto"></i>
+                    <p class="mt-4 text-lg">Se încarcă datele...</p>
+                </div>
+                
+                <!-- Main Content Area (populated by JS) -->
+                <div id="main-content-area" class="hidden space-y-8">
+                    <!-- Client Card -->
+                    <div id="client-card-container"></div>
+                    <!-- Collapsible Sections -->
+                    <div id="collapsible-sections-container" class="space-y-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            GoogleAuthProvider, 
+            signInWithPopup,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+        // --- Configuration ---
+        const firebaseConfig = {
+            // IMPORTANT: Replace with your project's Firebase configuration
+            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
+            authDomain: "asorte-crm.firebaseapp.com",
+            projectId: "asorte-crm",
+            storageBucket: "asorte-crm.appspot.com",
+            messagingSenderId: "848279125018",
+            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
+        };
+        // IMPORTANT: Add your YouTube Data API v3 Key here
+        const YOUTUBE_API_KEY = 'AIzaSyBKbR_eomzn8LjPG0CrGnIuxqZ8N3lnGgQ'; 
+
+        // --- Firebase Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app);
+
+        // --- State Management ---
+        let state = {
+            user: null,
+            clientData: null,
+            googleAccessToken: null,
+            ytPlayer: null,
+        };
+
+        // --- DOM Element References ---
+        const dom = {
+            authView: document.getElementById('auth-view'),
+            registerView: document.getElementById('register-view'),
+            appView: document.getElementById('app-view'),
+            appLoader: document.getElementById('app-loader'),
+            mainContentArea: document.getElementById('main-content-area'),
+            welcomeHeader: document.getElementById('welcome-header'),
+            clientCardContainer: document.getElementById('client-card-container'),
+            collapsibleSectionsContainer: document.getElementById('collapsible-sections-container'),
+            googleSigninBtn: document.getElementById('google-signin-btn'),
+            signoutBtn: document.getElementById('signout-btn'),
+            emailLoginForm: document.getElementById('email-login-form'),
+            registerForm: document.getElementById('register-form'),
+            showRegisterLink: document.getElementById('show-register-link'),
+            showLoginLink: document.getElementById('show-login-link'),
+            authError: document.getElementById('auth-error'),
+            registerError: document.getElementById('register-error'),
+        };
+
+        // --- Authentication Logic ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                state.user = user;
+                dom.authView.classList.add('hidden');
+                dom.registerView.classList.add('hidden');
+                dom.appView.classList.remove('hidden');
+                dom.welcomeHeader.textContent = `Salut, ${user.displayName || user.email}!`;
+                await fetchPortalData();
+            } else {
+                state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
+                dom.authView.classList.remove('hidden');
+                dom.appView.classList.add('hidden');
+                dom.mainContentArea.classList.add('hidden');
+                dom.appLoader.style.display = 'block';
+            }
+        });
+        
+        const signInWithGoogle = async () => {
+            const provider = new GoogleAuthProvider();
+            // Request scopes needed for Classroom API
+            provider.addScope('https://www.googleapis.com/auth/classroom.announcements.readonly');
+            provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me.readonly');
+            
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                state.googleAccessToken = credential.accessToken;
+            } catch (error) {
+                showAuthError(`Google Sign-In Error: ${error.message}`);
+            }
+        };
+
+        const handleSignOut = async () => {
+            await signOut(auth);
+        };
+
+        // --- Data Fetching & Processing ---
+        const fetchPortalData = async () => {
+            dom.appLoader.style.display = 'block';
+            dom.mainContentArea.classList.add('hidden');
+            try {
+                const getClientPortalData = httpsCallable(functions, 'getClientPortalData');
+                const result = await getClientPortalData();
+                
+                if (result.data.error) {
+                    throw new Error(result.data.error);
+                }
+
+                state.clientData = result.data;
+                renderApp();
+
+            } catch (error) {
+                dom.appLoader.innerHTML = `<p class="text-red-400 text-center">Eroare: ${error.message}. Asigură-te că e-mailul tău este înregistrat în sistem.</p>`;
+            } finally {
+                dom.appLoader.style.display = 'none';
+                dom.mainContentArea.classList.remove('hidden');
+            }
+        };
+        
+        const fetchYouTubeVideoTitles = async (videoIds) => {
+            if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === 'YOUR_YOUTUBE_API_KEY' || videoIds.length === 0) {
+                return videoIds.map(id => ({ id, title: `Video ID: ${id}` }));
+            }
+            const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoIds.join(',')}&key=${YOUTUBE_API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.items) {
+                    return data.items.map(item => ({ id: item.id, title: item.snippet.title }));
+                }
+                return videoIds.map(id => ({ id, title: `Video ID: ${id}` }));
+            } catch (error) {
+                console.error("Error fetching YouTube titles:", error);
+                return videoIds.map(id => ({ id, title: `Video ID: ${id}` }));
+            }
+        };
+
+        const fetchClassroomAnnouncements = async (courseId) => {
+            if (!state.googleAccessToken) return [];
+            const url = `https://classroom.googleapis.com/v1/courses/${courseId}/announcements`;
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${state.googleAccessToken}` }
+            });
+            const data = await response.json();
+            return data.announcements || [];
+        };
+        
+        const fetchClassroomCoursework = async (courseId) => {
+            if (!state.googleAccessToken) return [];
+            const url = `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`;
+             const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${state.googleAccessToken}` }
+            });
+            const data = await response.json();
+            return data.courseWork || [];
+        };
+
+        // --- Rendering Logic ---
+        const renderApp = () => {
+            renderClientCard(state.clientData);
+            renderCollapsibleSections(state.clientData);
+            lucide.createIcons();
+        };
+
+        const renderClientCard = (data) => {
+            const { name, discipline, sessionNumber, subscriptionType, nextSessions, lastPayment } = data;
+            const progress = subscriptionType > 0 ? (sessionNumber / subscriptionType) * 100 : 0;
+            
+            let nextSessionsHTML = '<p class="text-sm text-gray-400">Nicio ședință programată.</p>';
+            if (nextSessions && nextSessions.length > 0) {
+                nextSessionsHTML = `<ul class="space-y-2 max-h-40 overflow-y-auto pr-2">${
+                    nextSessions.map(session => {
+                        const date = new Date(session.start.dateTime);
+                        const formattedDate = date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+                        const formattedTime = date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+                        return `<li class="text-sm text-gray-300">${formattedDate} @ ${formattedTime} - ${session.discipline}</li>`;
+                    }).join('')
+                }</ul>`;
+            }
+
+            const cardHTML = `
+                <div class="bg-gray-800 p-6 rounded-xl shadow-lg space-y-6">
+                    <div>
+                        <p class="text-lg font-medium text-gray-400">Curs Principal</p>
+                        <h2 class="text-3xl font-bold text-white">${discipline || 'N/A'}</h2>
+                    </div>
+                    
+                    <div>
+                        <p class="text-sm font-medium text-gray-300 mb-1">Status Abonament: Ședința ${sessionNumber || 0} / ${subscriptionType || 4}</p>
+                        <div class="w-full bg-gray-700 rounded-full h-2.5">
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-200 mb-2">Programări Viitoare (30 de zile)</h3>
+                        ${nextSessionsHTML}
+                    </div>
+
+                    <div>
+                        <p class="text-sm text-gray-400">Ultima plată: <span class="font-medium text-gray-300">${lastPayment || 'N/A'}</span></p>
+                    </div>
+                </div>
+            `;
+            dom.clientCardContainer.innerHTML = cardHTML;
+        };
+        
+        const renderCollapsibleSections = (data) => {
+            const { courseId } = data;
+            let sectionsHTML = '';
+
+            // Classroom Section
+            if (state.googleAccessToken && courseId) {
+                sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
+                    <div id="classroom-loader" class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin mx-auto"></i></div>
+                    <div id="classroom-content" class="hidden"></div>
+                `);
+            } else {
+                 sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
+                    <p class="p-4 text-sm text-gray-400">Pentru a accesa Google Classroom, te rugăm să te deconectezi și să te autentifici folosind contul tău de Google.</p>
+                `, true); // disabled
+            }
+
+            // YouTube Playlist Section
+            sectionsHTML += createCollapsibleSectionHTML('playlist', 'Rehearsal Playlist', 'youtube', `
+                <div id="playlist-content" class="space-y-4 p-4"></div>
+            `);
+            
+            // Session History Section
+             sectionsHTML += createCollapsibleSectionHTML('history', 'Istoric Sesiuni', 'history', `
+                <div id="history-content" class="space-y-4 p-4">${renderHistory(data.history || [])}</div>
+            `);
+
+            dom.collapsibleSectionsContainer.innerHTML = sectionsHTML;
+            attachCollapsibleListeners();
+        };
+
+        const createCollapsibleSectionHTML = (id, title, icon, content, disabled = false) => {
+            return `
+                <div class="bg-gray-800 rounded-xl shadow-lg">
+                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left" aria-expanded="false" aria-controls="${id}-section-content" ${disabled ? 'disabled class="opacity-50 cursor-not-allowed"' : ''}>
+                        <span class="flex items-center text-xl font-bold text-white">
+                            <i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>
+                            ${title}
+                        </span>
+                        <i class="section-toggle-icon lucide lucide-chevron-down h-6 w-6 text-gray-400"></i>
+                    </button>
+                    <div id="${id}-section-content" class="border-t border-gray-700 hidden" role="region">
+                        ${content}
+                    </div>
+                </div>
+            `;
+        };
+        
+        const renderClassroomContent = async (courseId) => {
+            const loader = document.getElementById('classroom-loader');
+            const content = document.getElementById('classroom-content');
+            content.innerHTML = `<div id="classroom-loader" class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin mx-auto"></i></div>`;
+            lucide.createIcons();
+
+
+            try {
+                const [announcements, coursework] = await Promise.all([
+                    fetchClassroomAnnouncements(courseId),
+                    fetchClassroomCoursework(courseId)
+                ]);
+                
+                let announcementsHTML = announcements.map(a => `
+                    <div class="p-3 bg-gray-700/50 rounded-lg mb-2">
+                        <p class="text-gray-300">${a.text}</p>
+                        <p class="text-xs text-gray-500 mt-1">Publicat: ${new Date(a.creationTime).toLocaleDateString('ro-RO')}</p>
+                    </div>
+                `).join('');
+
+                let courseworkHTML = coursework.map(cw => `
+                     <div class="p-3 bg-gray-700/50 rounded-lg mb-2">
+                        <a href="${cw.alternateLink}" target="_blank" class="font-semibold text-blue-400 hover:underline">${cw.title}</a>
+                        <p class="text-xs text-gray-500 mt-1">Data limită: ${cw.dueDate ? `${cw.dueDate.day}/${cw.dueDate.month}/${cw.dueDate.year}` : 'N/A'}</p>
+                    </div>
+                `).join('');
+
+                content.innerHTML = `
+                    <div class="flex border-b border-gray-600 px-4">
+                        <button class="tab-btn p-3 text-sm font-medium border-b-2 border-blue-500 text-white" data-tab="announcements">Anunțuri</button>
+                        <button class="tab-btn p-3 text-sm font-medium border-b-2 border-transparent text-gray-400" data-tab="coursework">Teme</button>
+                    </div>
+                    <div class="p-4">
+                        <div id="announcements-tab" class="tab-content">${announcementsHTML || '<p class="text-sm text-gray-400">Nu sunt anunțuri.</p>'}</div>
+                        <div id="coursework-tab" class="tab-content hidden">${courseworkHTML || '<p class="text-sm text-gray-400">Nu sunt teme.</p>'}</div>
+                    </div>
+                `;
+                attachClassroomTabListeners();
+            } catch (error) {
+                content.innerHTML = `<p class="text-red-400 p-4">Eroare la încărcarea datelor din Classroom.</p>`;
+            }
+        };
+        
+        const renderPlaylistContent = async (playlist) => {
+            const container = document.getElementById('playlist-content');
+            const videoIds = playlist || [];
+            const videoDetails = await fetchYouTubeVideoTitles(videoIds);
+
+            const playlistItemsHTML = videoDetails.map((video, index) => `
+                <div class="flex items-center justify-between p-2 rounded-md hover:bg-gray-700/50 group">
+                    <button class="play-video-btn text-left flex-grow truncate text-gray-300 group-hover:text-white" data-video-id="${video.id}">
+                        ${video.title}
+                    </button>
+                    <button class="remove-video-btn text-red-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-index="${index}">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div id="youtube-player-container" class="aspect-video bg-black rounded-lg mb-4 ${videoIds.length === 0 ? 'hidden' : ''}">
+                    <div id="youtube-player"></div>
+                </div>
+                <div id="playlist-controls" class="mb-3">
+                    <button id="show-add-video-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"><i data-lucide="plus"></i> Adaugă Video</button>
+                    <div id="add-video-form" class="hidden flex items-center gap-2">
+                        <input type="text" id="youtube-url-input" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-900 rounded-md shadow-sm" placeholder="Paste YouTube URL...">
+                        <button id="save-video-btn" class="bg-green-600 text-white font-bold p-2 rounded-lg hover:bg-green-700"><i data-lucide="check"></i></button>
+                        <button id="cancel-add-video-btn" class="bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-500"><i data-lucide="x"></i></button>
+                    </div>
+                </div>
+                <div class="space-y-1">${playlistItemsHTML || '<p class="text-sm text-gray-400">Playlist-ul tău este gol.</p>'}</div>
+            `;
+            
+            if (videoIds.length > 0 && !state.ytPlayer) {
+                createYTPlayer(videoIds[0]);
+            } else if (videoIds.length === 0 && state.ytPlayer) {
+                state.ytPlayer.destroy();
+                state.ytPlayer = null;
+            }
+            
+            attachPlaylistListeners();
+            lucide.createIcons();
+        };
+        
+        const renderHistory = (history) => {
+            if (!history || history.length === 0) {
+                return '<p class="text-sm text-gray-400">Nu există istoric.</p>';
+            }
+            return `<ul class="space-y-2">${
+                history.map(item => `
+                    <li class="p-3 bg-gray-700/50 rounded-lg text-sm text-gray-300">${item.summary} - ${new Date(item.date).toLocaleDateString('ro-RO')} (${item.status})</li>
+                `).join('')
+            }</ul>`;
+        };
+
+        // --- Event Listeners & UI Helpers ---
+        const attachCollapsibleListeners = () => {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = document.getElementById(header.getAttribute('aria-controls'));
+                    const isExpanded = header.getAttribute('aria-expanded') === 'true';
+                    header.setAttribute('aria-expanded', !isExpanded);
+                    content.classList.toggle('hidden');
+                    
+                    // Lazy load content
+                    if (!isExpanded) {
+                        const sectionId = header.id.split('-')[0];
+                        if (sectionId === 'classroom' && state.clientData.courseId && state.googleAccessToken) {
+                            renderClassroomContent(state.clientData.courseId);
+                        } else if (sectionId === 'playlist') {
+                            renderPlaylistContent(state.clientData.youtubePlaylist);
+                        }
+                    }
+                });
+            });
+        };
+        
+        const attachClassroomTabListeners = () => {
+            const tabButtons = document.querySelectorAll('#classroom-content .tab-btn');
+            const tabContents = document.querySelectorAll('#classroom-content .tab-content');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('border-blue-500', 'text-white');
+                        btn.classList.add('border-transparent', 'text-gray-400');
+                    });
+                    button.classList.add('border-blue-500', 'text-white');
+                    button.classList.remove('border-transparent', 'text-gray-400');
+                    
+                    tabContents.forEach(content => content.classList.add('hidden'));
+                    document.getElementById(`${button.dataset.tab}-tab`).classList.remove('hidden');
+                });
+            });
+        };
+        
+        const attachPlaylistListeners = () => {
+            document.getElementById('show-add-video-btn')?.addEventListener('click', (e) => {
+                e.currentTarget.classList.add('hidden');
+                document.getElementById('add-video-form').classList.remove('hidden');
+            });
+            document.getElementById('cancel-add-video-btn')?.addEventListener('click', () => {
+                document.getElementById('add-video-form').classList.add('hidden');
+                document.getElementById('show-add-video-btn').classList.remove('hidden');
+                document.getElementById('youtube-url-input').value = '';
+            });
+            document.getElementById('save-video-btn')?.addEventListener('click', handleAddVideo);
+            
+            document.querySelectorAll('.remove-video-btn').forEach(btn => {
+                btn.addEventListener('click', handleRemoveVideo);
+            });
+            
+            document.querySelectorAll('.play-video-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const videoId = e.currentTarget.dataset.videoId;
+                    if (state.ytPlayer) {
+                        state.ytPlayer.loadVideoById(videoId);
+                    } else {
+                        document.getElementById('youtube-player-container').classList.remove('hidden');
+                        createYTPlayer(videoId);
+                    }
+                });
+            });
+        };
+        
+        const handleAddVideo = async () => {
+            const input = document.getElementById('youtube-url-input');
+            const url = input.value.trim();
+            const videoId = parseYouTubeUrl(url);
+
+            if (!videoId) {
+                alert('URL YouTube invalid.');
+                return;
+            }
+
+            const currentPlaylist = state.clientData.youtubePlaylist || [];
+            if (currentPlaylist.includes(videoId)) {
+                alert('Acest video este deja în playlist.');
+                return;
+            }
+            
+            const newPlaylist = [...currentPlaylist, videoId];
+            await updatePlaylistOnServer(newPlaylist);
+            input.value = '';
+            document.getElementById('add-video-form').classList.add('hidden');
+            document.getElementById('show-add-video-btn').classList.remove('hidden');
+        };
+        
+        const handleRemoveVideo = async (e) => {
+            const indexToRemove = parseInt(e.currentTarget.dataset.index, 10);
+            const currentPlaylist = state.clientData.youtubePlaylist || [];
+            const newPlaylist = currentPlaylist.filter((_, index) => index !== indexToRemove);
+            await updatePlaylistOnServer(newPlaylist);
+        };
+        
+        const updatePlaylistOnServer = async (newPlaylist) => {
+            try {
+                const updateClientPlaylist = httpsCallable(functions, 'updateClientPlaylist');
+                await updateClientPlaylist({ playlist: newPlaylist });
+                state.clientData.youtubePlaylist = newPlaylist;
+                renderPlaylistContent(newPlaylist);
+            } catch (error) {
+                alert(`Eroare la actualizarea playlist-ului: ${error.message}`);
+            }
+        };
+
+        const parseYouTubeUrl = (url) => {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        };
+        
+        const createYTPlayer = (videoId) => {
+            state.ytPlayer = new YT.Player('youtube-player', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    'playsinline': 1
+                },
+            });
+        };
+
+        const showAuthError = (message) => {
+            dom.authError.textContent = message;
+            dom.authError.classList.remove('hidden');
+        };
+        const showRegisterError = (message) => {
+            dom.registerError.textContent = message;
+            dom.registerError.classList.remove('hidden');
+        };
+
+        // --- Initial Event Listeners ---
+        dom.googleSigninBtn.addEventListener('click', signInWithGoogle);
+        dom.signoutBtn.addEventListener('click', handleSignOut);
+        
+        dom.showRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            dom.authView.classList.add('hidden');
+            dom.registerView.classList.remove('hidden');
+        });
+        
+        dom.showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            dom.registerView.classList.add('hidden');
+            dom.authView.classList.remove('hidden');
+        });
+
+        dom.emailLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            dom.authError.classList.add('hidden');
+            const email = dom.emailLoginForm['email'].value;
+            const password = dom.emailLoginForm['password'].value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showAuthError(error.message);
+            }
+        });
+        
+        dom.registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            dom.registerError.classList.add('hidden');
+            const email = dom.registerForm['register-email'].value;
+            const password = dom.registerForm['register-password'].value;
+             try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showRegisterError(error.message);
+            }
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
