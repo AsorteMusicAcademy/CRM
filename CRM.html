@@ -561,31 +561,23 @@
                     });
                     return timesheets;
                 },
-                async logSession(instructorId, dateKey, sessionData) {
-                    if (!db || !instructorId || !dateKey || !sessionData) return;
+                async logDailyTimesheet(instructorId, dateKey, dailyData) { // dailyData = { totalCommission, sessionList }
+                    if (!db || !instructorId || !dateKey || !dailyData) return;
                     const docRef = doc(db, "timesheets", instructorId);
                     const docSnap = await getDoc(docRef);
 
                     if (docSnap.exists()) {
-                        // Document exists, update the sessions map
-                        const sessions = docSnap.data().sessions || {};
-                        const daySessions = sessions[dateKey] || [];
-
-                        // Prevent duplicates
-                        const isAlreadyLogged = daySessions.some(s => s.clientName === sessionData.clientName && s.time === sessionData.time);
-
-                        if (!isAlreadyLogged) {
-                            await updateDoc(docRef, {
-                                [`sessions.${dateKey}`]: [...daySessions, sessionData]
-                            });
-                        }
+                        // Document exists, update the sessions map with the new daily data object
+                        await updateDoc(docRef, {
+                            [`sessions.${dateKey}`]: dailyData
+                        });
                     } else {
-                        // Document doesn't exist, create it
+                        // Document doesn't exist, create it with the new structure
                         const instructor = state.instructors.find(i => i.id === instructorId);
                         await setDoc(docRef, {
                             instructorName: instructor?.name || 'N/A',
                             sessions: {
-                                [dateKey]: [sessionData]
+                                [dateKey]: dailyData
                             }
                         });
                     }
@@ -1756,15 +1748,17 @@
 
             // NEW FUNCTION 2: Renders the UI with filters
             // REPLACED FUNCTION: renderFilteredTimesheet
+          // REPLACEMENT for renderFilteredTimesheet
             const renderFilteredTimesheet = () => {
                 const instructors = state.instructors;
-                const clientFinancials = state.timesheetClientData;
+                // NOTE: clientFinancials is no longer needed here as data is pre-calculated
 
                 if (instructors.length === 0) {
                     dom.resultsArea.innerHTML = `<div class="text-center py-12"><p class="text-lg text-gray-400">Nu sunt instructori de afișat.</p></div>`;
                     return;
                 }
 
+                // ... (year and month filter HTML generation remains the same) ...
                 const allYears = [...new Set(
                     Object.values(state.timesheet).flatMap(ts =>
                         Object.keys(ts.sessions || {}).map(dateKey => new Date(dateKey).getFullYear())
@@ -1778,25 +1772,24 @@
                 ].map((m, i) => `<option value="${i}" ${i === state.timesheetFilter.month ? 'selected' : ''}>${m}</option>`).join('');
 
                 const filterHTML = `
-        <div class="bg-gray-800 shadow-xl rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center">
-            <h3 class="text-lg font-semibold text-white flex-shrink-0">Filtrează Pontaj</h3>
-            <div class="flex-grow flex gap-4 w-full sm:w-auto">
-                <select id="month-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    ${monthOptions}
-                </select>
-                <select id="year-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    ${yearOptions}
-                </select>
-            </div>
+    <div class="bg-gray-800 shadow-xl rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center">
+        <h3 class="text-lg font-semibold text-white flex-shrink-0">Filtrează Pontaj</h3>
+        <div class="flex-grow flex gap-4 w-full sm:w-auto">
+            <select id="month-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                ${monthOptions}
+            </select>
+            <select id="year-filter" class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                ${yearOptions}
+            </select>
         </div>
+    </div>
     `;
 
                 const instructorCardsHTML = instructors.map(instructor => {
                     const instructorTimesheet = state.timesheet[instructor.id] || { sessions: {} };
                     const sortedDays = Object.keys(instructorTimesheet.sessions || {}).sort((a, b) => new Date(b) - new Date(a));
-                    const instructorPercent = parseFloat(state.instructorPercentages[instructor.id]) || 0;
 
-                    let totalMonthlyCommission = 0; // NEW: Initialize monthly total for the instructor
+                    let totalMonthlyCommission = 0;
 
                     const filteredDays = sortedDays.filter(dateKey => {
                         const date = new Date(dateKey);
@@ -1804,81 +1797,74 @@
                     });
 
                     const dayCardsHTML = filteredDays.map(dateKey => {
-                        const sessions = instructorTimesheet.sessions[dateKey] || [];
+                        const dayData = instructorTimesheet.sessions[dateKey] || { sessionList: [], totalCommission: 0 };
+                        const sessions = dayData.sessionList;
+                        const dailyTotalCommission = dayData.totalCommission || 0;
+
+                        totalMonthlyCommission += dailyTotalCommission;
+
+                        const sessionListHTML = sessions.map(session => {
+                            const commission = session.commission || 0;
+                            return `
+                <li class="flex justify-between items-center text-sm p-2 bg-gray-900/50 rounded">
+                    <div class="flex-1">
+                        <span>${session.clientName} - ${session.discipline}</span>
+                        <span class="block text-xs font-mono text-blue-300">${session.time}</span>
+                    </div>
+                    <span class="font-semibold text-lg ${commission > 0 ? 'text-green-400' : 'text-gray-500'} ml-4">
+                        ${commission.toFixed(2)} RON
+                    </span>
+                </li>
+            `;
+                        }).join('');
+
                         const date = new Date(dateKey);
                         const dayName = date.toLocaleDateString('ro-RO', { weekday: 'long' });
                         const formattedDate = date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
                         const displayDate = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} - ${formattedDate}`;
-                        let dailyTotalCommission = 0;
-
-                        const sessionListHTML = sessions.map(session => {
-                            const clientData = clientFinancials[session.clientName];
-                            let commission = 0;
-                            if (clientData && instructorPercent > 0) {
-                                const lastPayment = clientData.lastPaymentAmount || 0;
-                                const subType = parseInt(clientData.subscription, 10) || 4;
-                                if (lastPayment > 0 && subType > 0) {
-                                    const sessionPrice = lastPayment / subType;
-                                    commission = (sessionPrice * instructorPercent) / 100 - (sessionPrice * 0.06); // Deduct 6% tax
-                                }
-                            }
-                            dailyTotalCommission += commission;
-                            return `
-                    <li class="flex justify-between items-center text-sm p-2 bg-gray-900/50 rounded">
-                        <div class="flex-1">
-                            <span>${session.clientName} - ${session.discipline}</span>
-                            <span class="block text-xs font-mono text-blue-300">${session.time}</span>
-                        </div>
-                        <span class="font-semibold text-lg ${commission > 0 ? 'text-green-400' : 'text-gray-500'} ml-4">
-                            ${commission.toFixed(2)} RON
-                        </span>
-                    </li>
-                `;
-                        }).join('');
-
-                        totalMonthlyCommission += dailyTotalCommission; // NEW: Add the daily total to the monthly total
 
                         return `
-                <div class="day-card mt-2">
-                    <button class="day-header w-full flex justify-between items-center p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-left">
-                        <span class="font-semibold text-gray-100">${displayDate}</span>
-                        <div class="flex items-center">
-                            <span class="font-bold text-lg text-green-400 mr-4">${dailyTotalCommission.toFixed(2)} RON</span>
-                            <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
-                        </div>
-                    </button>
-                    <ul class="day-sessions-list mt-2 pl-4 space-y-1" style="display: none;">
-                        ${sessionListHTML}
-                    </ul>
-                </div>
-            `;
+            <div class="day-card mt-2">
+                <button class="day-header w-full flex justify-between items-center p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-left">
+                    <span class="font-semibold text-gray-100">${displayDate}</span>
+                    <div class="flex items-center">
+                        <span class="font-bold text-lg text-green-400 mr-4">${dailyTotalCommission.toFixed(2)} RON</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i>
+                    </div>
+                </button>
+                <ul class="day-sessions-list mt-2 pl-4 space-y-1" style="display: none;">
+                    ${sessionListHTML}
+                </ul>
+            </div>
+        `;
                     }).join('');
 
                     return `
-            <div class="bg-gray-800 shadow-lg rounded-xl overflow-hidden instructor-card mb-4">
-                    <button class="instructor-header w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 text-left">
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-x-4">
-                         <h3 class="text-xl font-bold text-white">${instructor.name}</h3>
-                         <span class="text-sm font-semibold text-gray-300">Total Lunar: <span class="text-xl text-green-400 font-bold">${totalMonthlyCommission.toFixed(2)} RON</span></span>
-                    </div>
-                    <i data-lucide="chevron-down" class="h-6 w-6 text-gray-300 transition-transform flex-shrink-0"></i>
-                </button>
-                <div class="instructor-details p-4 border-t border-gray-600" style="display: none;">
-                    ${dayCardsHTML || `<p class="text-sm text-center text-gray-400 py-4">Nicio sesiune înregistrată pentru luna selectată.</p>`}
+        <div class="bg-gray-800 shadow-lg rounded-xl overflow-hidden instructor-card mb-4">
+            <button class="instructor-header w-full flex justify-between items-center p-4 bg-gray-700/50 hover:bg-gray-700 text-left">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-x-4">
+                    <h3 class="text-xl font-bold text-white">${instructor.name}</h3>
+                    <span class="text-sm font-semibold text-gray-300">Total Lunar: <span class="text-xl text-green-400 font-bold">${totalMonthlyCommission.toFixed(2)} RON</span></span>
                 </div>
-            </div>
-        `;
-                }).join('');
-
-                dom.resultsArea.innerHTML = `
-        <div class="fade-in">
-            ${filterHTML}
-            <div id="instructor-cards-container">
-                ${instructorCardsHTML}
+                <i data-lucide="chevron-down" class="h-6 w-6 text-gray-300 transition-transform flex-shrink-0"></i>
+            </button>
+            <div class="instructor-details p-4 border-t border-gray-600" style="display: none;">
+                ${dayCardsHTML || `<p class="text-sm text-center text-gray-400 py-4">Nicio sesiune înregistrată pentru luna selectată.</p>`}
             </div>
         </div>
     `;
+                }).join('');
 
+                dom.resultsArea.innerHTML = `
+    <div class="fade-in">
+        ${filterHTML}
+        <div id="instructor-cards-container">
+            ${instructorCardsHTML}
+        </div>
+    </div>
+    `;
+
+                // ... (event listeners at the end of the function remain the same) ...
                 document.getElementById('month-filter').addEventListener('change', (e) => {
                     state.timesheetFilter.month = parseInt(e.target.value, 10);
                     renderFilteredTimesheet();
@@ -1895,7 +1881,7 @@
                         if (content && icon) {
                             const isVisible = content.style.display !== 'none';
                             content.style.display = isVisible ? 'none' : 'block';
-                            icon.classList.toggle('rotate-180');
+                            icon.classList.toggle('rotate-180', !isVisible);
                         }
                     });
                 });
@@ -2200,27 +2186,68 @@
                 }
 
                 button.disabled = true;
-                button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se înregistrează...`;
+                button.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se calculează și se înregistrează...`;
                 lucide.createIcons();
 
                 let loggedCount = 0;
                 const todayKey = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
                 try {
+                    // 1. Fetch financial data for all of today's clients first
+                    const clientNames = Object.keys(state.clients);
+                    const clientFinancials = await getClientFinancialData(clientNames);
+
+                    // 2. Group sessions by instructor
+                    const sessionsByInstructor = {};
                     for (const [clientName, details] of Object.entries(state.clients)) {
                         const clientData = state.clientFirebaseData[clientName];
                         const instructorId = clientData?.assignedInstructor ? state.instructors.find(i => i.name === clientData.assignedInstructor)?.id : null;
 
                         if (instructorId) {
-                            const sessionData = {
-                                clientName: clientName,
-                                discipline: details.discipline,
-                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
-                            };
-                            await firestoreApi.logSession(instructorId, todayKey, sessionData);
-                            loggedCount++;
+                            if (!sessionsByInstructor[instructorId]) {
+                                sessionsByInstructor[instructorId] = [];
+                            }
+                            sessionsByInstructor[instructorId].push({ clientName, details });
                         }
                     }
+
+                    // 3. Process and log data for each instructor
+                    for (const [instructorId, sessions] of Object.entries(sessionsByInstructor)) {
+                        let dailyTotalCommission = 0;
+                        const sessionList = [];
+                        const instructorPercent = parseFloat(state.instructorPercentages[instructorId]) || 0;
+
+                        for (const { clientName, details } of sessions) {
+                            const financialData = clientFinancials[clientName];
+                            let commission = 0;
+
+                            if (financialData && instructorPercent > 0) {
+                                const lastPayment = financialData.lastPaymentAmount || 0;
+                                const subType = parseInt(financialData.subscription, 10) || 4;
+                                if (lastPayment > 0 && subType > 0) {
+                                    const sessionPrice = lastPayment / subType;
+                                    commission = (sessionPrice * instructorPercent) / 100 - (sessionPrice * 0.06); // Deduct 6% tax
+                                }
+                            }
+
+                            dailyTotalCommission += commission;
+                            loggedCount++;
+
+                            sessionList.push({
+                                clientName: clientName,
+                                discipline: details.discipline,
+                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+                                commission: commission // Store the calculated commission
+                            });
+                        }
+
+                        // 4. Log the entire day's data for the instructor
+                        await firestoreApi.logDailyTimesheet(instructorId, todayKey, {
+                            totalCommission: dailyTotalCommission,
+                            sessionList: sessionList
+                        });
+                    }
+
                     renderNotification(`${loggedCount} sesiuni au fost înregistrate în pontaj.`, 'success');
                 } catch (err) {
                     renderNotification(`Eroare la înregistrarea pontajului: ${err.message}`, 'error');
