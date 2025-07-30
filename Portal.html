@@ -4,17 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Client</title>
+    <title>Portal Client - Asorte</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- YouTube IFrame Player API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
         }
         .section-toggle-icon {
             transition: transform 0.3s ease;
@@ -28,19 +29,30 @@
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1f2937; /* gray-800 */
+            background: #1E1E1E;
         }
         ::-webkit-scrollbar-thumb {
-            background: #4b5563; /* gray-600 */
+            background: #4A4A4A;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* gray-500 */
+            background: #6A6A6A;
+        }
+        .lime-accent {
+            color: #D1FE49;
+        }
+        .btn-lime {
+            background-color: #D1FE49;
+            color: #121212;
+            font-weight: 600;
+        }
+        .btn-lime:hover {
+            background-color: #b8e043;
         }
     </style>
 </head>
 
-<body class="bg-gray-900 text-gray-200">
+<body class="text-white">
 
     <div id="portal-app" class="container mx-auto p-4 sm:p-6 lg:p-8">
 
@@ -51,9 +63,9 @@
                 <p class="text-gray-400">Accesează contul tău</p>
             </div>
             
-            <div class="bg-gray-800 p-8 rounded-xl shadow-lg">
+            <div class="bg-[#1E1E1E] p-8 rounded-lg shadow-lg">
                 <!-- Google Sign-In Button -->
-                <button id="google-signin-btn" class="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-4 focus:ring-gray-300 transition-all duration-300 flex items-center justify-center shadow-md">
+                <button id="google-signin-btn" class="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-4 focus:ring-gray-300 transition-all duration-300 flex items-center justify-center shadow-md">
                     <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24px" height="24px">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
@@ -65,28 +77,28 @@
                 </button>
 
                 <div class="relative flex py-5 items-center">
-                    <div class="flex-grow border-t border-gray-600"></div>
-                    <span class="flex-shrink mx-4 text-gray-400 text-sm">SAU</span>
-                    <div class="flex-grow border-t border-gray-600"></div>
+                    <div class="flex-grow border-t border-gray-700"></div>
+                    <span class="flex-shrink mx-4 text-gray-500 text-sm">SAU</span>
+                    <div class="flex-grow border-t border-gray-700"></div>
                 </div>
 
                 <!-- Email/Password Form -->
                 <form id="email-login-form" class="space-y-4">
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                        <input type="email" id="email" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label for="email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                        <input type="email" id="email" required class="w-full px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D1FE49]">
                     </div>
                     <div>
-                        <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Parola</label>
-                        <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label for="password" class="block text-sm font-medium text-gray-400 mb-1">Parola</label>
+                        <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D1FE49]">
                     </div>
                     <div id="auth-error" class="text-red-400 text-sm hidden"></div>
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                    <button type="submit" class="w-full btn-lime py-3 px-4 rounded-md transition-colors">
                         Autentificare
                     </button>
                 </form>
                  <p class="text-center text-sm text-gray-400 mt-6">
-                    Nu ai cont? <a href="#" id="show-register-link" class="font-medium text-blue-400 hover:underline">Creează unul acum</a>
+                    Nu ai cont? <a href="#" id="show-register-link" class="font-medium lime-accent hover:underline">Creează unul acum</a>
                 </p>
             </div>
         </div>
@@ -97,23 +109,23 @@
                 <h1 class="text-4xl font-bold text-white">Creează Cont</h1>
                 <p class="text-gray-400">Introdu datele pentru a te înregistra</p>
             </div>
-            <div class="bg-gray-800 p-8 rounded-xl shadow-lg">
+            <div class="bg-[#1E1E1E] p-8 rounded-lg shadow-lg">
                  <form id="register-form" class="space-y-4">
                     <div>
-                        <label for="register-email" class="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                        <input type="email" id="register-email" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label for="register-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                        <input type="email" id="register-email" required class="w-full px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D1FE49]">
                     </div>
                     <div>
-                        <label for="register-password" class="block text-sm font-medium text-gray-300 mb-1">Parola</label>
-                        <input type="password" id="register-password" required class="w-full px-3 py-2 border border-gray-600 bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <label for="register-password" class="block text-sm font-medium text-gray-400 mb-1">Parola</label>
+                        <input type="password" id="register-password" required class="w-full px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D1FE49]">
                     </div>
                     <div id="register-error" class="text-red-400 text-sm hidden"></div>
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors">
+                    <button type="submit" class="w-full btn-lime py-3 px-4 rounded-md transition-colors">
                         Înregistrare
                     </button>
                 </form>
                  <p class="text-center text-sm text-gray-400 mt-6">
-                    Ai deja cont? <a href="#" id="show-login-link" class="font-medium text-blue-400 hover:underline">Autentifică-te</a>
+                    Ai deja cont? <a href="#" id="show-login-link" class="font-medium lime-accent hover:underline">Autentifică-te</a>
                 </p>
             </div>
         </div>
@@ -123,7 +135,7 @@
         <div id="app-view" class="hidden">
             <header class="flex justify-between items-center mb-8">
                 <h1 id="welcome-header" class="text-3xl font-bold text-white"></h1>
-                <button id="signout-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
+                <button id="signout-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-[#121212] transition-colors">
                     Deconectare
                 </button>
             </header>
@@ -131,7 +143,7 @@
             <div id="app-content" class="space-y-8">
                 <!-- Loader -->
                 <div id="app-loader" class="text-center p-10">
-                    <i data-lucide="loader-2" class="h-12 w-12 animate-spin text-blue-400 mx-auto"></i>
+                    <i data-lucide="loader-2" class="h-12 w-12 animate-spin lime-accent mx-auto"></i>
                     <p class="mt-4 text-lg">Se încarcă datele...</p>
                 </div>
                 
@@ -162,7 +174,6 @@
 
         // --- Configuration ---
         const firebaseConfig = {
-            // IMPORTANT: Replace with your project's Firebase configuration
             apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
             authDomain: "asorte-crm.firebaseapp.com",
             projectId: "asorte-crm",
@@ -170,7 +181,6 @@
             messagingSenderId: "848279125018",
             appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
         };
-        // IMPORTANT: Add your YouTube Data API v3 Key here
         const YOUTUBE_API_KEY = 'AIzaSyBKbR_eomzn8LjPG0CrGnIuxqZ8N3lnGgQ'; 
 
         // --- Firebase Initialization ---
@@ -213,7 +223,6 @@
                 dom.authView.classList.add('hidden');
                 dom.registerView.classList.add('hidden');
                 dom.appView.classList.remove('hidden');
-                // Don't set the welcome header here anymore
                 await fetchPortalData();
             } else {
                 state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
@@ -221,13 +230,12 @@
                 dom.appView.classList.add('hidden');
                 dom.mainContentArea.classList.add('hidden');
                 dom.appLoader.style.display = 'block';
-                dom.welcomeHeader.textContent = ''; // Clear header on sign out
+                dom.welcomeHeader.textContent = '';
             }
         });
         
         const signInWithGoogle = async () => {
             const provider = new GoogleAuthProvider();
-            // Request scopes needed for Classroom API
             provider.addScope('https://www.googleapis.com/auth/classroom.announcements.readonly');
             provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me.readonly');
             
@@ -257,7 +265,6 @@
                 }
 
                 state.clientData = result.data;
-                // Set the welcome header ONLY after data is successfully fetched
                 dom.welcomeHeader.textContent = `Salut, ${state.clientData.name}!`;
                 renderApp();
 
@@ -315,7 +322,7 @@
         };
 
         const renderClientCard = (data) => {
-            const { name, discipline, sessionNumber, subscriptionType, nextSessions, lastPayment } = data;
+            const { discipline, sessionNumber, subscriptionType, nextSessions, lastPayment } = data;
             const progress = subscriptionType > 0 ? (sessionNumber / subscriptionType) * 100 : 0;
             
             let nextSessionsHTML = '<p class="text-sm text-gray-400">Nicio ședință programată.</p>';
@@ -331,7 +338,7 @@
             }
 
             const cardHTML = `
-                <div class="bg-gray-800 p-6 rounded-xl shadow-lg space-y-6">
+                <div class="bg-[#1E1E1E] p-6 rounded-lg shadow-lg space-y-6">
                     <div>
                         <p class="text-lg font-medium text-gray-400">Curs Principal</p>
                         <h2 class="text-3xl font-bold text-white">${discipline || 'N/A'}</h2>
@@ -339,13 +346,13 @@
                     
                     <div>
                         <p class="text-sm font-medium text-gray-300 mb-1">Status Abonament: Ședința ${sessionNumber || 0} / ${subscriptionType || 4}</p>
-                        <div class="w-full bg-gray-700 rounded-full h-2.5">
-                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                        <div class="w-full bg-[#2A2A2A] rounded-full h-2.5">
+                            <div class="bg-[#D1FE49] h-2.5 rounded-full" style="width: ${progress}%"></div>
                         </div>
                     </div>
 
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-200 mb-2">Programări Viitoare (30 de zile)</h3>
+                        <h3 class="text-lg font-semibold text-white mb-2">Programări Viitoare (30 de zile)</h3>
                         ${nextSessionsHTML}
                     </div>
 
@@ -361,7 +368,6 @@
             const { courseId } = data;
             let sectionsHTML = '';
 
-            // Classroom Section
             const isClassroomDisabled = !(state.googleAccessToken && courseId);
             sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
                 <div id="classroom-content-wrapper">
@@ -369,12 +375,10 @@
                 </div>
             `, isClassroomDisabled);
 
-            // YouTube Playlist Section
             sectionsHTML += createCollapsibleSectionHTML('playlist', 'Rehearsal Playlist', 'youtube', `
                 <div id="playlist-content" class="space-y-4 p-4"></div>
             `);
             
-            // Session History Section
              sectionsHTML += createCollapsibleSectionHTML('history', 'Istoric Sesiuni', 'history', `
                 <div id="history-content" class="space-y-4 p-4">${renderHistory(data.history || [])}</div>
             `);
@@ -384,10 +388,10 @@
         };
 
         const createCollapsibleSectionHTML = (id, title, icon, content, disabled = false) => {
-            const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
+            const disabledClasses = disabled ? 'opacity-50' : 'hover:bg-[#2A2A2A]';
             return `
-                <div class="bg-gray-800 rounded-xl shadow-lg">
-                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left ${disabledClasses}" aria-expanded="false" aria-controls="${id}-section-content">
+                <div class="bg-[#1E1E1E] rounded-lg shadow-lg">
+                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left transition-colors ${disabledClasses}" aria-expanded="false" aria-controls="${id}-section-content">
                         <span class="flex items-center text-xl font-bold text-white">
                             <i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>
                             ${title}
@@ -403,7 +407,7 @@
         
         const renderClassroomContent = async (courseId) => {
             const contentWrapper = document.getElementById('classroom-content-wrapper');
-            contentWrapper.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin mx-auto"></i></div>`;
+            contentWrapper.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin lime-accent mx-auto"></i></div>`;
             lucide.createIcons();
 
             try {
@@ -413,22 +417,22 @@
                 ]);
                 
                 let announcementsHTML = announcements.map(a => `
-                    <div class="p-3 bg-gray-700/50 rounded-lg mb-2">
+                    <div class="p-3 bg-[#2A2A2A] rounded-md mb-2">
                         <p class="text-gray-300">${a.text}</p>
                         <p class="text-xs text-gray-500 mt-1">Publicat: ${new Date(a.creationTime).toLocaleDateString('ro-RO')}</p>
                     </div>
                 `).join('');
 
                 let courseworkHTML = coursework.map(cw => `
-                     <div class="p-3 bg-gray-700/50 rounded-lg mb-2">
-                        <a href="${cw.alternateLink}" target="_blank" class="font-semibold text-blue-400 hover:underline">${cw.title}</a>
+                     <div class="p-3 bg-[#2A2A2A] rounded-md mb-2">
+                        <a href="${cw.alternateLink}" target="_blank" class="font-semibold lime-accent hover:underline">${cw.title}</a>
                         <p class="text-xs text-gray-500 mt-1">Data limită: ${cw.dueDate ? `${cw.dueDate.day}/${cw.dueDate.month}/${cw.dueDate.year}` : 'N/A'}</p>
                     </div>
                 `).join('');
 
                 contentWrapper.innerHTML = `
-                    <div class="flex border-b border-gray-600 px-4">
-                        <button class="tab-btn p-3 text-sm font-medium border-b-2 border-blue-500 text-white" data-tab="announcements">Anunțuri</button>
+                    <div class="flex border-b border-gray-700 px-4">
+                        <button class="tab-btn p-3 text-sm font-medium border-b-2 border-[#D1FE49] text-white" data-tab="announcements">Anunțuri</button>
                         <button class="tab-btn p-3 text-sm font-medium border-b-2 border-transparent text-gray-400" data-tab="coursework">Teme</button>
                     </div>
                     <div class="p-4">
@@ -448,7 +452,7 @@
             const videoDetails = await fetchYouTubeVideoTitles(videoIds);
 
             const playlistItemsHTML = videoDetails.map((video, index) => `
-                <div class="flex items-center justify-between p-2 rounded-md hover:bg-gray-700/50 group">
+                <div class="flex items-center justify-between p-2 rounded-md hover:bg-[#2A2A2A] group">
                     <button class="play-video-btn text-left flex-grow truncate text-gray-300 group-hover:text-white" data-video-id="${video.id}">
                         ${video.title}
                     </button>
@@ -463,11 +467,11 @@
                     <div id="youtube-player"></div>
                 </div>
                 <div id="playlist-controls" class="mb-3">
-                    <button id="show-add-video-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"><i data-lucide="plus"></i> Adaugă Video</button>
+                    <button id="show-add-video-btn" class="btn-lime py-2 px-4 rounded-md text-sm flex items-center gap-2 transition-colors"><i data-lucide="plus"></i> Adaugă Video</button>
                     <div id="add-video-form" class="hidden flex items-center gap-2">
-                        <input type="text" id="youtube-url-input" class="flex-grow px-3 py-2 border border-gray-600 bg-gray-900 rounded-md shadow-sm" placeholder="Paste YouTube URL...">
-                        <button id="save-video-btn" class="bg-green-600 text-white font-bold p-2 rounded-lg hover:bg-green-700"><i data-lucide="check"></i></button>
-                        <button id="cancel-add-video-btn" class="bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-500"><i data-lucide="x"></i></button>
+                        <input type="text" id="youtube-url-input" class="flex-grow px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm" placeholder="Paste YouTube URL...">
+                        <button id="save-video-btn" class="bg-green-600 text-white font-bold p-2 rounded-md hover:bg-green-700"><i data-lucide="check"></i></button>
+                        <button id="cancel-add-video-btn" class="bg-gray-600 text-white font-bold p-2 rounded-md hover:bg-gray-500"><i data-lucide="x"></i></button>
                     </div>
                 </div>
                 <div class="space-y-1">${playlistItemsHTML || '<p class="text-sm text-gray-400">Playlist-ul tău este gol.</p>'}</div>
@@ -488,7 +492,7 @@
             }
             return `<ul class="space-y-2">${
                 history.map(item => `
-                    <li class="p-3 bg-gray-700/50 rounded-lg text-sm text-gray-300">${item.summary} - ${new Date(item.date).toLocaleDateString('ro-RO')} (${item.status})</li>
+                    <li class="p-3 bg-[#2A2A2A] rounded-md text-sm text-gray-300">${item.summary} - ${new Date(item.date).toLocaleDateString('ro-RO')} (${item.status})</li>
                 `).join('')
             }</ul>`;
         };
@@ -500,9 +504,7 @@
                     const content = document.getElementById(header.getAttribute('aria-controls'));
                     const isExpanded = header.getAttribute('aria-expanded') === 'true';
                     
-                    // Do nothing if the button has the disabled-style classes
                     if (header.classList.contains('opacity-50')) {
-                        // Still toggle to show the message
                          header.setAttribute('aria-expanded', !isExpanded);
                          content.classList.toggle('hidden');
                         return;
@@ -529,10 +531,10 @@
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     tabButtons.forEach(btn => {
-                        btn.classList.remove('border-blue-500', 'text-white');
+                        btn.classList.remove('border-[#D1FE49]', 'text-white');
                         btn.classList.add('border-transparent', 'text-gray-400');
                     });
-                    button.classList.add('border-blue-500', 'text-white');
+                    button.classList.add('border-[#D1FE49]', 'text-white');
                     button.classList.remove('border-transparent', 'text-gray-400');
                     
                     tabContents.forEach(content => content.classList.add('hidden'));
