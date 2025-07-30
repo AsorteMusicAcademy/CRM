@@ -213,7 +213,7 @@
                 dom.authView.classList.add('hidden');
                 dom.registerView.classList.add('hidden');
                 dom.appView.classList.remove('hidden');
-                dom.welcomeHeader.textContent = `Salut, ${user.displayName || user.email}!`;
+                // Don't set the welcome header here anymore
                 await fetchPortalData();
             } else {
                 state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
@@ -221,6 +221,7 @@
                 dom.appView.classList.add('hidden');
                 dom.mainContentArea.classList.add('hidden');
                 dom.appLoader.style.display = 'block';
+                dom.welcomeHeader.textContent = ''; // Clear header on sign out
             }
         });
         
@@ -256,6 +257,8 @@
                 }
 
                 state.clientData = result.data;
+                // Set the welcome header ONLY after data is successfully fetched
+                dom.welcomeHeader.textContent = `Salut, ${state.clientData.name}!`;
                 renderApp();
 
             } catch (error) {
@@ -461,7 +464,7 @@
             `).join('');
 
             container.innerHTML = `
-                <div id="youtube-player-container" class="aspect-video bg-black rounded-lg mb-4 ${videoIds.length === 0 ? 'hidden' : ''}">
+                <div id="youtube-player-container" class="aspect-video bg-black rounded-lg mb-4 hidden">
                     <div id="youtube-player"></div>
                 </div>
                 <div id="playlist-controls" class="mb-3">
@@ -475,9 +478,8 @@
                 <div class="space-y-1">${playlistItemsHTML || '<p class="text-sm text-gray-400">Playlist-ul tău este gol.</p>'}</div>
             `;
             
-            if (videoIds.length > 0 && !state.ytPlayer) {
-                createYTPlayer(videoIds[0]);
-            } else if (videoIds.length === 0 && state.ytPlayer) {
+            // If the playlist is now empty but a player exists, destroy it.
+            if (videoIds.length === 0 && state.ytPlayer) {
                 state.ytPlayer.destroy();
                 state.ytPlayer = null;
             }
