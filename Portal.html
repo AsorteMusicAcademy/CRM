@@ -327,14 +327,29 @@
             
             let nextSessionsHTML = '<p class="text-sm text-gray-400">Nicio ședință programată.</p>';
             if (nextSessions && nextSessions.length > 0) {
-                nextSessionsHTML = `<ul class="space-y-2 max-h-40 overflow-y-auto pr-2">${
+                nextSessionsHTML = `<div class="space-y-3 max-h-48 overflow-y-auto pr-2">${
                     nextSessions.map(session => {
                         const date = new Date(session.start.dateTime);
-                        const formattedDate = date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+                        const day = date.toLocaleDateString('ro-RO', { day: 'numeric' });
+                        const month = date.toLocaleDateString('ro-RO', { month: 'short' }).toUpperCase().replace('.', '');
+                        const weekday = date.toLocaleDateString('ro-RO', { weekday: 'long' });
+                        const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
                         const formattedTime = date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-                        return `<li class="text-sm text-gray-300">${formattedDate} @ ${formattedTime} - ${session.discipline}</li>`;
+                        
+                        return `
+                            <div class="flex items-center gap-4 p-3 bg-[#2A2A2A] rounded-md">
+                                <div class="text-center w-16 flex-shrink-0">
+                                    <p class="text-xs lime-accent font-bold uppercase tracking-wider">${month}</p>
+                                    <p class="text-2xl font-bold text-white">${day}</p>
+                                </div>
+                                <div class="border-l border-gray-700 pl-4">
+                                    <p class="font-semibold text-white">${capitalizedWeekday} @ ${formattedTime}</p>
+                                    <p class="text-sm text-gray-400">${session.discipline}</p>
+                                </div>
+                            </div>
+                        `;
                     }).join('')
-                }</ul>`;
+                }</div>`;
             }
 
             const cardHTML = `
