@@ -2250,7 +2250,7 @@
                                 const subType = parseInt(financialData.subscription, 10) || 4;
                                 if (lastPayment > 0 && subType > 0) {
                                     const sessionPrice = lastPayment / subType;
-                                    commission = (sessionPrice * instructorPercent) / 100 - (sessionPrice * 0.06); // Deduct 6% tax
+                                    commission = sessionPrice * (instructorPercent / 100) - (sessionPrice * 0.06); // Deduct 6% tax
                                 }
                             }
 
