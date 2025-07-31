@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ro" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Instructor - Asorte</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+        }
+        .section-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .section-header[aria-expanded="true"] .section-toggle-icon {
+            transform: rotate(180deg);
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1E1E1E;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4A4A4A;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6A6A6A;
+        }
+        .lime-accent {
+            color: #D1FE49;
+        }
+        .btn-lime {
+            background-color: #D1FE49;
+            color: #121212;
+            font-weight: 600;
+        }
+        .btn-lime:hover {
+            background-color: #b8e043;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-white">
+
+    <div id="instructor-portal-app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ===== Authentication View ===== -->
+        <div id="auth-view" class="max-w-md mx-auto mt-10">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white">Portal Instructor</h1>
+                <p class="text-gray-400">Autentifică-te pentru a accesa panoul de control</p>
+            </div>
+            
+            <div class="bg-[#1E1E1E] p-8 rounded-lg shadow-lg">
+                <!-- Email/Password Form -->
+                <form id="email-login-form" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                        <input type="email" id="email" required class="w-full px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D1FE49]">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-400 mb-1">Parola</label>
+                        <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D1FE49]">
+                    </div>
+                    <div id="auth-error" class="text-red-400 text-sm hidden"></div>
+                    <button type="submit" class="w-full btn-lime py-3 px-4 rounded-md transition-colors">
+                        Autentificare
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===== Main App View (Dashboard) ===== -->
+        <div id="app-view" class="hidden">
+            <header class="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
+                <div>
+                    <h1 id="welcome-header" class="text-3xl font-bold text-white"></h1>
+                    <p id="today-date" class="text-gray-400"></p>
+                </div>
+                <button id="signout-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-[#121212] transition-colors self-start sm:self-center">
+                    Deconectare
+                </button>
+            </header>
+
+            <div id="app-content">
+                <!-- Loader -->
+                <div id="app-loader" class="text-center p-10">
+                    <i data-lucide="loader-2" class="h-12 w-12 animate-spin lime-accent mx-auto"></i>
+                    <p class="mt-4 text-lg">Se încarcă programările de astăzi...</p>
+                </div>
+                
+                <!-- Main Content Area (populated by JS) -->
+                <div id="main-content-area" class="hidden space-y-8">
+                    <!-- Client cards will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+        // --- Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
+            authDomain: "asorte-crm.firebaseapp.com",
+            projectId: "asorte-crm",
+            storageBucket: "asorte-crm.appspot.com",
+            messagingSenderId: "848279125018",
+            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
+        };
+        const YOUTUBE_API_KEY = 'AIzaSyBKbR_eomzn8LjPG0CrGnIuxqZ8N3lnGgQ'; 
+
+        // --- Firebase Initialization ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app);
+
+        // --- State Management ---
+        let state = {
+            user: null,
+            clients: [],
+            ytPlayers: {},
+        };
+
+        // --- DOM Element References ---
+        const dom = {
+            authView: document.getElementById('auth-view'),
+            appView: document.getElementById('app-view'),
+            appLoader: document.getElementById('app-loader'),
+            mainContentArea: document.getElementById('main-content-area'),
+            welcomeHeader: document.getElementById('welcome-header'),
+            todayDate: document.getElementById('today-date'),
+            signoutBtn: document.getElementById('signout-btn'),
+            emailLoginForm: document.getElementById('email-login-form'),
+            authError: document.getElementById('auth-error'),
+        };
+
+        // --- Authentication Logic ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                state.user = user;
+                dom.authView.classList.add('hidden');
+                dom.appView.classList.remove('hidden');
+                fetchInstructorDashboard();
+            } else {
+                state = { user: null, clients: [], ytPlayers: {} };
+                dom.authView.classList.remove('hidden');
+                dom.appView.classList.add('hidden');
+                dom.mainContentArea.classList.add('hidden');
+                dom.appLoader.style.display = 'block';
+                dom.welcomeHeader.textContent = '';
+            }
+        });
+        
+        const handleSignOut = async () => {
+            if (state.ytPlayers) {
+                Object.values(state.ytPlayers).forEach(player => player.destroy());
+            }
+            await signOut(auth);
+        };
+
+        // --- Data Fetching & Processing ---
+        const fetchInstructorDashboard = async () => {
+            dom.appLoader.style.display = 'block';
+            dom.mainContentArea.classList.add('hidden');
+            try {
+                // IMPORTANT: You will need to deploy a Firebase Cloud Function named 'getInstructorDashboard'
+                // for this to work. The function should verify the user is an instructor and return their assigned clients for the day.
+                const getInstructorDashboard = httpsCallable(functions, 'getInstructorDashboard');
+                const result = await getInstructorDashboard();
+                
+                if (result.data.error) {
+                    throw new Error(result.data.error);
+                }
+
+                state.clients = result.data.clients;
+                dom.welcomeHeader.textContent = `Salut, ${result.data.instructorName || 'Instructor'}!`;
+                dom.todayDate.textContent = new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                renderDashboard();
+
+            } catch (error) {
+                 if (error.code === 'functions/unauthenticated' || error.message.includes("not an instructor")) {
+                     dom.appLoader.innerHTML = `<p class="text-red-400 text-center">Acces neautorizat. Doar instructorii pot accesa acest portal.</p>`;
+                 } else {
+                     dom.appLoader.innerHTML = `<p class="text-red-400 text-center">A apărut o eroare: ${error.message}. Asigură-te că funcția 'getInstructorDashboard' este implementată.</p>`;
+                 }
+            } finally {
+                dom.appLoader.style.display = 'none';
+                dom.mainContentArea.classList.remove('hidden');
+            }
+        };
+        
+        const fetchYouTubeVideoTitles = async (videoIds) => {
+            if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === 'YOUR_YOUTUBE_API_KEY' || !videoIds || videoIds.length === 0) {
+                return [];
+            }
+            const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoIds.join(',')}&key=${YOUTUBE_API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.items) {
+                    return data.items.map(item => ({ id: item.id, title: item.snippet.title }));
+                }
+                return videoIds.map(id => ({ id, title: `Video ID: ${id}` }));
+            } catch (error) {
+                console.error("Error fetching YouTube titles:", error);
+                return videoIds.map(id => ({ id, title: `Video ID: ${id}` }));
+            }
+        };
+
+        // --- Rendering Logic ---
+        const renderDashboard = () => {
+            if (state.clients.length === 0) {
+                dom.mainContentArea.innerHTML = `<div class="text-center py-10 bg-[#1E1E1E] rounded-lg"><p class="text-lg text-gray-400">Nu ai clienți programați pentru astăzi.</p></div>`;
+                return;
+            }
+            
+            const clientCardsHTML = state.clients.map(client => createClientCardHTML(client)).join('');
+            dom.mainContentArea.innerHTML = clientCardsHTML;
+            attachAllClientCardListeners();
+            lucide.createIcons();
+        };
+
+        const createClientCardHTML = (client) => {
+            const progress = client.subscriptionType > 0 ? (client.sessionNumber / client.subscriptionType) * 100 : 0;
+            const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9]/g, '-');
+            const formattedTime = new Date(client.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+
+            return `
+                <div class="client-card bg-[#1E1E1E] p-6 rounded-lg shadow-lg space-y-6 fade-in" data-client-name="${client.name}">
+                    <!-- Client Header -->
+                    <div>
+                        <div class="flex justify-between items-start">
+                             <div>
+                                <h2 class="text-3xl font-bold text-white">${client.name}</h2>
+                                <span class="text-lg font-medium text-gray-400">${client.discipline}</span>
+                             </div>
+                             <span class="text-2xl font-bold lime-accent">${formattedTime}</span>
+                        </div>
+                        <p class="text-sm font-medium text-gray-300 mb-1 mt-4">Status Abonament: Ședința ${client.sessionNumber || 0} / ${client.subscriptionType || 4}</p>
+                        <div class="w-full bg-[#2A2A2A] rounded-full h-2.5">
+                            <div class="bg-[#D1FE49] h-2.5 rounded-full" style="width: ${progress}%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Collapsible Sections -->
+                    <div class="space-y-4">
+                        ${createCollapsibleSectionHTML(sanitizedClientName, 'homework', 'Temă pentru acasă', 'book-marked')}
+                        ${createCollapsibleSectionHTML(sanitizedClientName, 'playlist', 'Rehearsal Playlist', 'youtube')}
+                    </div>
+                </div>
+            `;
+        };
+        
+        const createCollapsibleSectionHTML = (clientName, sectionId, title, icon) => {
+            const fullId = `${sectionId}-${clientName}`;
+            return `
+                <div class="bg-[#121212] rounded-lg shadow-lg">
+                    <button id="${fullId}-header" class="section-header w-full flex justify-between items-center p-4 text-left transition-colors hover:bg-[#2A2A2A]" aria-expanded="false" aria-controls="${fullId}-content">
+                        <span class="flex items-center text-xl font-bold text-white">
+                            <i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>
+                            ${title}
+                        </span>
+                        <i class="section-toggle-icon lucide lucide-chevron-down h-6 w-6 text-gray-400"></i>
+                    </button>
+                    <div id="${fullId}-content" class="border-t border-gray-700 hidden" role="region">
+                        <!-- Content will be injected here -->
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderHomeworkContent = (container, clientName) => {
+            const client = state.clients.find(c => c.name === clientName);
+            if (!client) return;
+            const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
+
+            const homeworkHistory = (client.homework || [])
+                .sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort descending
+                .map(hw => `
+                    <div class="p-3 bg-[#2A2A2A] rounded-md">
+                        <p class="text-gray-300 whitespace-pre-wrap">${hw.text}</p>
+                        <p class="text-xs text-gray-500 mt-2">Dat pe: ${new Date(hw.date).toLocaleDateString('ro-RO')}</p>
+                    </div>
+                `).join('');
+
+            container.innerHTML = `
+                <div class="p-4 space-y-4">
+                    <div>
+                        <label for="new-homework-${sanitizedClientName}" class="block text-sm font-medium text-gray-400 mb-1">Adaugă temă nouă</label>
+                        <textarea id="new-homework-${sanitizedClientName}" class="w-full p-2 border border-gray-700 bg-[#2A2A2A] rounded-md" rows="4" placeholder="Scrie tema aici..."></textarea>
+                        <button class="save-homework-btn mt-2 btn-lime py-2 px-4 rounded-md text-sm flex items-center gap-2 transition-colors">
+                            <i data-lucide="save"></i> Salvează Tema
+                        </button>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold mb-2">Istoric Teme</h4>
+                        <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
+                            ${homeworkHistory || '<p class="text-sm text-gray-400">Nicio temă anterioară.</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        const renderPlaylistContent = async (container, clientName) => {
+            const client = state.clients.find(c => c.name === clientName);
+            if (!client) return;
+            
+            const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
+            const playerContainerId = `youtube-player-container-${sanitizedClientName}`;
+            const playerId = `youtube-player-${sanitizedClientName}`;
+
+            container.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin lime-accent mx-auto"></i></div>`;
+            lucide.createIcons();
+
+            const videoIds = client.youtubePlaylist || [];
+            const videoDetails = await fetchYouTubeVideoTitles(videoIds);
+
+            const playlistItemsHTML = videoDetails.map((video, index) => `
+                <div class="flex items-center justify-between p-2 rounded-md hover:bg-[#2A2A2A]">
+                    <button class="play-video-btn text-left flex-grow truncate text-gray-300 hover:text-white" data-video-id="${video.id}" data-player-id="${playerId}">
+                        ${video.title}
+                    </button>
+                    <button class="remove-video-btn text-red-500 hover:text-red-400 p-1" data-index="${index}">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="p-4 space-y-4">
+                    <div id="${playerContainerId}" class="aspect-video bg-black rounded-lg mb-4 hidden">
+                        <div id="${playerId}"></div>
+                    </div>
+                    <div class="playlist-controls mb-3">
+                        <button class="show-add-video-btn btn-lime py-2 px-4 rounded-md text-sm flex items-center gap-2 transition-colors"><i data-lucide="plus"></i> Adaugă Video</button>
+                        <div class="add-video-form hidden flex flex-wrap sm:flex-nowrap items-center gap-2">
+                            <input type="text" class="youtube-url-input w-full flex-grow px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm" placeholder="Paste YouTube URL...">
+                            <div class="flex gap-2 flex-shrink-0">
+                                <button class="save-video-btn bg-green-600 text-white font-bold p-2 rounded-md hover:bg-green-700"><i data-lucide="check"></i></button>
+                                <button class="cancel-add-video-btn bg-gray-600 text-white font-bold p-2 rounded-md hover:bg-gray-500"><i data-lucide="x"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-1 max-h-60 overflow-y-auto pr-2">${playlistItemsHTML || '<p class="text-sm text-gray-400">Playlist-ul este gol.</p>'}</div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+        };
+
+        // --- Event Listeners & UI Helpers ---
+        const attachAllClientCardListeners = () => {
+            document.querySelectorAll('.client-card').forEach(card => {
+                const clientName = card.dataset.clientName;
+                card.querySelectorAll('.section-header').forEach(header => {
+                    header.addEventListener('click', () => handleSectionToggle(header, clientName));
+                });
+            });
+        };
+        
+        const handleSectionToggle = (header, clientName) => {
+            const content = header.nextElementSibling;
+            const isExpanded = header.getAttribute('aria-expanded') === 'true';
+            
+            header.setAttribute('aria-expanded', !isExpanded);
+            content.classList.toggle('hidden');
+            
+            if (!isExpanded) { // If opening
+                const sectionId = header.id.split('-')[0];
+                if (sectionId === 'homework') {
+                    renderHomeworkContent(content, clientName);
+                    attachHomeworkListeners(content, clientName);
+                } else if (sectionId === 'playlist') {
+                    renderPlaylistContent(content, clientName);
+                    attachPlaylistListeners(content, clientName);
+                }
+            }
+        };
+        
+        const attachHomeworkListeners = (container, clientName) => {
+            container.querySelector('.save-homework-btn')?.addEventListener('click', async () => {
+                const textarea = container.querySelector('textarea');
+                const homeworkText = textarea.value.trim();
+                if (!homeworkText) return;
+
+                try {
+                    // IMPORTANT: You need a cloud function 'addHomeworkForClient'
+                    const addHomeworkForClient = httpsCallable(functions, 'addHomeworkForClient');
+                    const result = await addHomeworkForClient({ clientName, homeworkText });
+
+                    if (result.data.success) {
+                        // Update local state and re-render
+                        const client = state.clients.find(c => c.name === clientName);
+                        if (client) {
+                            if (!client.homework) client.homework = [];
+                            client.homework.push({ text: homeworkText, date: new Date().toISOString() });
+                            renderHomeworkContent(container, clientName);
+                            attachHomeworkListeners(container, clientName); // Re-attach listeners
+                        }
+                    } else {
+                        throw new Error(result.data.error || "Failed to save homework.");
+                    }
+                } catch (error) {
+                    alert(`Error saving homework: ${error.message}`);
+                }
+            });
+        };
+
+        const attachPlaylistListeners = (container, clientName) => {
+            container.querySelector('.show-add-video-btn')?.addEventListener('click', (e) => {
+                e.currentTarget.classList.add('hidden');
+                container.querySelector('.add-video-form').classList.remove('hidden');
+            });
+            container.querySelector('.cancel-add-video-btn')?.addEventListener('click', (e) => {
+                container.querySelector('.add-video-form').classList.add('hidden');
+                container.querySelector('.show-add-video-btn').classList.remove('hidden');
+                container.querySelector('.youtube-url-input').value = '';
+            });
+            container.querySelector('.save-video-btn')?.addEventListener('click', (e) => handleAddVideo(e, clientName));
+            
+            container.querySelectorAll('.remove-video-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => handleRemoveVideo(e, clientName));
+            });
+            
+            container.querySelectorAll('.play-video-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const videoId = e.currentTarget.dataset.videoId;
+                    const playerId = e.currentTarget.dataset.playerId;
+                    const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
+                    const playerContainerId = `youtube-player-container-${sanitizedClientName}`;
+                    
+                    document.getElementById(playerContainerId).classList.remove('hidden');
+
+                    if (state.ytPlayers[playerId] && state.ytPlayers[playerId].loadVideoById) {
+                        state.ytPlayers[playerId].loadVideoById(videoId);
+                    } else {
+                        createYTPlayer(playerId, videoId);
+                    }
+                });
+            });
+        };
+        
+        const handleAddVideo = async (e, clientName) => {
+            const container = e.currentTarget.closest('.p-4');
+            const input = container.querySelector('.youtube-url-input');
+            const url = input.value.trim();
+            const videoId = parseYouTubeUrl(url);
+
+            if (!videoId) {
+                alert('URL YouTube invalid.');
+                return;
+            }
+            
+            const client = state.clients.find(c => c.name === clientName);
+            const currentPlaylist = client.youtubePlaylist || [];
+            if (currentPlaylist.includes(videoId)) {
+                alert('Acest video este deja în playlist.');
+                return;
+            }
+            
+            const newPlaylist = [...currentPlaylist, videoId];
+            await updatePlaylistOnServer(clientName, newPlaylist, container);
+            input.value = '';
+        };
+        
+        const handleRemoveVideo = async (e, clientName) => {
+            const container = e.currentTarget.closest('.p-4');
+            const indexToRemove = parseInt(e.currentTarget.dataset.index, 10);
+            const client = state.clients.find(c => c.name === clientName);
+            const currentPlaylist = client.youtubePlaylist || [];
+            const newPlaylist = currentPlaylist.filter((_, index) => index !== indexToRemove);
+            await updatePlaylistOnServer(clientName, newPlaylist, container);
+        };
+        
+        const updatePlaylistOnServer = async (clientName, newPlaylist, container) => {
+            try {
+                // IMPORTANT: You need a cloud function 'updateClientPlaylistForInstructor'
+                const updateClientPlaylist = httpsCallable(functions, 'updateClientPlaylistForInstructor');
+                await updateClientPlaylist({ clientName, playlist: newPlaylist });
+                
+                // Update local state
+                const client = state.clients.find(c => c.name === clientName);
+                if (client) client.youtubePlaylist = newPlaylist;
+
+                // Re-render the specific playlist section
+                const playlistContentContainer = container.parentElement;
+                await renderPlaylistContent(playlistContentContainer, clientName);
+                attachPlaylistListeners(playlistContentContainer, clientName);
+
+            } catch (error) {
+                alert(`Eroare la actualizarea playlist-ului: ${error.message}`);
+            }
+        };
+
+        const parseYouTubeUrl = (url) => {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        };
+        
+        const createYTPlayer = (playerId, videoId) => {
+            // Destroy previous player if it exists for this ID
+            if (state.ytPlayers[playerId] && state.ytPlayers[playerId].destroy) {
+                state.ytPlayers[playerId].destroy();
+            }
+            
+            state.ytPlayers[playerId] = new YT.Player(playerId, {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: { 'playsinline': 1 },
+            });
+        };
+
+        const showAuthError = (message) => {
+            dom.authError.textContent = message;
+            dom.authError.classList.remove('hidden');
+        };
+
+        // --- Initial Event Listeners ---
+        dom.signoutBtn.addEventListener('click', handleSignOut);
+        
+        dom.emailLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            dom.authError.classList.add('hidden');
+            const email = dom.emailLoginForm['email'].value;
+            const password = dom.emailLoginForm['password'].value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showAuthError("Email sau parolă incorectă. Vă rugăm să reîncercați.");
+            }
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
