@@ -220,14 +220,19 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 state.user = user;
+                if (user.providerData[0]?.providerId === 'google.com') {
+                    state.googleAccessToken = sessionStorage.getItem('googleAccessToken');
+                }
                 dom.authView.classList.add('hidden');
                 dom.registerView.classList.add('hidden');
                 dom.appView.classList.remove('hidden');
                 
-                // **FIX**: Call fetchPortalData without await to prevent blocking
-                fetchPortalData();
+                setTimeout(() => {
+                    fetchPortalData();
+                }, 0);
             } else {
                 state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
+                sessionStorage.removeItem('googleAccessToken');
                 dom.authView.classList.remove('hidden');
                 dom.appView.classList.add('hidden');
                 dom.mainContentArea.classList.add('hidden');
@@ -246,6 +251,7 @@
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 if (credential) {
                     state.googleAccessToken = credential.accessToken;
+                    sessionStorage.setItem('googleAccessToken', state.googleAccessToken);
                 }
             } catch (error) {
                 showAuthError(`Google Sign-In Error: ${error.message}`);
@@ -253,6 +259,7 @@
         };
 
         const handleSignOut = async () => {
+            sessionStorage.removeItem('googleAccessToken');
             await signOut(auth);
         };
 
@@ -376,7 +383,7 @@
                     </div>
 
                     <div>
-                        <p class="text-sm text-gray-400">Ultima plată: <span class="font-medium text-gray-300">${lastPayment || 'N/A'}</span></p>
+                        <p class="text-sm text-gray-400">Ultima plată: <span class="font-medium text-gray-300">${lastPayment || 'Nicio plată înregistrată'}</span></p>
                     </div>
                 </div>
             `;
