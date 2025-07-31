@@ -220,12 +220,18 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 state.user = user;
+                // **FIX**: Try to load the access token from session storage
+                if (user.providerData[0]?.providerId === 'google.com') {
+                    state.googleAccessToken = sessionStorage.getItem('googleAccessToken');
+                }
                 dom.authView.classList.add('hidden');
                 dom.registerView.classList.add('hidden');
                 dom.appView.classList.remove('hidden');
                 await fetchPortalData();
             } else {
                 state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
+                // **FIX**: Clear session storage on sign out
+                sessionStorage.removeItem('googleAccessToken');
                 dom.authView.classList.remove('hidden');
                 dom.appView.classList.add('hidden');
                 dom.mainContentArea.classList.add('hidden');
@@ -243,12 +249,16 @@
                 const result = await signInWithPopup(auth, provider);
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 state.googleAccessToken = credential.accessToken;
+                // **FIX**: Save the access token to session storage
+                sessionStorage.setItem('googleAccessToken', state.googleAccessToken);
             } catch (error) {
                 showAuthError(`Google Sign-In Error: ${error.message}`);
             }
         };
 
         const handleSignOut = async () => {
+            // **FIX**: Clear session storage on sign out
+            sessionStorage.removeItem('googleAccessToken');
             await signOut(auth);
         };
 
