@@ -1164,22 +1164,39 @@
                                 <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400"></i>
                             </span>
                         </div>
-                        <ul class="history-month-list mt-2 pl-4 space-y-1" style="display: none;">
+                        <ul class="history-month-list mt-2 space-y-1" style="display: none;">
                             ${sessions.map(s => {
                     const date = new Date(s.date);
                     if (isNaN(date.getTime())) return '';
+
+                    // Format the specific date for each event
+                    const formattedEventDate = date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
                     const statusClass = s.status === 'cancelled' ? 'bg-red-900/50 text-red-300' : s.status === 'rescheduled' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-gray-600/50 text-gray-300';
                     const rescheduledDate = s.rescheduledTo ? new Date(s.rescheduledTo) : null;
                     const rescheduledText = rescheduledDate && !isNaN(rescheduledDate.getTime())
                         ? `(Reprogramat pentru ${rescheduledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })})`
                         : '';
                     const statusText = s.status === 'cancelled' ? '(Anulat)' : s.status === 'rescheduled' ? rescheduledText : '';
-                    return `<li class="text-sm p-2 rounded-md ${statusClass}">${s.summary} <span class="font-semibold ml-2">${statusText}</span></li>`;
+                    
+                    // Updated the list item to include the formatted date and use flexbox for better alignment.
+                    return `
+                        <li class="text-sm p-2 rounded-md ${statusClass} flex justify-between items-center flex-wrap gap-2">
+                            <div class="flex-grow min-w-0">
+                                <span class="font-mono text-gray-400 mr-3">${formattedEventDate}</span>
+                                <span class="truncate">${s.summary}</span>
+                            </div>
+                            <span class="font-semibold ml-2 flex-shrink-0">${statusText}</span>
+                        </li>
+                    `;
                 }).join('')}
                         </ul>
                     </li>
                 `).join('') + `</ul>`;
             };
+
+
+
 
             const getDisplayTitle = () => {
                 if (state.searchQuery) return 'Rezultate Căutare';
