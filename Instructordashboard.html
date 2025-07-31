@@ -23,7 +23,8 @@
         .section-toggle-icon {
             transition: transform 0.3s ease;
         }
-        .section-header[aria-expanded="true"] .section-toggle-icon {
+        .section-header[aria-expanded="true"] .section-toggle-icon,
+        #toggle-today-schedule[aria-expanded="true"] .section-toggle-icon {
             transform: rotate(180deg);
         }
         /* Custom scrollbar for better aesthetics */
@@ -263,8 +264,33 @@
             state.clients.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
             
             const clientCardsHTML = state.clients.map(client => createClientCardHTML(client)).join('');
-            dom.mainContentArea.innerHTML = clientCardsHTML;
+
+            dom.mainContentArea.innerHTML = `
+                <div class="bg-[#1E1E1E] rounded-lg shadow-lg">
+                    <button id="toggle-today-schedule" class="w-full flex justify-between items-center p-4 text-left transition-colors hover:bg-[#2A2A2A]" aria-expanded="false">
+                        <span class="flex items-center text-xl font-bold text-white">
+                            <i data-lucide="calendar-check" class="h-6 w-6 mr-3"></i>
+                            Programul de Astăzi (${state.clients.length} ${state.clients.length === 1 ? 'client' : 'clienți'})
+                        </span>
+                        <i class="section-toggle-icon lucide lucide-chevron-down h-6 w-6 text-gray-400"></i>
+                    </button>
+                    <div id="today-schedule-container" class="hidden p-4 md:p-6 space-y-6">
+                        ${clientCardsHTML}
+                    </div>
+                </div>
+            `;
+
             attachAllClientCardListeners();
+            
+            // Add listener for the main collapsible card
+            const toggleButton = document.getElementById('toggle-today-schedule');
+            const scheduleContainer = document.getElementById('today-schedule-container');
+            toggleButton.addEventListener('click', () => {
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                toggleButton.setAttribute('aria-expanded', !isExpanded);
+                scheduleContainer.classList.toggle('hidden');
+            });
+
             lucide.createIcons();
         };
 
@@ -274,7 +300,7 @@
             const formattedTime = new Date(client.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
 
             return `
-                <div class="client-card bg-[#1E1E1E] p-6 rounded-lg shadow-lg space-y-6 fade-in" data-client-name="${client.name}">
+                <div class="client-card bg-[#121212] p-6 rounded-lg shadow-lg space-y-6 fade-in" data-client-name="${client.name}">
                     <div>
                         <div class="flex justify-between items-start">
                              <div>
@@ -300,7 +326,7 @@
         const createCollapsibleSectionHTML = (clientName, sectionId, title, icon) => {
             const fullId = `${sectionId}-${clientName}`;
             return `
-                <div class="bg-[#121212] rounded-lg shadow-lg">
+                <div class="bg-[#1E1E1E] rounded-lg shadow-lg">
                     <button id="${fullId}-header" class="section-header w-full flex justify-between items-center p-4 text-left transition-colors hover:bg-[#2A2A2A]" aria-expanded="false" aria-controls="${fullId}-content">
                         <span class="flex items-center text-xl font-bold text-white">
                             <i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>
