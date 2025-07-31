@@ -217,7 +217,7 @@
         };
 
         // --- Authentication Logic ---
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 state.user = user;
                 if (user.providerData[0]?.providerId === 'google.com') {
@@ -226,8 +226,7 @@
                 dom.authView.classList.add('hidden');
                 dom.registerView.classList.add('hidden');
                 dom.appView.classList.remove('hidden');
-                // **FIX**: Removed 'await' to prevent blocking the auth flow
-                fetchPortalData(); 
+                await fetchPortalData();
             } else {
                 state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
                 sessionStorage.removeItem('googleAccessToken');
@@ -247,10 +246,8 @@
             try {
                 const result = await signInWithPopup(auth, provider);
                 const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    state.googleAccessToken = credential.accessToken;
-                    sessionStorage.setItem('googleAccessToken', state.googleAccessToken);
-                }
+                state.googleAccessToken = credential.accessToken;
+                sessionStorage.setItem('googleAccessToken', state.googleAccessToken);
             } catch (error) {
                 showAuthError(`Google Sign-In Error: ${error.message}`);
             }
