@@ -5,15 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Instructor - Asorte</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- YouTube IFrame Player API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         body {
@@ -77,7 +73,6 @@
 
     <div id="instructor-portal-app" class="container mx-auto p-4 sm:p-6 lg:p-8">
 
-        <!-- ===== Authentication View ===== -->
         <div id="auth-view" class="max-w-md mx-auto mt-10">
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-bold text-white">Portal Instructor</h1>
@@ -93,7 +88,6 @@
             </div>
         </div>
 
-        <!-- ===== Main App View (Dashboard) ===== -->
         <div id="app-view" class="hidden">
             <header class="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
                 <div>
@@ -105,7 +99,6 @@
                 </button>
             </header>
 
-            <!-- Tab Controls -->
             <div class="mb-6 flex items-center gap-2 p-1 bg-[#1E1E1E] rounded-lg">
                 <button data-view="dashboard" class="tab-button flex-1 text-center py-2 px-4 rounded-md transition-colors duration-200">Programul de Azi</button>
                 <button data-view="timesheet" class="tab-button flex-1 text-center py-2 px-4 rounded-md transition-colors duration-200">Pontaj</button>
@@ -171,7 +164,17 @@
                 dom.appView.classList.remove('hidden');
                 switchView('dashboard');
             } else {
-                state = { user: null, instructorName: null, clients: [], ytPlayers: {}, activeView: 'dashboard' };
+                // This state reset includes the fix for the timesheet error
+                state = {
+                    user: null,
+                    instructorName: null,
+                    instructorId: null,
+                    clients: [],
+                    timesheetData: {},
+                    timesheetFilter: { month: new Date().getMonth(), year: new Date().getFullYear() },
+                    ytPlayers: {},
+                    activeView: 'dashboard',
+                };
                 dom.authView.classList.remove('hidden');
                 dom.appView.classList.add('hidden');
             }
@@ -332,8 +335,8 @@
             const client = state.clients.find(c => c.name === clientName);
             if (!client) return;
             const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
-            const playerContainerId = `youtube-player-container-${sanitizedClientName}`;
-            const playerId = `youtube-player-${sanitizedClientName}`;
+            const playerContainerId = `Youtubeer-container-${sanitizedClientName}`;
+            const playerId = `Youtubeer-${sanitizedClientName}`;
             container.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin lime-accent mx-auto"></i></div>`;
             lucide.createIcons();
             const videoIds = client.youtubePlaylist || [];
@@ -405,7 +408,7 @@
                     const videoId = e.currentTarget.dataset.videoId;
                     const playerId = e.currentTarget.dataset.playerId;
                     const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
-                    const playerContainerId = `youtube-player-container-${sanitizedClientName}`;
+                    const playerContainerId = `Youtubeer-container-${sanitizedClientName}`;
                     document.getElementById(playerContainerId).classList.remove('hidden');
                     if (state.ytPlayers[playerId] && state.ytPlayers[playerId].loadVideoById) {
                         state.ytPlayers[playerId].loadVideoById(videoId);
