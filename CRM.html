@@ -495,15 +495,22 @@
             // --- FIRESTORE API ---
             const firestoreApi = {
                 async getClientData(clientName) {
-                    if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '' };
+                    if (!db || !clientName) return { notes: '', subscription: '4', assignedInstructor: '', youtubePlaylist: [], courseId: null };
                     const sanitizedName = sanitizeForFirestoreId(clientName);
                     const docRef = doc(db, "clients", sanitizedName);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        return { name: clientName, ...data, subscription: data.subscription || '4', assignedInstructor: data.assignedInstructor || '' };
+                        return {
+                            name: clientName,
+                            ...data,
+                            subscription: data.subscription || '4',
+                            assignedInstructor: data.assignedInstructor || '',
+                            youtubePlaylist: data.youtubePlaylist || [],
+                            courseId: data.courseId || null
+                        };
                     } else {
-                        return { name: clientName, notes: '', subscription: '4', assignedInstructor: '' };
+                        return { name: clientName, notes: '', subscription: '4', assignedInstructor: '', youtubePlaylist: [], courseId: null };
                     }
                 },
                 async saveClientData(clientName, data) {
@@ -2976,7 +2983,7 @@
                 showModal(dom.cashPaymentModal);
             };
 
-            async function handleCreateEventSubmit(e) {
+             async function handleCreateEventSubmit(e) {
                 e.preventDefault();
                 const button = dom.submitEventBtn;
                 button.disabled = true;
@@ -3010,7 +3017,16 @@
 
                     await api.createEvent(eventData);
 
-                    await firestoreApi.saveClientData(name, { name, phone, email, discipline, subscription: '4', assignedInstructor: '' });
+                    // Save client to Firestore with the new fields
+                    await firestoreApi.saveClientData(name, {
+                        name,
+                        phone,
+                        email,
+                        discipline,
+                        subscription: '4',
+                        assignedInstructor: '',
+                        youtubePlaylist: [] // Initialize empty playlist
+                    });
 
                     renderNotification(`Programarea pentru ${name} a fost creată cu succes!`, 'success');
                     hideModal(dom.createEventModal);
@@ -3024,7 +3040,7 @@
                     lucide.createIcons();
                 }
             }
-
+            
             async function handleCashPaymentSubmit(e) {
                 e.preventDefault();
                 const button = dom.submitCashPaymentBtn;
@@ -3339,7 +3355,7 @@
                 return daysDifference > 30;
             };
 
-            const processCalendarItems = async (items) => {
+               const processCalendarItems = async (items) => {
                 const processedClients = {};
                 if (!items) return processedClients;
 
@@ -3376,16 +3392,50 @@
                     }
                     const studentEmail = event.attendees?.find(a => !a.organizer && a.email !== event.organizer?.email)?.email;
 
-                    if (name && discipline && phone) {
+                    // Logic to save/update client data in Firestore
+                    if (name && discipline) {
                         const sanitizedName = sanitizeForFirestoreId(name);
                         const existingData = existingClientsMap.get(sanitizedName);
-                        if (!existingData || existingData.discipline !== discipline || existingData.phone !== phone) {
+                        
+                        const dataToUpdate = {};
+                        let needsUpdate = false;
+
+                        // Case 1: New client
+                        if (!existingData) {
+                            needsUpdate = true;
+                            dataToUpdate.name = name;
+                            dataToUpdate.discipline = discipline;
+                            if (phone) dataToUpdate.phone = phone;
+                            if (studentEmail) dataToUpdate.email = studentEmail;
+                            dataToUpdate.youtubePlaylist = []; // Initialize playlist
+                        } 
+                        // Case 2: Existing client
+                        else {
+                            // Check for changes in core data
+                            if (existingData.discipline !== discipline) {
+                                needsUpdate = true;
+                                dataToUpdate.discipline = discipline;
+                            }
+                            if (phone && existingData.phone !== phone) {
+                                needsUpdate = true;
+                                dataToUpdate.phone = phone;
+                            }
+                            if (studentEmail && existingData.email !== studentEmail) {
+                                needsUpdate = true;
+                                dataToUpdate.email = studentEmail;
+                            }
+                            // Check if playlist needs to be initialized for the existing client
+                            if (!existingData.hasOwnProperty('youtubePlaylist')) {
+                                needsUpdate = true;
+                                dataToUpdate.youtubePlaylist = [];
+                            }
+                        }
+                        
+                        if (needsUpdate) {
                             console.log(`Syncing data for ${sanitizedName}: New or changed.`);
-                            firestoreApi.saveClientData(name, {
-                                name: name,
-                                discipline: discipline,
-                                phone: phone
-                            }).catch(err => console.error("Failed to save client info to Firestore:", err));
+                            // Since saveClientData merges, we only send the fields that need to be added or changed.
+                            firestoreApi.saveClientData(name, dataToUpdate)
+                                .catch(err => console.error("Failed to save client info to Firestore:", err));
                         }
                     }
 
@@ -3393,7 +3443,7 @@
                         eventId: event.id, discipline, sessionNumber, studentEmail,
                         startTime: event.start?.dateTime,
                         phone: phone || processedClients[name]?.phone,
-                        lastPayment: null, // This will be populated later
+                        lastPayment: null,
                     };
                 }
                 return processedClients;
