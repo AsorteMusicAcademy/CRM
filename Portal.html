@@ -20,7 +20,8 @@
         .section-toggle-icon {
             transition: transform 0.3s ease;
         }
-        .section-header[aria-expanded="true"] .section-toggle-icon {
+        .section-header[aria-expanded="true"] .section-toggle-icon,
+        .homework-item-header[aria-expanded="true"] .section-toggle-icon {
             transform: rotate(180deg);
         }
         /* Custom scrollbar for better aesthetics */
@@ -192,7 +193,6 @@
         let state = {
             user: null,
             clientData: null,
-            googleAccessToken: null,
             ytPlayer: null,
         };
 
@@ -226,7 +226,7 @@
                 
                 fetchPortalData();
             } else {
-                state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
+                state = { user: null, clientData: null, ytPlayer: null };
                 dom.authView.classList.remove('hidden');
                 dom.appView.classList.add('hidden');
                 dom.mainContentArea.classList.add('hidden');
@@ -237,15 +237,8 @@
         
         const signInWithGoogle = async () => {
             const provider = new GoogleAuthProvider();
-            provider.addScope('https://www.googleapis.com/auth/classroom.announcements.readonly');
-            provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me.readonly');
-            
             try {
-                const result = await signInWithPopup(auth, provider);
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    state.googleAccessToken = credential.accessToken;
-                }
+                await signInWithPopup(auth, provider);
             } catch (error) {
                 showAuthError(`Google Sign-In Error: ${error.message}`);
             }
@@ -284,7 +277,6 @@
                     dom.appLoader.innerHTML = `<p class="text-red-400 text-center">A apărut o eroare: ${error.message}.</p>`;
                 }
             } finally {
-                // We only hide the loader if there wasn't a "not found" error
                 if (!state.clientData) {
                     dom.appLoader.style.display = 'block';
                 } else {
@@ -310,26 +302,6 @@
                 console.error("Error fetching YouTube titles:", error);
                 return videoIds.map(id => ({ id, title: `Video ID: ${id}` }));
             }
-        };
-
-        const fetchClassroomAnnouncements = async (courseId) => {
-            if (!state.googleAccessToken) return [];
-            const url = `https://classroom.googleapis.com/v1/courses/${courseId}/announcements`;
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${state.googleAccessToken}` }
-            });
-            const data = await response.json();
-            return data.announcements || [];
-        };
-        
-        const fetchClassroomCoursework = async (courseId) => {
-            if (!state.googleAccessToken) return [];
-            const url = `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`;
-             const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${state.googleAccessToken}` }
-            });
-            const data = await response.json();
-            return data.courseWork || [];
         };
 
         // --- Rendering Logic ---
@@ -398,21 +370,15 @@
         };
         
         const renderCollapsibleSections = (data) => {
-            const { courseId } = data;
             let sectionsHTML = '';
 
-            const isClassroomDisabled = !(state.googleAccessToken && courseId);
-            sectionsHTML += createCollapsibleSectionHTML('classroom', 'Google Classroom', 'book-marked', `
-                <div id="classroom-content-wrapper">
-                    <p class="p-4 text-sm text-gray-400">Pentru a accesa Google Classroom, te rugăm să te deconectezi și să te autentifici folosind contul tău de Google.</p>
-                </div>
-            `, isClassroomDisabled);
+            sectionsHTML += createCollapsibleSectionHTML('homework', 'Temă pentru acasă', 'book-marked', '');
 
             sectionsHTML += createCollapsibleSectionHTML('playlist', 'Rehearsal Playlist', 'youtube', `
                 <div id="playlist-content" class="space-y-4 p-4"></div>
             `);
             
-             sectionsHTML += createCollapsibleSectionHTML('history', 'Istoric Sesiuni', 'history', `
+            sectionsHTML += createCollapsibleSectionHTML('history', 'Istoric Sesiuni', 'history', `
                 <div id="history-content" class="space-y-4 p-4">${renderHistory(data.history || [])}</div>
             `);
 
@@ -420,11 +386,10 @@
             attachCollapsibleListeners();
         };
 
-        const createCollapsibleSectionHTML = (id, title, icon, content, disabled = false) => {
-            const disabledClasses = disabled ? 'opacity-50' : 'hover:bg-[#2A2A2A]';
+        const createCollapsibleSectionHTML = (id, title, icon, content) => {
             return `
                 <div class="bg-[#1E1E1E] rounded-lg shadow-lg">
-                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left transition-colors ${disabledClasses}" aria-expanded="false" aria-controls="${id}-section-content">
+                    <button id="${id}-section-header" class="section-header w-full flex justify-between items-center p-4 text-left transition-colors hover:bg-[#2A2A2A]" aria-expanded="false" aria-controls="${id}-section-content">
                         <span class="flex items-center text-xl font-bold text-white">
                             <i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>
                             ${title}
@@ -438,45 +403,52 @@
             `;
         };
         
-        const renderClassroomContent = async (courseId) => {
-            const contentWrapper = document.getElementById('classroom-content-wrapper');
-            contentWrapper.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin lime-accent mx-auto"></i></div>`;
-            lucide.createIcons();
-
-            try {
-                const [announcements, coursework] = await Promise.all([
-                    fetchClassroomAnnouncements(courseId),
-                    fetchClassroomCoursework(courseId)
-                ]);
-                
-                let announcementsHTML = announcements.map(a => `
-                    <div class="p-3 bg-[#2A2A2A] rounded-md mb-2">
-                        <p class="text-gray-300">${a.text}</p>
-                        <p class="text-xs text-gray-500 mt-1">Publicat: ${new Date(a.creationTime).toLocaleDateString('ro-RO')}</p>
-                    </div>
-                `).join('');
-
-                let courseworkHTML = coursework.map(cw => `
-                     <div class="p-3 bg-[#2A2A2A] rounded-md mb-2">
-                        <a href="${cw.alternateLink}" target="_blank" class="font-semibold lime-accent hover:underline">${cw.title}</a>
-                        <p class="text-xs text-gray-500 mt-1">Data limită: ${cw.dueDate ? `${cw.dueDate.day}/${cw.dueDate.month}/${cw.dueDate.year}` : 'N/A'}</p>
-                    </div>
-                `).join('');
-
-                contentWrapper.innerHTML = `
-                    <div class="flex border-b border-gray-700 px-4">
-                        <button class="tab-btn p-3 text-sm font-medium border-b-2 border-[#D1FE49] text-white" data-tab="announcements">Anunțuri</button>
-                        <button class="tab-btn p-3 text-sm font-medium border-b-2 border-transparent text-gray-400" data-tab="coursework">Teme</button>
-                    </div>
-                    <div class="p-4">
-                        <div id="announcements-tab" class="tab-content">${announcementsHTML || '<p class="text-sm text-gray-400">Nu sunt anunțuri.</p>'}</div>
-                        <div id="coursework-tab" class="tab-content hidden">${courseworkHTML || '<p class="text-sm text-gray-400">Nu sunt teme.</p>'}</div>
-                    </div>
-                `;
-                attachClassroomTabListeners();
-            } catch (error) {
-                contentWrapper.innerHTML = `<p class="text-red-400 p-4">Eroare la încărcarea datelor din Classroom.</p>`;
+        const renderHomeworkContent = (container, homework) => {
+            if (!homework || homework.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 p-4">Nu ai teme pentru acasă.</p>';
+                return;
             }
+            const sortedHomework = [...homework].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const homeworkHTML = sortedHomework.map((hw, index) => {
+                const fullText = hw.text;
+                const snippet = fullText.split(' ').slice(0, 10).join(' ') + (fullText.split(' ').length > 10 ? '...' : '');
+                const formattedDate = new Date(hw.date).toLocaleDateString('ro-RO');
+
+                return `
+                <div class="bg-[#2A2A2A] rounded-md">
+                    <button class="homework-item-header w-full flex justify-between items-center p-3 text-left transition-colors hover:bg-[#3a3a3a]" aria-expanded="false" data-target="homework-content-${index}">
+                        <div class="flex-grow pr-4">
+                            <p class="font-semibold text-gray-300">${snippet}</p>
+                            <p class="text-xs text-gray-500 mt-1">Dată pe: ${formattedDate}</p>
+                        </div>
+                        <i data-lucide="chevron-down" class="section-toggle-icon h-5 w-5 text-gray-400 flex-shrink-0 ml-2"></i>
+                    </button>
+                    <div id="homework-content-${index}" class="p-3 border-t border-gray-700 hidden">
+                        <p class="text-gray-300 whitespace-pre-wrap">${fullText}</p>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="p-4 space-y-3">
+                    <div class="space-y-2 max-h-96 overflow-y-auto pr-2">${homeworkHTML}</div>
+                </div>
+            `;
+            
+            container.querySelectorAll('.homework-item-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const isExpanded = header.getAttribute('aria-expanded') === 'true';
+                    const targetId = header.dataset.target;
+                    const content = container.querySelector(`#${targetId}`);
+                    
+                    header.setAttribute('aria-expanded', !isExpanded);
+                    content.classList.toggle('hidden');
+                });
+            });
+            
+            lucide.createIcons();
         };
         
         const renderPlaylistContent = async (playlist) => {
@@ -538,42 +510,18 @@
                 header.addEventListener('click', () => {
                     const content = document.getElementById(header.getAttribute('aria-controls'));
                     const isExpanded = header.getAttribute('aria-expanded') === 'true';
-                    
-                    if (header.classList.contains('opacity-50')) {
-                         header.setAttribute('aria-expanded', !isExpanded);
-                         content.classList.toggle('hidden');
-                        return;
-                    }
 
                     header.setAttribute('aria-expanded', !isExpanded);
                     content.classList.toggle('hidden');
                     
                     if (!isExpanded) {
                         const sectionId = header.id.split('-')[0];
-                        if (sectionId === 'classroom') {
-                            renderClassroomContent(state.clientData.courseId);
+                        if (sectionId === 'homework') {
+                            renderHomeworkContent(content, state.clientData.homework);
                         } else if (sectionId === 'playlist') {
                             renderPlaylistContent(state.clientData.youtubePlaylist);
                         }
                     }
-                });
-            });
-        };
-        
-        const attachClassroomTabListeners = () => {
-            const tabButtons = document.querySelectorAll('#classroom-content-wrapper .tab-btn');
-            const tabContents = document.querySelectorAll('#classroom-content-wrapper .tab-content');
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    tabButtons.forEach(btn => {
-                        btn.classList.remove('border-[#D1FE49]', 'text-white');
-                        btn.classList.add('border-transparent', 'text-gray-400');
-                    });
-                    button.classList.add('border-[#D1FE49]', 'text-white');
-                    button.classList.remove('border-transparent', 'text-gray-400');
-                    
-                    tabContents.forEach(content => content.classList.add('hidden'));
-                    document.getElementById(`${button.dataset.tab}-tab`).classList.remove('hidden');
                 });
             });
         };
