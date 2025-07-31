@@ -1,289 +1,479 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { getAuth } = require("firebase-admin/auth");
-const { google } = require("googleapis");
-const stripeLib = require("stripe");
+<!DOCTYPE html>
+<html lang="ro" class="dark">
 
-initializeApp();
-const db = getFirestore();
-const adminAuth = getAuth();
-
-// --- Function for Admin App ---
-
-exports.getStripeFinancials = onCall({ secrets: ["STRIPE_SECRET"], cors: true }, async (request) => {
-  const stripe = new stripeLib(process.env.STRIPE_SECRET);
-  const { startDate, endDate } = request.data;
-  if (!startDate || !endDate) {
-    throw new HttpsError('invalid-argument', 'The function must be called with "startDate" and "endDate".');
-  }
-  try {
-    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
-    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
-    const charges = await stripe.charges.list({
-      created: { gte: startTimestamp, lte: endTimestamp },
-      expand: ["data.balance_transaction"],
-      limit: 100,
-    });
-    const successfulCharges = charges.data.filter((charge) => charge.paid && !charge.refunded);
-    const paymentPromises = successfulCharges.map(async (charge) => {
-      let customerName = "Guest Customer";
-      let customerEmail = "N/A";
-      if (charge.customer) {
-        try {
-          const customer = await stripe.customers.retrieve(charge.customer);
-          customerName = customer.name || customer.email || "Unknown Customer";
-          customerEmail = customer.email || "N/A";
-        } catch (customerError) {
-          console.warn(`Could not retrieve customer ${charge.customer}:`, customerError.message);
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Instructor - Asorte</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
         }
-      } else {
-         customerName = charge.billing_details.name || charge.receipt_email || "Guest Customer";
-         customerEmail = charge.receipt_email || charge.billing_details.email || "N/A";
-      }
-      const fee = charge.balance_transaction ? charge.balance_transaction.fee / 100 : 0;
-      const netAmount = (charge.amount / 100) - fee;
-      return {
-        date: new Date(charge.created * 1000).toISOString(),
-        customer: customerName,
-        email: customerEmail,
-        description: charge.description || 'Abonament',
-        amount: charge.amount / 100,
-        net: netAmount,
-      };
-    });
-    const payments = await Promise.all(paymentPromises);
-    return { payments };
-  } catch (error) {
-    console.error("Stripe API Error:", error);
-    throw new HttpsError('internal', 'Unable to fetch data from Stripe.', error.message);
-  }
-});
-
-
-// --- Functions for Client Portal ---
-
-async function getLastPayment(clientData) {
-    const stripe = new stripeLib(process.env.STRIPE_SECRET);
-    const allPayments = [];
-    if (clientData.email) {
-        try {
-            const customers = await stripe.customers.list({ email: clientData.email, limit: 1 });
-            if (customers.data.length > 0) {
-                const charges = await stripe.charges.list({ customer: customers.data[0].id, limit: 10 });
-                charges.data
-                    .filter(c => c.paid && !c.refunded)
-                    .forEach(c => {
-                        allPayments.push({
-                            date: new Date(c.created * 1000),
-                            text: `${(c.amount / 100).toFixed(2)} RON (${new Date(c.created * 1000).toLocaleDateString('ro-RO')} via Stripe)`
-                        });
-                    });
+        .section-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .section-header[aria-expanded="true"] .section-toggle-icon,
+        #toggle-today-schedule[aria-expanded="true"] .section-toggle-icon {
+            transform: rotate(180deg);
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1E1E1E;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4A4A4A;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6A6A6A;
+        }
+        .lime-accent {
+            color: #D1FE49;
+        }
+        .btn-lime {
+            background-color: #D1FE49;
+            color: #121212;
+            font-weight: 600;
+        }
+        .btn-lime:hover {
+            background-color: #b8e043;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
             }
-        } catch (error) { console.error("Error fetching Stripe payments for client:", error.message); }
-    }
-    try {
-        const paymentsRef = db.collection('payments');
-        const snapshot = await paymentsRef.where('clientName', '==', clientData.name).get();
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            allPayments.push({
-                date: new Date(data.created),
-                text: `${data.amount.toFixed(2)} RON (${new Date(data.date).toLocaleDateString('ro-RO')} via Cash)`
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .tab-button.active {
+            background-color: #D1FE49;
+            color: #121212;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+
+    <div id="instructor-portal-app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ===== Authentication View ===== -->
+        <div id="auth-view" class="max-w-md mx-auto mt-10">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white">Portal Instructor</h1>
+                <p class="text-gray-400">Autentifică-te pentru a accesa panoul de control</p>
+            </div>
+            
+            <div class="bg-[#1E1E1E] p-8 rounded-lg shadow-lg">
+                <button id="google-signin-btn" class="w-full bg-white text-gray-700 font-semibold py-3 px-4 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-4 focus:ring-gray-300 transition-all duration-300 flex items-center justify-center shadow-md">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path><path d="M1 1h22v22H1z" fill="none"></path></svg>
+                    Autentificare cu Google
+                </button>
+                <div id="auth-error" class="text-red-400 text-sm mt-4 text-center hidden"></div>
+            </div>
+        </div>
+
+        <!-- ===== Main App View (Dashboard) ===== -->
+        <div id="app-view" class="hidden">
+            <header class="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
+                <div>
+                    <h1 id="welcome-header" class="text-3xl font-bold text-white"></h1>
+                    <p id="today-date" class="text-gray-400"></p>
+                </div>
+                <button id="signout-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-[#121212] transition-colors self-start sm:self-center">
+                    Deconectare
+                </button>
+            </header>
+
+            <!-- Tab Controls -->
+            <div class="mb-6 flex items-center gap-2 p-1 bg-[#1E1E1E] rounded-lg">
+                <button data-view="dashboard" class="tab-button flex-1 text-center py-2 px-4 rounded-md transition-colors duration-200">Programul de Azi</button>
+                <button data-view="timesheet" class="tab-button flex-1 text-center py-2 px-4 rounded-md transition-colors duration-200">Pontaj</button>
+            </div>
+
+            <div id="app-content">
+                <div id="app-loader" class="text-center p-10">
+                    <i data-lucide="loader-2" class="h-12 w-12 animate-spin lime-accent mx-auto"></i>
+                    <p class="mt-4 text-lg">Se încarcă...</p>
+                </div>
+                <div id="main-content-area" class="hidden space-y-8"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOWN00AgCvIRaQSuspNAZCl-GM97LoCSk",
+            authDomain: "asorte-crm.firebaseapp.com",
+            projectId: "asorte-crm",
+            storageBucket: "asorte-crm.appspot.com",
+            messagingSenderId: "848279125018",
+            appId: "1:848279125018:web:3788d9a7be3b7d2456a5a3"
+        };
+        const YOUTUBE_API_KEY = 'AIzaSyBKbR_eomzn8LjPG0CrGnIuxqZ8N3lnGgQ'; 
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app);
+
+        let state = {
+            user: null,
+            instructorName: null,
+            instructorId: null,
+            clients: [],
+            timesheetData: {},
+            timesheetFilter: { month: new Date().getMonth(), year: new Date().getFullYear() },
+            ytPlayers: {},
+            activeView: 'dashboard',
+        };
+
+        const dom = {
+            authView: document.getElementById('auth-view'),
+            appView: document.getElementById('app-view'),
+            appLoader: document.getElementById('app-loader'),
+            mainContentArea: document.getElementById('main-content-area'),
+            welcomeHeader: document.getElementById('welcome-header'),
+            todayDate: document.getElementById('today-date'),
+            signoutBtn: document.getElementById('signout-btn'),
+            googleSigninBtn: document.getElementById('google-signin-btn'),
+            authError: document.getElementById('auth-error'),
+            tabButtons: document.querySelectorAll('.tab-button'),
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                state.user = user;
+                dom.authView.classList.add('hidden');
+                dom.appView.classList.remove('hidden');
+                switchView('dashboard');
+            } else {
+                state = { user: null, instructorName: null, clients: [], ytPlayers: {}, activeView: 'dashboard' };
+                dom.authView.classList.remove('hidden');
+                dom.appView.classList.add('hidden');
+            }
+        });
+        
+        const handleGoogleSignIn = async () => await signInWithPopup(auth, new GoogleAuthProvider()).catch(err => showAuthError(err.message));
+        const handleSignOut = async () => {
+            Object.values(state.ytPlayers).forEach(p => p.destroy());
+            await signOut(auth);
+        };
+
+        const switchView = (view) => {
+            state.activeView = view;
+            dom.tabButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
             });
-        });
-    } catch (error) { console.error("Error fetching Firestore payments for client:", error); }
-    if (allPayments.length === 0) return null;
-    allPayments.sort((a, b) => b.date - a.date);
-    return allPayments[0].text;
-}
+            if (view === 'dashboard') {
+                fetchInstructorDashboard();
+            } else if (view === 'timesheet') {
+                fetchInstructorTimesheet();
+            }
+        };
 
-async function getSessionHistory(calendar, clientName) {
-    const timeMax = new Date().toISOString();
-    const timeMin = new Date(new Date().setDate(new Date().getDate() - 90)).toISOString();
-    let history = [];
-    try {
-        const response = await calendar.events.list({
-            calendarId: "asorteoffice@gmail.com",
-            timeMin, timeMax, q: `"${clientName}"`, singleEvents: true, orderBy: "startTime", showDeleted: true,
-        });
-        if (response.data.items) {
-            history = response.data.items.map(event => {
-                let status = "Efectuată";
-                const organizer = event.attendees?.find(a => a.organizer);
-                if (organizer?.responseStatus === 'declined' || event.status === 'cancelled') {
-                    status = "Anulată";
+        const fetchInstructorDashboard = async () => {
+            dom.appLoader.style.display = 'block';
+            dom.mainContentArea.classList.add('hidden');
+            try {
+                const getInstructorDashboard = httpsCallable(functions, 'getInstructorDashboard');
+                const result = await getInstructorDashboard();
+                state.clients = result.data.clients;
+                state.instructorName = result.data.instructorName;
+                state.instructorId = result.data.instructorId;
+                dom.welcomeHeader.textContent = `Salut, ${state.instructorName || 'Instructor'}!`;
+                dom.todayDate.textContent = new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                renderDashboard();
+            } catch (error) {
+                 dom.mainContentArea.innerHTML = `<div class="text-center p-4 bg-red-900/20 rounded-lg"><h3 class="font-bold text-lg text-red-300">A apărut o eroare</h3><p class="text-red-400 mt-2 font-mono text-sm">${error.message}</p></div>`;
+            } finally {
+                dom.appLoader.style.display = 'none';
+                dom.mainContentArea.classList.remove('hidden');
+            }
+        };
+
+        const fetchInstructorTimesheet = async () => {
+            dom.appLoader.style.display = 'block';
+            dom.mainContentArea.classList.add('hidden');
+            try {
+                const getInstructorTimesheet = httpsCallable(functions, 'getInstructorTimesheet');
+                const result = await getInstructorTimesheet();
+                state.timesheetData = result.data;
+                renderTimesheetView();
+            } catch (error) {
+                dom.mainContentArea.innerHTML = `<div class="text-center p-4 bg-red-900/20 rounded-lg"><h3 class="font-bold text-lg text-red-300">A apărut o eroare</h3><p class="text-red-400 mt-2 font-mono text-sm">${error.message}</p></div>`;
+            } finally {
+                dom.appLoader.style.display = 'none';
+                dom.mainContentArea.classList.remove('hidden');
+            }
+        };
+        
+        const fetchYouTubeVideoTitles = async (videoIds) => {
+            if (!YOUTUBE_API_KEY || !videoIds || videoIds.length === 0) return [];
+            const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoIds.join(',')}&key=${YOUTUBE_API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.items ? data.items.map(item => ({ id: item.id, title: item.snippet.title })) : videoIds.map(id => ({ id, title: `ID: ${id}` }));
+            } catch (error) {
+                console.error("Error fetching YouTube titles:", error);
+                return videoIds.map(id => ({ id, title: `ID: ${id}` }));
+            }
+        };
+
+        // --- RENDER FUNCTIONS ---
+        const renderDashboard = () => {
+            if (state.clients.length === 0) {
+                dom.mainContentArea.innerHTML = `<div class="text-center py-10 bg-[#1E1E1E] rounded-lg"><p class="text-lg text-gray-400">Nu ai clienți programați pentru astăzi.</p></div>`;
+                return;
+            }
+            state.clients.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+            const clientCardsHTML = state.clients.map(createClientCardHTML).join('');
+            dom.mainContentArea.innerHTML = `<div class="bg-[#1E1E1E] rounded-lg shadow-lg"><button id="toggle-today-schedule" class="w-full flex justify-between items-center p-4 text-left transition-colors hover:bg-[#2A2A2A]" aria-expanded="false"><span class="flex items-center text-xl font-bold text-white"><i data-lucide="calendar-check" class="h-6 w-6 mr-3"></i>Programul de Astăzi (${state.clients.length} ${state.clients.length === 1 ? 'client' : 'clienți'})</span><i class="section-toggle-icon lucide lucide-chevron-down h-6 w-6 text-gray-400"></i></button><div id="today-schedule-container" class="hidden p-4 md:p-6 space-y-6">${clientCardsHTML}</div></div>`;
+            attachAllClientCardListeners();
+            const toggleButton = document.getElementById('toggle-today-schedule');
+            toggleButton.addEventListener('click', () => {
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                toggleButton.setAttribute('aria-expanded', !isExpanded);
+                document.getElementById('today-schedule-container').classList.toggle('hidden');
+            });
+            lucide.createIcons();
+        };
+
+        const renderTimesheetView = () => {
+            const { instructor, timesheet, instructorPercentages } = state.timesheetData;
+            if (!timesheet || !timesheet.sessions) {
+                dom.mainContentArea.innerHTML = `<div class="text-center py-10 bg-[#1E1E1E] rounded-lg"><p class="text-lg text-gray-400">Nu există date de pontaj pentru acest instructor.</p></div>`;
+                return;
+            }
+            const allYears = [...new Set(Object.keys(timesheet.sessions).map(dateKey => new Date(dateKey).getFullYear()))].sort((a, b) => b - a);
+            if (allYears.length === 0) allYears.push(new Date().getFullYear());
+            const yearOptions = allYears.map(y => `<option value="${y}" ${y === state.timesheetFilter.year ? 'selected' : ''}>${y}</option>`).join('');
+            const monthOptions = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"].map((m, i) => `<option value="${i}" ${i === state.timesheetFilter.month ? 'selected' : ''}>${m}</option>`).join('');
+            const filterHTML = `<div class="bg-[#1E1E1E] shadow-xl rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4 items-center"><h3 class="text-lg font-semibold text-white flex-shrink-0">Filtrează Pontaj</h3><div class="flex-grow flex gap-4 w-full sm:w-auto"><select id="month-filter" class="w-full px-3 py-2 border border-gray-600 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-lime-400">${monthOptions}</select><select id="year-filter" class="w-full px-3 py-2 border border-gray-600 bg-[#2A2A2A] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-lime-400">${yearOptions}</select></div></div>`;
+            
+            const filteredDays = Object.keys(timesheet.sessions).filter(dateKey => {
+                const date = new Date(dateKey);
+                return date.getFullYear() === state.timesheetFilter.year && date.getMonth() === state.timesheetFilter.month;
+            }).sort((a, b) => new Date(a) - new Date(b));
+            
+            let totalMonthlyCommission = 0;
+            const dayCardsHTML = filteredDays.map(dateKey => {
+                const dayData = timesheet.sessions[dateKey];
+                const dailyTotalCommission = dayData.totalCommission || 0;
+                totalMonthlyCommission += dailyTotalCommission;
+                const sessionListHTML = dayData.sessionList.map(session => `<li class="flex justify-between items-center text-sm p-2 bg-[#121212] rounded"><div><span>${session.clientName} - ${session.discipline}</span><span class="block text-xs font-mono text-blue-400">${session.time}</span></div><span class="font-semibold text-lg ${session.commission > 0 ? 'text-green-400' : 'text-gray-500'} ml-4">${session.commission.toFixed(2)} RON</span></li>`).join('');
+                const date = new Date(dateKey);
+                const displayDate = `${date.toLocaleDateString('ro-RO', { weekday: 'long' }).charAt(0).toUpperCase() + date.toLocaleDateString('ro-RO', { weekday: 'long' }).slice(1)} - ${date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+                return `<div class="day-card mt-2"><button class="day-header w-full flex justify-between items-center p-2 bg-[#2A2A2A] hover:bg-[#3A3A3A] rounded-md text-left"><span class="font-semibold text-gray-100">${displayDate}</span><div class="flex items-center"><span class="font-bold text-lg text-green-400 mr-4">${dailyTotalCommission.toFixed(2)} RON</span><i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 transition-transform"></i></div></button><ul class="day-sessions-list mt-2 pl-4 space-y-1 hidden">${sessionListHTML}</ul></div>`;
+            }).join('');
+
+            const instructorCardHTML = `<div class="bg-[#1E1E1E] shadow-lg rounded-xl overflow-hidden instructor-card mb-4"><div class="instructor-header w-full flex justify-between items-center p-4 bg-[#2A2A2A] text-left"><div class="flex flex-col sm:flex-row sm:items-center gap-x-4"><h3 class="text-xl font-bold text-white">${instructor.name}</h3><span class="text-sm font-semibold text-gray-300">Total Lunar: <span class="text-xl text-lime-400 font-bold">${totalMonthlyCommission.toFixed(2)} RON</span></span></div></div><div class="instructor-details p-4 border-t border-gray-700">${dayCardsHTML || `<p class="text-sm text-center text-gray-400 py-4">Nicio sesiune înregistrată pentru luna selectată.</p>`}</div></div>`;
+            
+            dom.mainContentArea.innerHTML = `<div class="fade-in">${filterHTML}<div id="instructor-cards-container">${instructorCardHTML}</div></div>`;
+            
+            document.getElementById('month-filter').addEventListener('change', (e) => { state.timesheetFilter.month = parseInt(e.target.value, 10); renderTimesheetView(); });
+            document.getElementById('year-filter').addEventListener('change', (e) => { state.timesheetFilter.year = parseInt(e.target.value, 10); renderTimesheetView(); });
+            document.querySelectorAll('.day-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    content.classList.toggle('hidden');
+                    header.querySelector('.lucide-chevron-down').classList.toggle('rotate-180', !content.classList.contains('hidden'));
+                });
+            });
+            lucide.createIcons();
+        };
+
+        const createClientCardHTML = (client) => {
+            const progress = client.subscriptionType > 0 ? (client.sessionNumber / client.subscriptionType) * 100 : 0;
+            const sanitizedClientName = client.name.replace(/[^a-zA-Z0-9]/g, '-');
+            const formattedTime = new Date(client.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+            return `<div class="client-card bg-[#121212] p-6 rounded-lg shadow-lg space-y-6 fade-in" data-client-name="${client.name}"><div><div class="flex justify-between items-start"><div><h2 class="text-3xl font-bold text-white">${client.name}</h2><span class="text-lg font-medium text-gray-400">${client.discipline}</span></div><span class="text-2xl font-bold lime-accent">${formattedTime}</span></div><p class="text-sm font-medium text-gray-300 mb-1 mt-4">Status Abonament: Ședința ${client.sessionNumber || 0} / ${client.subscriptionType || 4}</p><div class="w-full bg-[#2A2A2A] rounded-full h-2.5"><div class="bg-[#D1FE49] h-2.5 rounded-full" style="width: ${progress}%"></div></div></div><div class="space-y-4">${createCollapsibleSectionHTML(sanitizedClientName, 'homework', 'Temă pentru acasă', 'book-marked')}${createCollapsibleSectionHTML(sanitizedClientName, 'playlist', 'Rehearsal Playlist', 'youtube')}</div></div>`;
+        };
+        
+        const createCollapsibleSectionHTML = (clientName, sectionId, title, icon) => {
+            const fullId = `${sectionId}-${clientName}`;
+            return `<div class="bg-[#1E1E1E] rounded-lg shadow-lg"><button id="${fullId}-header" class="section-header w-full flex justify-between items-center p-4 text-left transition-colors hover:bg-[#2A2A2A]" aria-expanded="false" aria-controls="${fullId}-content"><span class="flex items-center text-xl font-bold text-white"><i data-lucide="${icon}" class="h-6 w-6 mr-3"></i>${title}</span><i class="section-toggle-icon lucide lucide-chevron-down h-6 w-6 text-gray-400"></i></button><div id="${fullId}-content" class="border-t border-gray-700 hidden" role="region"></div></div>`;
+        };
+
+        const renderHomeworkContent = (container, clientName) => {
+            const client = state.clients.find(c => c.name === clientName);
+            if (!client) return;
+            const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
+            const homeworkHistory = (client.homework || []).sort((a, b) => new Date(b.date) - new Date(a.date)).map(hw => `<div class="p-3 bg-[#2A2A2A] rounded-md"><p class="text-gray-300 whitespace-pre-wrap">${hw.text}</p><p class="text-xs text-gray-500 mt-2">Dat pe: ${new Date(hw.date).toLocaleDateString('ro-RO')}</p></div>`).join('');
+            container.innerHTML = `<div class="p-4 space-y-4"><div><label for="new-homework-${sanitizedClientName}" class="block text-sm font-medium text-gray-400 mb-1">Adaugă temă nouă</label><textarea id="new-homework-${sanitizedClientName}" class="w-full p-2 border border-gray-700 bg-[#2A2A2A] rounded-md" rows="4" placeholder="Scrie tema aici..."></textarea><button class="save-homework-btn mt-2 btn-lime py-2 px-4 rounded-md text-sm flex items-center gap-2 transition-colors"><i data-lucide="save"></i> Salvează Tema</button></div><div><h4 class="text-lg font-semibold mb-2">Istoric Teme</h4><div class="space-y-2 max-h-60 overflow-y-auto pr-2">${homeworkHistory || '<p class="text-sm text-gray-400">Nicio temă anterioară.</p>'}</div></div></div>`;
+            lucide.createIcons();
+        };
+
+        const renderPlaylistContent = async (container, clientName) => {
+            const client = state.clients.find(c => c.name === clientName);
+            if (!client) return;
+            const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
+            const playerContainerId = `youtube-player-container-${sanitizedClientName}`;
+            const playerId = `youtube-player-${sanitizedClientName}`;
+            container.innerHTML = `<div class="text-center p-4"><i data-lucide="loader-2" class="h-6 w-6 animate-spin lime-accent mx-auto"></i></div>`;
+            lucide.createIcons();
+            const videoIds = client.youtubePlaylist || [];
+            const videoDetails = await fetchYouTubeVideoTitles(videoIds);
+            const playlistItemsHTML = videoDetails.map((video, index) => `<div class="flex items-center justify-between p-2 rounded-md hover:bg-[#2A2A2A]"><button class="play-video-btn text-left flex-grow truncate text-gray-300 hover:text-white" data-video-id="${video.id}" data-player-id="${playerId}">${video.title}</button><button class="remove-video-btn text-red-500 hover:text-red-400 p-1" data-index="${index}"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div>`).join('');
+            container.innerHTML = `<div class="p-4 space-y-4"><div id="${playerContainerId}" class="aspect-video bg-black rounded-lg mb-4 hidden"><div id="${playerId}"></div></div><div class="playlist-controls mb-3"><button class="show-add-video-btn btn-lime py-2 px-4 rounded-md text-sm flex items-center gap-2 transition-colors"><i data-lucide="plus"></i> Adaugă Video</button><div class="add-video-form hidden flex flex-wrap sm:flex-nowrap items-center gap-2"><input type="text" class="youtube-url-input w-full flex-grow px-3 py-2 border border-gray-700 bg-[#2A2A2A] rounded-md shadow-sm" placeholder="Paste YouTube URL..."><div class="flex gap-2 flex-shrink-0"><button class="save-video-btn bg-green-600 text-white font-bold p-2 rounded-md hover:bg-green-700"><i data-lucide="check"></i></button><button class="cancel-add-video-btn bg-gray-600 text-white font-bold p-2 rounded-md hover:bg-gray-500"><i data-lucide="x"></i></button></div></div></div><div class="space-y-1 max-h-60 overflow-y-auto pr-2">${playlistItemsHTML || '<p class="text-sm text-gray-400">Playlist-ul este gol.</p>'}</div></div>`;
+            lucide.createIcons();
+        };
+
+        const attachAllClientCardListeners = () => {
+            document.querySelectorAll('.client-card').forEach(card => {
+                const clientName = card.dataset.clientName;
+                card.querySelectorAll('.section-header').forEach(header => {
+                    header.addEventListener('click', () => handleSectionToggle(header, clientName));
+                });
+            });
+        };
+        
+        const handleSectionToggle = (header, clientName) => {
+            const content = header.nextElementSibling;
+            const isExpanded = header.getAttribute('aria-expanded') === 'true';
+            header.setAttribute('aria-expanded', !isExpanded);
+            content.classList.toggle('hidden');
+            if (!isExpanded) {
+                const sectionId = header.id.split('-')[0];
+                if (sectionId === 'homework') {
+                    renderHomeworkContent(content, clientName);
+                    attachHomeworkListeners(content, clientName);
+                } else if (sectionId === 'playlist') {
+                    renderPlaylistContent(content, clientName);
+                    attachPlaylistListeners(content, clientName);
                 }
-                return { summary: event.summary || "Eveniment fără titlu", date: event.start?.dateTime || event.start?.date, status };
-            }).sort((a, b) => new Date(b.date) - new Date(a.date));
-        }
-    } catch (error) { console.error("Error fetching session history:", error); }
-    return history;
-}
+            }
+        };
+        
+        const attachHomeworkListeners = (container, clientName) => {
+            container.querySelector('.save-homework-btn')?.addEventListener('click', async () => {
+                const textarea = container.querySelector('textarea');
+                const homeworkText = textarea.value.trim();
+                if (!homeworkText) return;
+                try {
+                    const addHomework = httpsCallable(functions, 'addHomeworkForClientInsecure');
+                    await addHomework({ instructorName: state.instructorName, clientName, homeworkText });
+                    const client = state.clients.find(c => c.name === clientName);
+                    if (client) {
+                        if (!client.homework) client.homework = [];
+                        client.homework.push({ text: homeworkText, date: new Date().toISOString() });
+                        renderHomeworkContent(container, clientName);
+                        attachHomeworkListeners(container, clientName); 
+                    }
+                } catch (error) { alert(`Eroare la salvarea temei: ${error.message}`); }
+            });
+        };
 
-exports.getClientPortalData = onCall({ secrets: ["STRIPE_SECRET"], cors: true }, async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "You must be logged in.");
-    const email = request.auth.token.email;
-    if (!email) throw new HttpsError("invalid-argument", "Token is missing an email.");
-    const snapshot = await db.collection("clients").where("email", "==", email).limit(1).get();
-    if (snapshot.empty) throw new HttpsError("not-found", "No client record found.");
-    const clientData = snapshot.docs[0].data();
-    const auth = new google.auth.GoogleAuth({ scopes: ["https://www.googleapis.com/auth/calendar.readonly"] });
-    const calendar = google.calendar({ version: "v3", auth });
-    const timeMin = new Date().toISOString();
-    const timeMax = new Date(new Date().setDate(new Date().getDate() + 30)).toISOString();
-    let upcomingSessions = [];
-    try {
-        const response = await calendar.events.list({ calendarId: "asorteoffice@gmail.com", timeMin, timeMax, q: `"${clientData.name}"`, singleEvents: true, orderBy: "startTime" });
-        upcomingSessions = response.data.items.filter(event => {
-            if (event.status === 'cancelled') return false;
-            const organizer = event.attendees?.find(a => a.organizer);
-            return organizer?.responseStatus !== 'declined';
-        }).map(e => ({ summary: e.summary, start: e.start, end: e.end, discipline: e.summary.split(' - ')[1] || clientData.discipline }));
-    } catch (error) { console.error("Error fetching Google Calendar events:", error); }
-    const lastEvent = await getLastSessionEvent(calendar, clientData.name);
-    let sessionNumber = 0;
-    if (lastEvent && lastEvent.summary) {
-        const parts = lastEvent.summary.split(' - ').map(p => p.trim());
-        if (parts.length >= 3) {
-            const parsedNumber = parseInt(parts[2].toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-            if (!isNaN(parsedNumber)) sessionNumber = parsedNumber;
-        }
-    }
-    const lastPayment = await getLastPayment(clientData);
-    const history = await getSessionHistory(calendar, clientData.name);
-    return { name: clientData.name, discipline: clientData.discipline, courseId: clientData.courseId || null, youtubePlaylist: clientData.youtubePlaylist || [], sessionNumber, subscriptionType: clientData.subscription || '4', nextSessions: upcomingSessions, lastPayment, history };
-});
+        const attachPlaylistListeners = (container, clientName) => {
+            container.querySelector('.show-add-video-btn')?.addEventListener('click', (e) => {
+                e.currentTarget.classList.add('hidden');
+                container.querySelector('.add-video-form').classList.remove('hidden');
+            });
+            container.querySelector('.cancel-add-video-btn')?.addEventListener('click', () => {
+                container.querySelector('.add-video-form').classList.add('hidden');
+                container.querySelector('.show-add-video-btn').classList.remove('hidden');
+                container.querySelector('.youtube-url-input').value = '';
+            });
+            container.querySelector('.save-video-btn')?.addEventListener('click', (e) => handleAddVideo(e, clientName));
+            container.querySelectorAll('.remove-video-btn').forEach(btn => btn.addEventListener('click', (e) => handleRemoveVideo(e, clientName)));
+            container.querySelectorAll('.play-video-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const videoId = e.currentTarget.dataset.videoId;
+                    const playerId = e.currentTarget.dataset.playerId;
+                    const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9]/g, '-');
+                    const playerContainerId = `youtube-player-container-${sanitizedClientName}`;
+                    document.getElementById(playerContainerId).classList.remove('hidden');
+                    if (state.ytPlayers[playerId] && state.ytPlayers[playerId].loadVideoById) {
+                        state.ytPlayers[playerId].loadVideoById(videoId);
+                    } else {
+                        createYTPlayer(playerId, videoId);
+                    }
+                });
+            });
+        };
+        
+        const handleAddVideo = async (e, clientName) => {
+            const container = e.currentTarget.closest('.p-4');
+            const input = container.querySelector('.youtube-url-input');
+            const url = input.value.trim();
+            const videoId = parseYouTubeUrl(url);
+            if (!videoId) return alert('URL YouTube invalid.');
+            const client = state.clients.find(c => c.name === clientName);
+            const currentPlaylist = client.youtubePlaylist || [];
+            if (currentPlaylist.includes(videoId)) return alert('Acest video este deja în playlist.');
+            const newPlaylist = [...currentPlaylist, videoId];
+            await updatePlaylistOnServer(clientName, newPlaylist, container);
+            input.value = '';
+        };
+        
+        const handleRemoveVideo = async (e, clientName) => {
+            const container = e.currentTarget.closest('.p-4');
+            const indexToRemove = parseInt(e.currentTarget.dataset.index, 10);
+            const client = state.clients.find(c => c.name === clientName);
+            const currentPlaylist = client.youtubePlaylist || [];
+            const newPlaylist = currentPlaylist.filter((_, index) => index !== indexToRemove);
+            await updatePlaylistOnServer(clientName, newPlaylist, container);
+        };
+        
+        const updatePlaylistOnServer = async (clientName, newPlaylist, container) => {
+            try {
+                const updatePlaylist = httpsCallable(functions, 'updatePlaylistForClientInsecure');
+                await updatePlaylist({ instructorName: state.instructorName, clientName, playlist: newPlaylist });
+                const clientInState = state.clients.find(c => c.name === clientName);
+                if (clientInState) clientInState.youtubePlaylist = newPlaylist;
+                const playlistContentContainer = container.parentElement;
+                await renderPlaylistContent(playlistContentContainer, clientName);
+                attachPlaylistListeners(playlistContentContainer, clientName);
+            } catch (error) { alert(`Eroare la actualizarea playlist-ului: ${error.message}`); }
+        };
 
-async function getLastSessionEvent(calendar, clientName) {
-    const timeMax = new Date().toISOString();
-    const timeMin = new Date(new Date().setDate(new Date().getDate() - 60)).toISOString();
-    try {
-        const response = await calendar.events.list({ calendarId: "asorteoffice@gmail.com", timeMin, timeMax, q: `"${clientName}" "Sedinta"`, singleEvents: true, orderBy: "startTime", showDeleted: false });
-        const events = response.data.items.filter(event => {
-            if (event.status === 'cancelled') return false;
-            const organizer = event.attendees?.find(a => a.organizer);
-            return organizer?.responseStatus !== 'declined';
-        });
-        return events.length > 0 ? events[events.length - 1] : null;
-    } catch (error) { console.error("Error fetching last session event:", error); return null; }
-}
+        const parseYouTubeUrl = (url) => {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        };
+        
+        const createYTPlayer = (playerId, videoId) => {
+            if (state.ytPlayers[playerId] && state.ytPlayers[playerId].destroy) {
+                state.ytPlayers[playerId].destroy();
+            }
+            state.ytPlayers[playerId] = new YT.Player(playerId, { height: '100%', width: '100%', videoId, playerVars: { 'playsinline': 1 } });
+        };
 
-exports.updateClientPlaylist = onCall({ cors: true }, async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "You must be logged in.");
-    const email = request.auth.token.email;
-    const { playlist } = request.data;
-    if (!Array.isArray(playlist)) throw new HttpsError("invalid-argument", "'playlist' must be an array.");
-    const snapshot = await db.collection("clients").where("email", "==", email).limit(1).get();
-    if (snapshot.empty) throw new HttpsError("not-found", "No client record found.");
-    await snapshot.docs[0].ref.update({ youtubePlaylist: playlist });
-    return { success: true };
-});
+        const showAuthError = (message) => {
+            dom.authError.textContent = message;
+            dom.authError.classList.remove('hidden');
+        };
 
-
-// --- Functions for Instructor App ---
-
-exports.getInstructorDashboard = onCall({ cors: true }, async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "You must be logged in.");
-    const instructorUID = request.auth.uid;
-    const userRecord = await adminAuth.getUser(instructorUID);
-    const instructorEmail = userRecord.email;
-    const instructorSnapshot = await db.collection('instructors').where('Email', '==', instructorEmail).limit(1).get();
-    if (instructorSnapshot.empty) throw new HttpsError("not-found", "The logged-in user is not a registered instructor in the database.");
-    const instructorName = instructorSnapshot.docs[0].data().name;
-    let allTodaysEvents = [];
-    try {
-        const today = new Date();
-        const timeMin = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0).toISOString();
-        const timeMax = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
-        const auth = new google.auth.GoogleAuth({ scopes: ["https://www.googleapis.com/auth/calendar.readonly"] });
-        const calendar = google.calendar({ version: "v3", auth });
-        const response = await calendar.events.list({ calendarId: "asorteoffice@gmail.com", timeMin, timeMax, singleEvents: true, orderBy: 'startTime' });
-        allTodaysEvents = response.data.items.filter(event => {
-            if (event.status === 'cancelled') return false;
-            const organizer = event.attendees?.find(a => a.organizer);
-            return organizer?.responseStatus !== 'declined';
-        });
-    } catch (error) {
-        console.error("Google Calendar API Error:", error);
-        if (error.code === 403) throw new HttpsError("permission-denied", "The service account lacks permission for Google Calendar.");
-        throw new HttpsError("internal", "Could not fetch calendar schedule.");
-    }
-    const clientsSnapshot = await db.collection('clients').where('assignedInstructor', '==', instructorName).get();
-    const assignedClientsData = clientsSnapshot.docs.reduce((acc, doc) => {
-        acc[doc.data().name] = doc.data();
-        return acc;
-    }, {});
-    const instructorClientsForToday = allTodaysEvents.map(event => {
-        if (!event.summary) return null;
-        const eventClientName = event.summary.split(' - ')[0].trim();
-        const clientData = assignedClientsData[eventClientName];
-        if (clientData) {
-            const sessionPart = event.summary.split(' - ')[2] || '';
-            const parsedNumber = parseInt(sessionPart.toLowerCase().replace('sedinta', '').replace('#', ''), 10);
-            return {
-                name: clientData.name, discipline: clientData.discipline, startTime: event.start.dateTime || event.start.date,
-                sessionNumber: isNaN(parsedNumber) ? 0 : parsedNumber, subscriptionType: clientData.subscription || '4',
-                youtubePlaylist: clientData.youtubePlaylist || [], homework: clientData.homework || [],
-            };
-        }
-        return null;
-    }).filter(Boolean);
-    return { instructorName, clients: instructorClientsForToday };
-});
-
-exports.addHomeworkForClientInsecure = onCall({ cors: true }, async (request) => {
-    const { instructorName, clientName, homeworkText } = request.data;
-    if (!instructorName || !clientName || !homeworkText) throw new HttpsError("invalid-argument", "Missing required fields.");
-    const clientSnapshot = await db.collection('clients').where('name', '==', clientName).limit(1).get();
-    if (clientSnapshot.empty) throw new HttpsError("not-found", "Client not found.");
-    const clientData = clientSnapshot.docs[0].data();
-    if (clientData.assignedInstructor !== instructorName) throw new HttpsError("permission-denied", "You are not assigned to this client.");
-    await clientSnapshot.docs[0].ref.update({
-        homework: FieldValue.arrayUnion({ text: homeworkText, date: new Date().toISOString() }),
-    });
-    return { success: true };
-});
-
-exports.updatePlaylistForClientInsecure = onCall({ cors: true }, async (request) => {
-    const { instructorName, clientName, playlist } = request.data;
-    if (!instructorName || !clientName || !Array.isArray(playlist)) throw new HttpsError("invalid-argument", "Missing required fields.");
-    const clientSnapshot = await db.collection('clients').where('name', '==', clientName).limit(1).get();
-    if (clientSnapshot.empty) throw new HttpsError("not-found", "Client not found.");
-    const clientData = clientSnapshot.docs[0].data();
-    if (clientData.assignedInstructor !== instructorName) throw new HttpsError("permission-denied", "You are not assigned to this client.");
-    await clientSnapshot.docs[0].ref.update({ youtubePlaylist: playlist });
-    return { success: true };
-});
-
-// **NEW FUNCTION FOR INSTRUCTOR TIMESHEET**
-exports.getInstructorTimesheet = onCall({ secrets: ["STRIPE_SECRET"], cors: true }, async (request) => {
-    if (!request.auth) {
-        throw new HttpsError("unauthenticated", "You must be logged in.");
-    }
-    const instructorUID = request.auth.uid;
-    const userRecord = await adminAuth.getUser(instructorUID);
-    const instructorEmail = userRecord.email;
-
-    const instructorSnapshot = await db.collection('instructors').where('Email', '==', instructorEmail).limit(1).get();
-    if (instructorSnapshot.empty) {
-        throw new HttpsError("not-found", "The logged-in user is not a registered instructor.");
-    }
-    const instructorDoc = instructorSnapshot.docs[0];
-    const instructorId = instructorDoc.id;
-    const instructorName = instructorDoc.data().name;
-
-    // Fetch the specific timesheet document for this instructor
-    const timesheetDoc = await db.collection('timesheets').doc(instructorId).get();
-    const timesheetData = timesheetDoc.exists ? timesheetDoc.data() : { sessions: {} };
-
-    // Fetch instructor percentages
-    const percentagesDoc = await db.collection('app-settings').doc('instructor-percentages').get();
-    const instructorPercentages = percentagesDoc.exists ? percentagesDoc.data() : {};
-    
-    return {
-        instructor: { id: instructorId, name: instructorName },
-        timesheet: timesheetData,
-        instructorPercentages
-    };
-});
+        dom.signoutBtn.addEventListener('click', handleSignOut);
+        dom.googleSigninBtn.addEventListener('click', handleGoogleSignIn);
+        dom.tabButtons.forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+        
+        lucide.createIcons();
+    </script>
+</body>
+</html>
