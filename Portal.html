@@ -220,19 +220,13 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 state.user = user;
-                if (user.providerData[0]?.providerId === 'google.com') {
-                    state.googleAccessToken = sessionStorage.getItem('googleAccessToken');
-                }
                 dom.authView.classList.add('hidden');
                 dom.registerView.classList.add('hidden');
                 dom.appView.classList.remove('hidden');
                 
-                setTimeout(() => {
-                    fetchPortalData();
-                }, 0);
+                fetchPortalData();
             } else {
                 state = { user: null, clientData: null, googleAccessToken: null, ytPlayer: null };
-                sessionStorage.removeItem('googleAccessToken');
                 dom.authView.classList.remove('hidden');
                 dom.appView.classList.add('hidden');
                 dom.mainContentArea.classList.add('hidden');
@@ -251,7 +245,6 @@
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 if (credential) {
                     state.googleAccessToken = credential.accessToken;
-                    sessionStorage.setItem('googleAccessToken', state.googleAccessToken);
                 }
             } catch (error) {
                 showAuthError(`Google Sign-In Error: ${error.message}`);
@@ -259,7 +252,6 @@
         };
 
         const handleSignOut = async () => {
-            sessionStorage.removeItem('googleAccessToken');
             await signOut(auth);
         };
 
@@ -280,10 +272,25 @@
                 renderApp();
 
             } catch (error) {
-                dom.appLoader.innerHTML = `<p class="text-red-400 text-center">Eroare: ${error.message}. Asigură-te că e-mailul tău este înregistrat în sistem.</p>`;
+                if (error.message && error.message.includes("No client record found")) {
+                    dom.appLoader.innerHTML = `
+                        <div class="text-center text-yellow-300 bg-yellow-900/50 p-4 rounded-lg">
+                            <h3 class="font-bold text-lg">Cont Inactiv</h3>
+                            <p>Nu sunteți un membru activ al Asorte Music Academy. Pentru a utiliza portalul, trebuie să aveți un abonament activ.</p>
+                            <p class="mt-2">Vă rugăm să ne <a href="https://www.asortemediaproductions.com/contact" target="_blank" class="font-bold underline hover:text-white">contactați</a> pentru a vă înscrie.</p>
+                        </div>
+                    `;
+                } else {
+                    dom.appLoader.innerHTML = `<p class="text-red-400 text-center">A apărut o eroare: ${error.message}.</p>`;
+                }
             } finally {
-                dom.appLoader.style.display = 'none';
-                dom.mainContentArea.classList.remove('hidden');
+                // We only hide the loader if there wasn't a "not found" error
+                if (!state.clientData) {
+                    dom.appLoader.style.display = 'block';
+                } else {
+                    dom.appLoader.style.display = 'none';
+                    dom.mainContentArea.classList.remove('hidden');
+                }
             }
         };
         
