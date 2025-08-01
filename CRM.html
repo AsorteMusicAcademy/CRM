@@ -1107,7 +1107,7 @@
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${notificationMessage}" ${!phone || !startTime || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="message-square" class="h-4 w-4 mr-1.5"></i><span>Notificare sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== parseInt(subscriptionType) || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
                                 <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
-                                <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
+                                <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" data-start-time="${startTime}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
                                 <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
                                     <i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Incrementeaza sedinta</span>
                                 </button>
@@ -1118,6 +1118,7 @@
                     </li>
                 `;
             };
+
 
             const createHomeworkHTML = (name, client) => {
                 if (!client) return '';
@@ -2073,8 +2074,8 @@
             };
 
             const handleDeclineClick = (button) => {
-                const { eventId, name, discipline, phone } = button.dataset;
-                state.cancellationContext = { eventId, name, discipline, phone, originalButton: button };
+                const { eventId, name, discipline, phone, startTime } = button.dataset;
+                state.cancellationContext = { eventId, name, discipline, phone, startTime, originalButton: button };
                 showModal(dom.cancelModal);
             };
 
@@ -2300,6 +2301,8 @@
 
                 const instructorsWithoutPhone = [];
                 let reportsSent = 0;
+                
+                // --- Step 1: Open all WhatsApp windows immediately ---
                 for (const [instructorName, clientList] of Object.entries(clientsByInstructor)) {
                     const instructor = state.instructors.find(inst => inst.name === instructorName);
                     if (instructor && instructor.phone) {
@@ -2314,6 +2317,7 @@
                     }
                 }
 
+                // --- Step 2: Display notifications after the fact ---
                 if (reportsSent > 0) {
                     renderNotification(`${reportsSent} rapoarte au fost generate.`, 'success');
                 }
@@ -2325,13 +2329,23 @@
                 }
             };
 
+
             const handleNotifyInstructor = async (instructorId, instructorName, instructorPhone) => {
+                const button = document.querySelector(`.notify-instructor-btn[data-id="${instructorId}"]`);
                 if (!instructorPhone) {
                     renderNotification(`Instructorul ${instructorName} nu are un număr de telefon salvat.`, 'error');
                     return;
                 }
-                renderLoader('Se preiau programările pentru mâine...');
+
+                // --- Step 1: Update UI to show loading state on the button ---
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
+                    lucide.createIcons();
+                }
+
                 try {
+                    // --- Step 2: Fetch all data from APIs first ---
                     const tomorrowsClients = await api.getEvents('tomorrow');
                     const clientDataPromises = Object.keys(tomorrowsClients).map(name => firestoreApi.getClientData(name));
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
@@ -2341,6 +2355,7 @@
                         }
                         return acc;
                     }, {});
+
                     const instructorClients = [];
                     for (const [clientName, details] of Object.entries(tomorrowsClients)) {
                         if (clientFirebaseData[clientName]?.assignedInstructor === instructorName) {
@@ -2350,21 +2365,32 @@
                             });
                         }
                     }
-                    dom.resultsArea.innerHTML = '';
-                    renderInstructorsView();
+
+                    // --- Step 3: Build the final message ---
+                    let finalMessage;
                     if (instructorClients.length === 0) {
+                        finalMessage = `Salut ${instructorName}! Nu ai ședințe programate pentru mâine.`;
                         renderNotification(`Instructorul ${instructorName} nu are clienți programați pentru mâine.`, 'success');
-                        return;
+                    } else {
+                        instructorClients.sort((a, b) => a.time.localeCompare(b.time));
+                        finalMessage = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
+                        finalMessage += instructorClients.map(client => `- ${client.name} la ${client.time}`).join('\n');
+                        renderNotification(`Raport generat pentru ${instructorName}.`, 'success');
                     }
-                    instructorClients.sort((a, b) => a.time.localeCompare(b.time));
-                    let message = `Salut ${instructorName}! Mâine ai următoarele ședințe:\n`;
-                    message += instructorClients.map(client => `- ${client.name} la ${client.time}`).join('\n');
-                    const link = getWhatsAppLink(instructorPhone, message);
+                    
+                    // --- Step 4: Open WhatsApp with the final, correct message ---
+                    const link = getWhatsAppLink(instructorPhone, finalMessage);
                     window.open(link, '_blank');
-                    renderNotification(`Raport generat pentru ${instructorName}.`, 'success');
+
                 } catch (err) {
                     renderNotification(`Eroare la generarea raportului: ${err.message}`, 'error');
-                    renderInstructorsView();
+                } finally {
+                    // --- Step 5: Restore the button's original state ---
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = `<i data-lucide="send" class="h-4 w-4"></i>`;
+                        lucide.createIcons();
+                    }
                 }
             };
 
@@ -2545,6 +2571,7 @@
                         data-name="${client.name}" 
                         data-discipline="${discipline}"
                         data-phone="${client.phone}"
+                        data-start-time="${startDate.toISOString()}"
                         title="Anulează Sesiunea">
                         <i data-lucide="calendar-x" class="h-4 w-4"></i>
                     </button>
@@ -3105,7 +3132,7 @@
 
             async function handleCancelByInstructor() {
                 if (!state.cancellationContext) return;
-                const { eventId, name, discipline, phone, originalButton } = state.cancellationContext;
+                const { eventId, name, discipline, phone, startTime, originalButton } = state.cancellationContext;
 
                 hideModal(dom.cancelModal);
                 originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
@@ -3113,25 +3140,40 @@
                 lucide.createIcons();
 
                 try {
-                    const clientDetails = state.clients[name];
-                    const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
-                    const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
-                    const formattedDate = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : dayText;
+                    // --- Step 1: Prepare and send the WhatsApp message immediately ---
+                    const eventDate = new Date(startTime);
+                    const formattedTime = eventDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+                    const formattedDate = eventDate.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
 
+                    const messageData = { name, discipline, date: formattedDate, time: formattedTime };
+                    const message = replacePlaceholders(state.messageTemplates.cancelByInstructor, messageData);
+                    const link = getWhatsAppLink(phone, message);
+
+                    if (link) {
+                        window.open(link, '_blank');
+                    }
+
+                    // --- Step 2: Perform the background API calls ---
                     const newSummary = `${name} - ${discipline}`;
                     await api.updateEventSummary(eventId, newSummary);
                     await api.cancelEvent(eventId);
 
                     renderNotification(`Evenimentul pentru ${name} a fost anulat de instructor. Numărul sesiunii a fost eliminat.`, 'success');
-                    document.getElementById(`client-${eventId}`)?.remove();
-
-                    const messageData = { name, discipline, date: formattedDate, time: formattedTime };
-                    const message = replacePlaceholders(state.messageTemplates.cancelByInstructor, messageData);
-
-                    const link = getWhatsAppLink(phone, message);
-                    if (link) {
-                        window.open(link, '_blank');
+                    
+                    // Remove the client from the UI
+                    const clientLi = document.getElementById(`client-${eventId}`);
+                    if(clientLi) {
+                        clientLi.remove();
+                    } else {
+                        // If the cancellation came from the details view, we might need to refresh
+                        if(state.expandedClient === name) {
+                            const container = document.querySelector(`.client-details[style*="block"]`);
+                            if(container) {
+                                renderClientDetails(name, container);
+                            }
+                        }
                     }
+
                 } catch (err) {
                     renderNotification(`Eroare la anularea evenimentului: ${err.message}`, 'error');
                     originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
@@ -3142,7 +3184,7 @@
 
             async function handleCancelByClient() {
                 if (!state.cancellationContext) return;
-                const { eventId, name, phone, discipline, originalButton } = state.cancellationContext;
+                const { eventId, name, phone, discipline, startTime, originalButton } = state.cancellationContext;
 
                 hideModal(dom.cancelModal);
                 originalButton.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
@@ -3150,20 +3192,37 @@
                 lucide.createIcons();
 
                 try {
-                    const clientDetails = state.clients[name];
-                    const formattedTime = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
-                    const dayText = state.activeTab === 'today' ? 'astăzi' : 'mâine';
-                    const formattedDate = clientDetails.startTime ? new Date(clientDetails.startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : dayText;
-
-                    await api.cancelEvent(eventId);
-                    renderNotification(`Evenimentul pentru ${name} a fost anulat de client.`, 'success');
-                    document.getElementById(`client-${eventId}`)?.remove();
+                    // --- Step 1: Prepare and send the WhatsApp message immediately ---
+                    const eventDate = new Date(startTime);
+                    const formattedTime = eventDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+                    const formattedDate = eventDate.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
 
                     const messageData = { name, discipline, date: formattedDate, time: formattedTime };
                     const message = replacePlaceholders(state.messageTemplates.cancelByClient, messageData);
-
                     const link = getWhatsAppLink(phone, message);
-                    if (link) window.open(link, '_blank');
+
+                    if (link) {
+                        window.open(link, '_blank');
+                    }
+
+                    // --- Step 2: Perform the background API calls ---
+                    await api.cancelEvent(eventId);
+                    renderNotification(`Evenimentul pentru ${name} a fost anulat de client.`, 'success');
+                    
+                    // Remove the client from the UI
+                    const clientLi = document.getElementById(`client-${eventId}`);
+                    if(clientLi) {
+                        clientLi.remove();
+                    } else {
+                        // If the cancellation came from the details view, we might need to refresh
+                        if(state.expandedClient === name) {
+                            const container = document.querySelector(`.client-details[style*="block"]`);
+                            if(container) {
+                                renderClientDetails(name, container);
+                            }
+                        }
+                    }
+
                 } catch (err) {
                     renderNotification(`Eroare la anularea evenimentului: ${err.message}`, 'error');
                     originalButton.innerHTML = `<i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span>`;
