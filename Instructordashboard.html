@@ -355,7 +355,8 @@
             });
         };
         
-        const handleSectionToggle = (header, clientName) => {
+        // --- FIX: Made the function async and added await ---
+        const handleSectionToggle = async (header, clientName) => {
             const content = header.nextElementSibling;
             const isExpanded = header.getAttribute('aria-expanded') === 'true';
             header.setAttribute('aria-expanded', !isExpanded);
@@ -366,7 +367,7 @@
                     renderHomeworkContent(content, clientName);
                     attachHomeworkListeners(content, clientName);
                 } else if (sectionId === 'playlist') {
-                    renderPlaylistContent(content, clientName);
+                    await renderPlaylistContent(content, clientName);
                     attachPlaylistListeners(content, clientName);
                 }
             }
