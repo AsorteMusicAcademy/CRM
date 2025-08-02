@@ -342,6 +342,50 @@
                 }</div>`;
             }
 
+            // --- PAYMENT BUTTON LOGIC ---
+            let paymentButtonHTML = '';
+            const isLastSession = sessionNumber >= subscriptionType;
+            
+            let lastPaymentDate = null;
+            if (lastPayment && lastPayment !== 'Nicio plată înregistrată') {
+                const parts = lastPayment.split('.');
+                if (parts.length === 3) {
+                    // new Date(year, monthIndex, day)
+                    lastPaymentDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+            }
+
+            let isPaymentOverdue = false;
+            if (lastPaymentDate) {
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                isPaymentOverdue = lastPaymentDate < oneMonthAgo;
+            }
+
+            const needsToPay = isLastSession || ((sessionNumber <= 2) && isPaymentOverdue);
+            
+            const paymentMessage = needsToPay 
+                ? "Abonamentul tău este pe cale să expire sau a expirat. Te rugăm să efectuezi plata pentru a continua."
+                : "Ești la zi cu plata. Poți prelungi abonamentul oricând dorești.";
+
+            const buttonActive = needsToPay;
+            const buttonClasses = buttonActive 
+                ? 'btn-lime'
+                : 'bg-gray-500 text-gray-400 cursor-not-allowed';
+
+            paymentButtonHTML = `
+                <div class="mt-6 pt-6 border-t border-gray-700">
+                    <p class="text-sm text-gray-400 mb-3 text-center">${paymentMessage}</p>
+                    <a href="https://www.asortemediaproductions.com/paginapreturi" 
+                       target="_blank" 
+                       class="block w-full text-center py-3 px-6 rounded-md transition-colors ${buttonClasses}"
+                       ${!buttonActive ? 'aria-disabled="true" onclick="event.preventDefault();"' : ''}>
+                        Efectuează Plata
+                    </a>
+                </div>
+            `;
+            // --- END OF PAYMENT BUTTON LOGIC ---
+
             const cardHTML = `
                 <div class="bg-[#1E1E1E] p-6 rounded-lg shadow-lg space-y-6">
                     <div>
@@ -364,6 +408,7 @@
                     <div>
                         <p class="text-sm text-gray-400">Ultima plată: <span class="font-medium text-gray-300">${lastPayment || 'Nicio plată înregistrată'}</span></p>
                     </div>
+                    ${paymentButtonHTML}
                 </div>
             `;
             dom.clientCardContainer.innerHTML = cardHTML;
