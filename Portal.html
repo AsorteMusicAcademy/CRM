@@ -344,6 +344,7 @@
 
             // --- PAYMENT BUTTON LOGIC ---
             let paymentButtonHTML = '';
+            let paymentMessage = '';
             const isLastSession = sessionNumber >= subscriptionType;
             
             let lastPaymentDate = null;
@@ -361,12 +362,22 @@
                 oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
                 isPaymentOverdue = lastPaymentDate < oneMonthAgo;
             }
-
-            const needsToPay = isLastSession || ((sessionNumber <= 2) && isPaymentOverdue);
             
-            const paymentMessage = needsToPay 
-                ? "Abonamentul tău este pe cale să expire sau a expirat. Te rugăm să efectuezi plata pentru a continua."
-                : "Ești la zi cu plata. Poți prelungi abonamentul oricând dorești.";
+            const noPaymentLogged = !lastPaymentDate;
+
+            const needsToPay = isLastSession || 
+                               ((sessionNumber <= 2) && isPaymentOverdue) ||
+                               (sessionNumber === 1 && noPaymentLogged);
+            
+            if (isLastSession) {
+                paymentMessage = "Abonamentul tău expiră după această ședință. Te rugăm să efectuezi plata pentru a continua.";
+            } else if (sessionNumber === 1 && noPaymentLogged) {
+                paymentMessage = "Bun venit! Pentru a începe, te rugăm să achiți prima plată pentru abonament.";
+            } else if ((sessionNumber <= 2) && isPaymentOverdue) {
+                paymentMessage = "Plata pentru abonamentul tău a expirat. Te rugăm să o reînnoiești pentru a nu întrerupe ședințele.";
+            } else {
+                paymentMessage = "Ești la zi cu plata. Poți prelungi abonamentul oricând dorești.";
+            }
 
             const buttonActive = needsToPay;
             const buttonClasses = buttonActive 
@@ -374,7 +385,7 @@
                 : 'bg-gray-500 text-gray-400 cursor-not-allowed';
 
             paymentButtonHTML = `
-                <div class="mt-6 pt-6 border-t border-gray-700">
+                <div class="mt-4">
                     <p class="text-sm text-gray-400 mb-3 text-center">${paymentMessage}</p>
                     <a href="https://www.asortemediaproductions.com/paginapreturi" 
                        target="_blank" 
@@ -398,6 +409,7 @@
                         <div class="w-full bg-[#2A2A2A] rounded-full h-2.5">
                             <div class="bg-[#D1FE49] h-2.5 rounded-full" style="width: ${progress}%"></div>
                         </div>
+                        ${paymentButtonHTML}
                     </div>
 
                     <div>
@@ -408,7 +420,6 @@
                     <div>
                         <p class="text-sm text-gray-400">Ultima plată: <span class="font-medium text-gray-300">${lastPayment || 'Nicio plată înregistrată'}</span></p>
                     </div>
-                    ${paymentButtonHTML}
                 </div>
             `;
             dom.clientCardContainer.innerHTML = cardHTML;
