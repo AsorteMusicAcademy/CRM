@@ -50,6 +50,13 @@
         .btn-lime:hover {
             background-color: #b8e043;
         }
+        /* Modal styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
     </style>
 </head>
 
@@ -158,23 +165,26 @@
             </div>
         </div>
     </div>
-    
-    <!-- ===== Confirmation Modal ===== -->
-    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
-        <div class="bg-[#1E1E1E] p-6 rounded-lg shadow-xl max-w-sm w-full border border-gray-700">
-            <h3 class="text-lg font-bold text-white mb-2">Confirmă Anularea</h3>
-            <p id="modal-message" class="text-gray-400 mb-4">Ești sigur că vrei să anulezi ședința? Această acțiune nu poate fi anulată.</p>
-            <div class="flex justify-end gap-3">
-                <button id="modal-cancel-btn" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-500 transition-colors">
-                    Închide
+
+    <!-- Cancellation Confirmation Modal -->
+    <div id="cancel-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-content bg-[#1E1E1E] rounded-xl shadow-2xl p-6 w-full max-w-md transform scale-95">
+            <h3 class="text-2xl font-bold text-white mb-4">Anulează Sesiunea</h3>
+            <p id="cancel-modal-message" class="text-gray-400 mb-6">Sunteți sigur că doriți să anulați această sesiune?</p>
+            <div id="cancel-modal-info" class="bg-[#2A2A2A] p-4 rounded-md mb-6">
+                <p class="text-sm font-semibold text-gray-300" id="cancel-modal-summary"></p>
+                <p class="text-xs text-gray-500" id="cancel-modal-datetime"></p>
+            </div>
+            <div class="space-y-3">
+                <button id="confirm-cancel-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
+                    Confirmă Anularea
                 </button>
-                <button id="modal-confirm-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700 transition-colors">
-                    Confirmă
+                <button id="close-cancel-modal-btn" class="w-full text-gray-400 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Renunță
                 </button>
             </div>
         </div>
     </div>
-
 
     <script type="module">
         // Firebase Imports
@@ -205,14 +215,13 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const functions = getFunctions(app);
-        
+
         // --- State Management ---
         let state = {
             user: null,
             clientData: null,
             ytPlayer: null,
-            // New state to hold the event ID for cancellation
-            sessionToCancel: null,
+            cancellationContext: null, // New state for cancellation
         };
 
         // --- DOM Element References ---
@@ -233,11 +242,13 @@
             showLoginLink: document.getElementById('show-login-link'),
             authError: document.getElementById('auth-error'),
             registerError: document.getElementById('register-error'),
-            // New modal DOM references
-            confirmationModal: document.getElementById('confirmation-modal'),
-            modalMessage: document.getElementById('modal-message'),
-            modalConfirmBtn: document.getElementById('modal-confirm-btn'),
-            modalCancelBtn: document.getElementById('modal-cancel-btn'),
+            // New cancellation modal elements
+            cancelModal: document.getElementById('cancel-modal'),
+            cancelModalMessage: document.getElementById('cancel-modal-message'),
+            cancelModalSummary: document.getElementById('cancel-modal-summary'),
+            cancelModalDatetime: document.getElementById('cancel-modal-datetime'),
+            confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+            closeCancelModalBtn: document.getElementById('close-cancel-modal-btn'),
         };
 
         // --- Authentication Logic ---
@@ -279,19 +290,9 @@
             try {
                 const getClientPortalData = httpsCallable(functions, 'getClientPortalData');
                 const result = await getClientPortalData();
-                
+
                 if (result.data.error) {
                     throw new Error(result.data.error);
-                }
-
-                // IMPORTANT: The backend function getClientPortalData must be updated to return the eventId for each session.
-                // It must also filter out events where the client's responseStatus is 'declined'.
-                // Here we re-filter for safety in case the backend hasn't been updated.
-                if (result.data.nextSessions) {
-                    result.data.nextSessions = result.data.nextSessions.filter(session => {
-                        const clientAttendee = session.attendees?.find(a => a.email === state.user.email);
-                        return !clientAttendee || clientAttendee.responseStatus !== 'declined';
-                    });
                 }
 
                 state.clientData = result.data;
@@ -351,7 +352,6 @@
             
             let nextSessionsHTML = '<p class="text-sm text-gray-400">Nicio ședință programată.</p>';
             if (nextSessions && nextSessions.length > 0) {
-                // Modified to include a button for cancellation
                 nextSessionsHTML = `<div class="space-y-3 max-h-48 overflow-y-auto pr-2">${
                     nextSessions.map(session => {
                         const date = new Date(session.start.dateTime);
@@ -367,13 +367,20 @@
                                     <p class="text-xs lime-accent font-bold uppercase tracking-wider">${month}</p>
                                     <p class="text-2xl font-bold text-white">${day}</p>
                                 </div>
-                                <div class="flex-grow border-l border-gray-700 pl-4">
+                                <div class="border-l border-gray-700 pl-4 flex-grow">
                                     <p class="font-semibold text-white">${capitalizedWeekday} @ ${formattedTime}</p>
                                     <p class="text-sm text-gray-400">${session.discipline}</p>
                                 </div>
-                                <button class="cancel-session-btn text-red-400 hover:text-red-300 transition-colors" data-event-id="${session.eventId}">
-                                    <i data-lucide="x-circle" class="h-6 w-6"></i>
-                                </button>
+                                <div class="flex-shrink-0">
+                                     <button class="cancel-session-btn bg-red-600 text-white p-2 rounded-md hover:bg-red-700 transition-colors"
+                                        data-event-id="${session.id}"
+                                        data-start-time="${session.start.dateTime}"
+                                        data-summary="${session.summary}"
+                                        data-discipline="${session.discipline}"
+                                        title="Anulează sesiunea">
+                                        <i data-lucide="x-circle" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
                             </div>
                         `;
                     }).join('')
@@ -452,9 +459,7 @@
 
                     <div>
                         <h3 class="text-lg font-semibold text-white mb-2">Programări Viitoare (30 de zile)</h3>
-                        <div id="upcoming-sessions-container">
-                            ${nextSessionsHTML}
-                        </div>
+                        ${nextSessionsHTML}
                     </div>
 
                     <div>
@@ -463,11 +468,6 @@
                 </div>
             `;
             dom.clientCardContainer.innerHTML = cardHTML;
-
-            // New: Attach listener for the cancel buttons after rendering
-            document.querySelectorAll('.cancel-session-btn').forEach(button => {
-                button.addEventListener('click', handleCancelSession);
-            });
         };
         
         const renderCollapsibleSections = (data) => {
@@ -625,6 +625,16 @@
                     }
                 });
             });
+
+            // New listener for the cancellation buttons
+            document.querySelectorAll('.cancel-session-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const { eventId, startTime, summary, discipline } = e.currentTarget.dataset;
+                    showCancellationModal({ eventId, startTime, summary, discipline });
+                });
+            });
         };
         
         const attachPlaylistListeners = () => {
@@ -662,15 +672,13 @@
             const videoId = parseYouTubeUrl(url);
 
             if (!videoId) {
-                // Modified to use a custom alert
-                showCustomAlert('URL YouTube invalid.');
+                alert('URL YouTube invalid.');
                 return;
             }
 
             const currentPlaylist = state.clientData.youtubePlaylist || [];
             if (currentPlaylist.includes(videoId)) {
-                // Modified to use a custom alert
-                showCustomAlert('Acest video este deja în playlist.');
+                alert('Acest video este deja în playlist.');
                 return;
             }
             
@@ -692,11 +700,11 @@
             try {
                 const updateClientPlaylist = httpsCallable(functions, 'updateClientPlaylist');
                 await updateClientPlaylist({ playlist: newPlaylist });
+
                 state.clientData.youtubePlaylist = newPlaylist;
                 renderPlaylistContent(newPlaylist);
             } catch (error) {
-                // Modified to use a custom alert
-                showCustomAlert(`Eroare la actualizarea playlist-ului: ${error.message}`);
+                alert(`Eroare la actualizarea playlist-ului: ${error.message}`);
             }
         };
 
@@ -725,61 +733,85 @@
             dom.registerError.textContent = message;
             dom.registerError.classList.remove('hidden');
         };
-        
-        // --- NEW CANCELLATION LOGIC ---
-        const handleCancelSession = (e) => {
-            const eventId = e.currentTarget.dataset.eventId;
-            if (!eventId) {
-                showCustomAlert("Eroare: ID-ul ședinței nu a putut fi găsit.");
-                return;
+
+        // --- Cancellation Modal Functions ---
+        const showCancellationModal = (sessionDetails) => {
+            state.cancellationContext = sessionDetails;
+
+            const sessionDate = new Date(sessionDetails.startTime);
+            const now = new Date();
+            const timeDifferenceInHours = (sessionDate - now) / (1000 * 60 * 60);
+
+            const isLateCancellation = timeDifferenceInHours < 48;
+
+            dom.cancelModalSummary.textContent = sessionDetails.summary;
+            dom.cancelModalDatetime.textContent = sessionDate.toLocaleString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+            if (isLateCancellation) {
+                dom.cancelModalMessage.innerHTML = 'Acest eveniment este programat să aibă loc în mai puțin de 48 de ore. **Anularea va duce la pierderea ședinței**, conform politicii noastre. Ești sigur că dorești să continui?';
+                dom.confirmCancelBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                dom.confirmCancelBtn.classList.add('bg-orange-600', 'hover:bg-orange-700');
+                dom.confirmCancelBtn.textContent = 'Anulează (conform Politicii)';
+            } else {
+                dom.cancelModalMessage.innerHTML = 'Ești sigur că dorești să anulezi această sesiune? Această ședință nu va fi contorizată.';
+                dom.confirmCancelBtn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+                dom.confirmCancelBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                dom.confirmCancelBtn.textContent = 'Confirmă Anularea';
             }
-            state.sessionToCancel = eventId;
-            showConfirmationModal(`Ești sigur că vrei să anulezi ședința?`);
-        };
-        
-        const showConfirmationModal = (message) => {
-            dom.modalMessage.textContent = message;
-            dom.confirmationModal.classList.remove('hidden');
+
+            dom.cancelModal.classList.remove('hidden');
+            setTimeout(() => {
+                dom.cancelModal.classList.remove('opacity-0');
+                dom.cancelModal.querySelector('.modal-content').classList.remove('scale-95');
+            }, 10);
         };
 
-        const hideConfirmationModal = () => {
-            dom.confirmationModal.classList.add('hidden');
-            state.sessionToCancel = null;
+        const hideCancellationModal = () => {
+            dom.cancelModal.classList.add('opacity-0');
+            dom.cancelModal.querySelector('.modal-content').classList.add('scale-95');
+            setTimeout(() => {
+                dom.cancelModal.classList.add('hidden');
+                state.cancellationContext = null;
+            }, 300);
         };
-        
-        const cancelSessionConfirmed = async () => {
-            hideConfirmationModal();
-            if (!state.sessionToCancel) return;
 
-            dom.appLoader.style.display = 'block';
-            dom.mainContentArea.classList.add('hidden');
+        const handleCancellation = async () => {
+            if (!state.cancellationContext) return;
+            
+            const { eventId, startTime } = state.cancellationContext;
+
+            dom.confirmCancelBtn.disabled = true;
+            dom.confirmCancelBtn.innerHTML = '<i data-lucide="loader-2" class="h-5 w-5 mr-2 animate-spin"></i> Se anulează...';
+            lucide.createIcons();
 
             try {
-                const cancelClientSession = httpsCallable(functions, 'cancelClientSession');
-                await cancelClientSession({ eventId: state.sessionToCancel });
-                
-                // On success, refetch data to update the UI
-                await fetchPortalData();
-                showCustomAlert("Ședința a fost anulată cu succes.");
-                
-            } catch (error) {
-                console.error("Cancellation Error:", error);
-                showCustomAlert(`Eroare la anularea ședinței: ${error.message}`);
-            } finally {
-                dom.appLoader.style.display = 'none';
-                if (state.clientData) {
-                    dom.mainContentArea.classList.remove('hidden');
+                const cancelSession = httpsCallable(functions, 'cancelClientSessionWithPolicy');
+                const result = await cancelSession({ eventId });
+
+                const canceledSessionIndex = state.clientData.nextSessions.findIndex(s => s.id === eventId);
+                if (canceledSessionIndex !== -1) {
+                    const isLateCancellation = new Date(startTime) - new Date() < (1000 * 60 * 60 * 48);
+                    
+                    // Update the front-end state based on the result
+                    state.clientData.nextSessions.splice(canceledSessionIndex, 1);
+                    if (!isLateCancellation) {
+                        state.clientData.sessionNumber = state.clientData.sessionNumber - 1;
+                    }
                 }
+                
+                hideCancellationModal();
+                renderApp();
+
+            } catch (error) {
+                alert(`Eroare la anulare: ${error.message}`);
+                console.error("Cancellation failed:", error);
+            } finally {
+                dom.confirmCancelBtn.disabled = false;
+                dom.confirmCancelBtn.innerHTML = 'Confirmă Anularea';
+                lucide.createIcons();
             }
         };
 
-        // A simple custom alert for better UI than the native alert()
-        const showCustomAlert = (message) => {
-            // This is a placeholder. For a real app, you would implement a nice-looking modal
-            // or notification toast here instead of the native alert.
-            alert(message);
-        };
-        
         // --- Initial Event Listeners ---
         dom.googleSigninBtn.addEventListener('click', signInWithGoogle);
         dom.signoutBtn.addEventListener('click', handleSignOut);
@@ -820,10 +852,10 @@
             }
         });
 
-        // New modal listeners
-        dom.modalConfirmBtn.addEventListener('click', cancelSessionConfirmed);
-        dom.modalCancelBtn.addEventListener('click', hideConfirmationModal);
-        
+        // Modal specific listeners
+        dom.confirmCancelBtn.addEventListener('click', handleCancellation);
+        dom.closeCancelModalBtn.addEventListener('click', hideCancellationModal);
+
         lucide.createIcons();
     </script>
 </body>
