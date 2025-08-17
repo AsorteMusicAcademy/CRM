@@ -166,6 +166,8 @@
                                 <button data-tab="dashboard" class="tab-button"></button>
                                 <button data-tab="add" class="tab-button"></button>
                                 <button data-tab="today" class="tab-button"></button>
+                                <!-- YESTERDAY BUTTON ADDED HERE -->
+                                <button data-tab="yesterday" class="tab-button"></button>
                                 <button data-tab="tomorrow" class="tab-button"></button>
                                 <button data-tab="all" class="tab-button"></button>
                                 <button data-tab="instructors" class="tab-button"></button>
@@ -653,7 +655,6 @@
                     await setDoc(docRef, percentages);
                 },
             };
-
             // --- Main App Initialization ---
             function initializeAppLogic() {
                 if (state.accessToken && !state.courses) {
@@ -752,9 +753,13 @@
                     } else {
                         const targetDate = new Date();
                         if (day === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
+                        // YESTERDAY LOGIC ADDED
+                        if (day === 'yesterday') targetDate.setDate(targetDate.getDate() - 1);
+                        
                         const startOfDay = new Date(targetDate);
                         startOfDay.setHours(0, 0, 0, 0);
                         params.append('timeMin', startOfDay.toISOString());
+                        
                         const endOfDay = new Date(targetDate);
                         endOfDay.setHours(23, 59, 59, 999);
                         params.append('timeMax', endOfDay.toISOString());
@@ -1015,14 +1020,14 @@
                     });
                 }
 
-                if (state.activeTab === 'today' || state.activeTab === 'tomorrow') {
+                if (['today', 'tomorrow', 'yesterday'].includes(state.activeTab)) {
                     clientEntries.sort(([, a], [, b]) => new Date(a.startTime) - new Date(b.startTime));
                 } else {
                     clientEntries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
                 }
 
                 if (clientEntries.length === 0) {
-                    const tabTitle = { today: 'astăzi', tomorrow: 'mâine', all: 'toți clienții' }[state.activeTab];
+                    const tabTitle = { today: 'astăzi', tomorrow: 'mâine', yesterday: 'ieri', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
                     if (state.activeDiscipline !== 'all') message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
                     if (state.filterLastSessionOnly) message += ` Afișând doar clienții în ultima ședință.`
@@ -1051,7 +1056,15 @@
                 const assignedInstructor = clientData?.assignedInstructor || '';
                 const isExpanded = state.expandedClient === name;
                 const formattedTime = startTime ? new Date(startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
-                const formattedDate = startTime ? new Date(startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' }) : (state.activeTab === 'today' ? 'astăzi' : 'mâine');
+                
+                let formattedDate = '';
+                if (startTime) {
+                     formattedDate = new Date(startTime).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+                } else {
+                    if(state.activeTab === 'today') formattedDate = 'astăzi';
+                    if(state.activeTab === 'tomorrow') formattedDate = 'mâine';
+                    if(state.activeTab === 'yesterday') formattedDate = 'ieri';
+                }
 
                 const messageData = { name, discipline, date: formattedDate, time: formattedTime };
                 const notificationMessage = replacePlaceholders(state.messageTemplates.notification, messageData);
@@ -1062,6 +1075,8 @@
 
                 const eventIdentifier = btoa(`${eventId} ${state.calendarId}`).replace(/=/g, '');
                 const editUrl = `https://calendar.google.com/calendar/r/eventedit/${eventIdentifier}`;
+                
+                const isActionableTab = ['today', 'tomorrow'].includes(state.activeTab);
 
                 return `
                 <li id="client-${eventId}" class="px-6 py-5 hover:bg-gray-700/50 transition-colors duration-200">
@@ -1069,7 +1084,7 @@
                             <div class="flex-grow mb-4 md:mb-0">
                                 <div class="flex items-center">
                                     <span class="text-2xl font-semibold text-gray-100 bg-gray-600 px-3 py-1 rounded-lg">${name}</span>
-                                    ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') ?
+                                    ${isActionableTab ?
                         `<a href="${editUrl}" target="_blank" class="ml-3 p-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600" title="Editează Eveniment în Google Calendar">
                                         <i data-lucide="calendar-days" class="h-4 w-4"></i>
                                     </a>` : ''
@@ -1090,10 +1105,10 @@
                                     </select>
                                     <span class="sub-status text-xs text-green-400 opacity-0">Salvat!</span>
                                 </div>
-                                ${(state.activeTab === 'today' || state.activeTab === 'tomorrow') && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-400 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
+                                ${(['today', 'tomorrow', 'yesterday'].includes(state.activeTab)) && startTime ? `<div class="flex items-center mt-1 text-sm text-blue-400 font-semibold"><i data-lucide="clock" class="h-4 w-4 mr-2"></i><span>${formattedTime}</span></div>` : ''}
                                 <div class="flex items-center gap-2 mt-2">
                                     ${phone ? `<button class="whatsapp-btn flex items-center justify-center bg-green-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-green-600 text-xs" data-phone="${phone}"><svg role="img" viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52s-.67-.816-.916-1.103c-.247-.287-.5-.318-.67-.323-.172-.005-.371-.005-.57-.005-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871-.118.571-.355 1.758-2.16 2.03-2.874.272-.714.272-1.319.198-1.469-.074-.15-.272-.222-.57-.371z"/></svg><span>${phone}</span></button>` : ''}
-                                    <button class="log-cash-btn flex items-center justify-center bg-emerald-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-emerald-600 disabled:bg-gray-400 text-xs" data-name="${name}" data-event-id="${eventId}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
+                                    <button class="log-cash-btn flex items-center justify-center bg-emerald-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-emerald-600 disabled:bg-gray-400 text-xs" data-name="${name}" data-event-id="${eventId}" ${!isActionableTab ? 'disabled' : ''}>
                                         <i data-lucide="dollar-sign" class="h-4 w-4 mr-1.5"></i><span>Cash</span>
                                     </button>
                                 </div>
@@ -1104,11 +1119,11 @@
                                     <span class="text-xs font-medium text-gray-300">Sedinta ${sessionNumber} / ${subscriptionType}</span>
                                     <div class="mt-1 w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.min((sessionNumber / parseInt(subscriptionType)) * 100, 100)}%"></div></div>
                                 </div>
-                                <button class="whatsapp-btn w-full flex items-center justify-center bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${notificationMessage}" ${!phone || !startTime || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="message-square" class="h-4 w-4 mr-1.5"></i><span>Notificare sedinta</span></button>
-                                <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== parseInt(subscriptionType) || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
-                                <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || state.activeTab === 'all' ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
-                                <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" data-start-time="${startTime}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
-                                <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${state.activeTab !== 'today' && state.activeTab !== 'tomorrow' ? 'disabled' : ''}>
+                                <button class="whatsapp-btn w-full flex items-center justify-center bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${notificationMessage}" ${!phone || !startTime || !isActionableTab ? 'disabled' : ''}><i data-lucide="message-square" class="h-4 w-4 mr-1.5"></i><span>Notificare sedinta</span></button>
+                                <button class="whatsapp-btn w-full flex items-center justify-center bg-orange-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${lastSessionMessage}" ${sessionNumber !== parseInt(subscriptionType) || !phone || !isActionableTab ? 'disabled' : ''}><i data-lucide="credit-card" class="h-4 w-4 mr-1.5"></i><span>Notificare ultima sedinta</span></button>
+                                <button class="whatsapp-btn w-full flex items-center justify-center bg-teal-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 text-xs" data-phone="${phone}" data-message="${newSubMessage}" ${sessionNumber !== 1 || !phone || !isActionableTab ? 'disabled' : ''}><i data-lucide="refresh-cw" class="h-4 w-4 mr-1.5"></i><span>Notificare plată nouă</span></button>
+                                <button class="decline-btn w-full flex items-center justify-center bg-red-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" data-discipline="${discipline}" data-phone="${phone}" data-start-time="${startTime}" ${!isActionableTab ? 'disabled' : ''}><i data-lucide="x-circle" class="h-4 w-4 mr-1.5"></i><span>Anulează</span></button>
+                                <button class="increment-session-btn w-full flex items-center justify-center bg-blue-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-xs" data-event-id="${eventId}" data-name="${name}" ${!isActionableTab ? 'disabled' : ''}>
                                     <i data-lucide="plus-circle" class="h-4 w-4 mr-1.5"></i><span>Incrementeaza sedinta</span>
                                 </button>
                             </div>
@@ -1203,6 +1218,11 @@
                 if (state.searchQuery) return 'Rezultate Căutare';
                 const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 if (state.activeTab === 'today') return `Sumar Clienți pentru Astăzi (${new Date().toLocaleDateString('ro-RO', options)})`;
+                if (state.activeTab === 'yesterday') {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    return `Sumar Clienți pentru Ieri (${yesterday.toLocaleDateString('ro-RO', options)})`;
+                }
                 if (state.activeTab === 'tomorrow') {
                     const tomorrow = new Date();
                     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1977,7 +1997,6 @@
                     updateUI();
                 }
             };
-
             const handleDashboardLoad = async () => {
                 renderLoader('Se calculează datele pentru dashboard...');
                 try {
@@ -2203,10 +2222,11 @@
                 renderNotification("Toate sesiunile pentru mâine au fost incrementate.", "success");
             };
 
-            const handleLogTodaysSessionsClick = async () => {
+            const handleLogSessionsClick = async () => {
                 const button = document.getElementById('logTodaysSessionsBtn');
-                if (state.activeTab !== 'today' || Object.keys(state.clients).length === 0) {
-                    renderNotification("Nicio sesiune de înregistrat pentru azi.", "success");
+                // MODIFICATION: Check if the active tab is 'today' or 'yesterday'
+                if (!['today', 'yesterday'].includes(state.activeTab) || Object.keys(state.clients).length === 0) {
+                    renderNotification("Nicio sesiune de înregistrat pentru ziua selectată.", "success");
                     return;
                 }
 
@@ -2215,10 +2235,16 @@
                 lucide.createIcons();
 
                 let loggedCount = 0;
-                const todayKey = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+                // MODIFICATION: Determine the date key based on the active tab
+                const targetDate = new Date();
+                if (state.activeTab === 'yesterday') {
+                    targetDate.setDate(targetDate.getDate() - 1);
+                }
+                const dateKey = targetDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
                 try {
-                    // 1. Fetch financial data for all of today's clients first
+                    // 1. Fetch financial data for all of the day's clients first
                     const clientNames = Object.keys(state.clients);
                     const clientFinancials = await getClientFinancialData(clientNames);
 
@@ -2266,19 +2292,20 @@
                             });
                         }
 
-                        // 4. Log the entire day's data for the instructor
-                        await firestoreApi.logDailyTimesheet(instructorId, todayKey, {
+                        // 4. Log the entire day's data for the instructor using the correct dateKey
+                        await firestoreApi.logDailyTimesheet(instructorId, dateKey, {
                             totalCommission: dailyTotalCommission,
                             sessionList: sessionList
                         });
                     }
 
-                    renderNotification(`${loggedCount} sesiuni au fost înregistrate în pontaj.`, 'success');
+                    renderNotification(`${loggedCount} sesiuni au fost înregistrate în pontaj pentru ${dateKey}.`, 'success');
                 } catch (err) {
                     renderNotification(`Eroare la înregistrarea pontajului: ${err.message}`, 'error');
                 } finally {
                     button.disabled = false;
-                    button.innerHTML = `Înregistrează Pontajul de Azi`;
+                    // MODIFICATION: The button text is now handled by updateUI, so we just reset the content here.
+                    button.innerHTML = state.activeTab === 'today' ? 'Înregistrează Pontajul de Azi' : 'Înregistrează Pontajul de Ieri';
                 }
             };
 
@@ -2398,7 +2425,8 @@
             function attachAppEventListeners() {
                 dom.calendarIdInput.addEventListener('change', (e) => state.calendarId = e.target.value);
                 dom.incrementAllBtn.addEventListener('click', handleIncrementAllTomorrow);
-                document.getElementById('logTodaysSessionsBtn').addEventListener('click', handleLogTodaysSessionsClick);
+                // THIS IS THE CORRECTED LINE
+                document.getElementById('logTodaysSessionsBtn').addEventListener('click', handleLogSessionsClick);
 
                 dom.openCalendarBtn.addEventListener('click', () => {
                     const calendarId = dom.calendarIdInput.value;
@@ -2938,10 +2966,11 @@
             };
 
             const updateUI = () => {
-                const tabConfig = {
+    const tabConfig = {
                     dashboard: { name: 'Dashboard', icon: 'layout-dashboard' },
                     add: { name: 'Adaugă Programare', icon: 'calendar-plus' },
                     today: { name: 'Astăzi', icon: 'calendar-check' },
+                    yesterday: { name: 'Ieri', icon: 'calendar-x' },
                     tomorrow: { name: 'Mâine', icon: 'calendar-clock' },
                     all: { name: 'Toți Clienții', icon: 'users' },
                     instructors: { name: 'Instructori', icon: 'user-cog' },
@@ -2965,14 +2994,20 @@
                     btn.className = `${baseClasses} ${isSelected ? selectedClasses : unselectedClasses}`;
                 });
 
-                const isClientTab = ['today', 'tomorrow', 'all'].includes(state.activeTab);
+                const isClientTab = ['today', 'tomorrow', 'all', 'yesterday'].includes(state.activeTab);
                 document.querySelectorAll('.filter-control').forEach(el => el.style.display = isClientTab ? 'flex' : 'none');
 
                 dom.incrementAllBtn.style.display = state.activeTab === 'tomorrow' ? 'block' : 'none';
 
                 const logSessionsBtn = document.getElementById('logTodaysSessionsBtn');
                 if (logSessionsBtn) {
-                    logSessionsBtn.style.display = state.activeTab === 'today' ? 'block' : 'none';
+                    // MODIFICATION: Show button for 'today' and 'yesterday'
+                    const showButton = ['today', 'yesterday'].includes(state.activeTab);
+                    logSessionsBtn.style.display = showButton ? 'block' : 'none';
+                    if (showButton) {
+                        // MODIFICATION: Change button text based on the active tab
+                        logSessionsBtn.textContent = state.activeTab === 'today' ? 'Înregistrează Pontajul de Azi' : 'Înregistrează Pontajul de Ieri';
+                    }
                 }
 
                 lucide.createIcons();
