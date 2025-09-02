@@ -994,8 +994,9 @@
                 lucide.createIcons();
             };
 
-            const populateDisciplineFilter = (clients) => {
-                const disciplines = [...new Set(Object.values(clients).map(client => client.discipline))].sort();
+            const populateDisciplineFilter = (sessions) => {
+                // MODIFICATION: Map the sessions array directly.
+                const disciplines = [...new Set(sessions.map(session => session.discipline))].sort();
                 dom.disciplineFilter.innerHTML = `<option value="all">Toate Disciplinele</option>`;
                 disciplines.forEach(discipline => {
                     const option = document.createElement('option');
@@ -1006,27 +1007,33 @@
                 dom.disciplineFilter.value = state.activeDiscipline;
             };
 
-            const renderClients = (allClients, clientFirebaseData) => {
+            const renderClients = (allSessions, clientFirebaseData) => {
                 state.fetched = true;
-                let clientEntries = Object.entries(allClients);
+                // MODIFICATION: The function now works directly with the sessions array.
+                let filteredSessions = [...allSessions];
 
                 if (state.activeDiscipline !== 'all') {
-                    clientEntries = clientEntries.filter(([_, details]) => details.discipline === state.activeDiscipline);
+                    filteredSessions = filteredSessions.filter(session => session.discipline === state.activeDiscipline);
                 }
                 if (state.filterLastSessionOnly) {
-                    clientEntries = clientEntries.filter(([name, details]) => {
-                        const subType = clientFirebaseData[name]?.subscription || '4';
-                        return details.sessionNumber === parseInt(subType);
+                    filteredSessions = filteredSessions.filter(session => {
+                        const subType = clientFirebaseData[session.name]?.subscription || '4';
+                        return session.sessionNumber === parseInt(subType);
                     });
                 }
 
                 if (['today', 'tomorrow', 'yesterday'].includes(state.activeTab)) {
-                    clientEntries.sort(([, a], [, b]) => new Date(a.startTime) - new Date(b.startTime));
+                    filteredSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
                 } else {
-                    clientEntries.sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                    // Sort by name first, then by start time for recurring clients
+                    filteredSessions.sort((a, b) => {
+                         if (a.name < b.name) return -1;
+                         if (a.name > b.name) return 1;
+                         return new Date(a.startTime) - new Date(b.startTime);
+                    });
                 }
 
-                if (clientEntries.length === 0) {
+                if (filteredSessions.length === 0) {
                     const tabTitle = { today: 'astăzi', tomorrow: 'mâine', yesterday: 'ieri', all: 'toți clienții' }[state.activeTab];
                     let message = state.searchQuery ? `Niciun client găsit pentru "${state.searchQuery}".` : `Nu s-au găsit programări pentru ${tabTitle}.`;
                     if (state.activeDiscipline !== 'all') message = `Nu s-au găsit programări pentru ${state.activeDiscipline} in ${tabTitle}.`;
@@ -1036,7 +1043,8 @@
                 }
 
                 const displayTitle = getDisplayTitle();
-                const clientListHTML = clientEntries.map(([name, details]) => createClientListItemHTML(name, details, clientFirebaseData[name])).join('');
+                // MODIFICATION: Pass each session object and the corresponding client data to the render function.
+                const clientListHTML = filteredSessions.map(session => createClientListItemHTML(session.name, session, clientFirebaseData[session.name])).join('');
 
                 dom.resultsArea.innerHTML = `
                     <div class="bg-gray-800 shadow-xl rounded-2xl overflow-hidden fade-in">
@@ -1944,7 +1952,7 @@
                     return;
                 }
                 if (state.activeTab === 'timesheet') {
-                    loadAndDisplayTimesheet(); // MODIFIED
+                    loadAndDisplayTimesheet();
                     return;
                 }
                 if (state.activeTab === 'dashboard') {
@@ -1975,8 +1983,13 @@
                 updateUI();
 
                 try {
+                    // state.clients is now an array of session objects
                     state.clients = await api.getEvents(state.activeTab);
-                    const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
+
+                    // MODIFICATION: Get unique client names from the sessions array to fetch Firestore data
+                    const uniqueClientNames = [...new Set(state.clients.map(session => session.name))];
+                    const clientDataPromises = uniqueClientNames.map(name => firestoreApi.getClientData(name));
+                    
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
                         if (data.name) {
@@ -2000,9 +2013,8 @@
             const handleDashboardLoad = async () => {
                 renderLoader('Se calculează datele pentru dashboard...');
                 try {
-                    // Calculate date range: last Monday to next Sunday
                     const today = new Date();
-                    const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+                    const dayOfWeek = today.getDay(); 
                     const lastMonday = new Date(today);
                     const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
                     lastMonday.setDate(today.getDate() - diffToMonday);
@@ -2014,35 +2026,51 @@
 
                     const options = { day: 'numeric', month: 'long' };
                     const dateRangeString = `${lastMonday.toLocaleDateString('ro-RO', options)} - ${nextSunday.toLocaleDateString('ro-RO', { ...options, year: 'numeric' })}`;
-
-                    // Fetch events for the calculated week
+                    
                     const weeklyEventsRaw = await api.getEventsForDateRange(lastMonday, nextSunday);
-
-                    const allClients = await api.getEvents('all');
+                    // MODIFICATION: allSessions is now an array
+                    const allSessions = await api.getEvents('all');
 
                     // 1. Total Active Students
-                    const totalStudents = Object.keys(allClients).length;
+                    // MODIFICATION: Calculate unique students from the session array.
+                    const uniqueStudentNames = new Set(allSessions.map(s => s.name));
+                    const totalStudents = uniqueStudentNames.size;
 
                     // 2. Sessions This Week
                     const sessionsThisWeek = weeklyEventsRaw.filter(event => event.status !== 'cancelled').length;
 
                     // 3. Subscriptions Ending Soon
-                    const clientDataPromises = Object.keys(allClients).map(name => firestoreApi.getClientData(name));
+                    // MODIFICATION: Get unique names to fetch from Firestore
+                    const allClientNames = [...uniqueStudentNames];
+                    const clientDataPromises = allClientNames.map(name => firestoreApi.getClientData(name));
                     const allClientFirebaseData = await Promise.all(clientDataPromises);
                     const endingSubscriptions = [];
+
+                    // Create a map for easy lookup of the last session number for each client
+                    const lastSessionMap = new Map();
+                    allSessions.forEach(session => {
+                        const currentLast = lastSessionMap.get(session.name) || 0;
+                        if(session.sessionNumber > currentLast) {
+                            lastSessionMap.set(session.name, session.sessionNumber);
+                        }
+                    });
+
                     allClientFirebaseData.forEach(clientData => {
-                        const clientDetails = allClients[clientData.name];
-                        if (clientDetails) {
+                        const lastSessionNumber = lastSessionMap.get(clientData.name);
+                        if(lastSessionNumber !== undefined) {
                             const subType = parseInt(clientData.subscription || '4');
-                            if (clientDetails.sessionNumber === subType) {
-                                endingSubscriptions.push({ name: clientData.name, discipline: clientDetails.discipline });
+                            if (lastSessionNumber === subType) {
+                                // Find discipline from one of the sessions
+                                const sessionInfo = allSessions.find(s => s.name === clientData.name);
+                                endingSubscriptions.push({ name: clientData.name, discipline: sessionInfo?.discipline || 'N/A' });
                             }
                         }
                     });
 
                     // 4. Discipline Breakdown
-                    const disciplineBreakdown = Object.values(allClients).reduce((acc, client) => {
-                        acc[client.discipline] = (acc[client.discipline] || 0) + 1;
+                    // MODIFICATION: Reduce the sessions array to count disciplines
+                    const disciplineBreakdown = allSessions.reduce((acc, session) => {
+                        acc[session.discipline] = (acc[session.discipline] || 0) + 1;
                         return acc;
                     }, {});
 
@@ -2224,8 +2252,8 @@
 
             const handleLogSessionsClick = async () => {
                 const button = document.getElementById('logTodaysSessionsBtn');
-                // MODIFICATION: Check if the active tab is 'today' or 'yesterday'
-                if (!['today', 'yesterday'].includes(state.activeTab) || Object.keys(state.clients).length === 0) {
+                // MODIFICATION: The check now looks at the length of the array.
+                if (!['today', 'yesterday'].includes(state.activeTab) || state.clients.length === 0) {
                     renderNotification("Nicio sesiune de înregistrat pentru ziua selectată.", "success");
                     return;
                 }
@@ -2235,22 +2263,21 @@
                 lucide.createIcons();
 
                 let loggedCount = 0;
-
-                // MODIFICATION: Determine the date key based on the active tab
                 const targetDate = new Date();
                 if (state.activeTab === 'yesterday') {
                     targetDate.setDate(targetDate.getDate() - 1);
                 }
-                const dateKey = targetDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                const dateKey = targetDate.toISOString().split('T')[0];
 
                 try {
-                    // 1. Fetch financial data for all of the day's clients first
-                    const clientNames = Object.keys(state.clients);
+                    // MODIFICATION: Get unique names from the session array for financial data fetching
+                    const clientNames = [...new Set(state.clients.map(session => session.name))];
                     const clientFinancials = await getClientFinancialData(clientNames);
 
-                    // 2. Group sessions by instructor
                     const sessionsByInstructor = {};
-                    for (const [clientName, details] of Object.entries(state.clients)) {
+                    // MODIFICATION: Loop over the state.clients array directly.
+                    for (const session of state.clients) {
+                        const clientName = session.name;
                         const clientData = state.clientFirebaseData[clientName];
                         const instructorId = clientData?.assignedInstructor ? state.instructors.find(i => i.name === clientData.assignedInstructor)?.id : null;
 
@@ -2258,17 +2285,19 @@
                             if (!sessionsByInstructor[instructorId]) {
                                 sessionsByInstructor[instructorId] = [];
                             }
-                            sessionsByInstructor[instructorId].push({ clientName, details });
+                            // Push the entire session object for processing
+                            sessionsByInstructor[instructorId].push(session);
                         }
                     }
 
-                    // 3. Process and log data for each instructor
                     for (const [instructorId, sessions] of Object.entries(sessionsByInstructor)) {
                         let dailyTotalCommission = 0;
                         const sessionList = [];
                         const instructorPercent = parseFloat(state.instructorPercentages[instructorId]) || 0;
 
-                        for (const { clientName, details } of sessions) {
+                        // MODIFICATION: Loop through each session assigned to the instructor.
+                        for (const session of sessions) {
+                            const clientName = session.name;
                             const financialData = clientFinancials[clientName];
                             let commission = 0;
 
@@ -2277,7 +2306,7 @@
                                 const subType = parseInt(financialData.subscription, 10) || 4;
                                 if (lastPayment > 0 && subType > 0) {
                                     const sessionPrice = lastPayment / subType;
-                                    commission = sessionPrice * (instructorPercent / 100) - (sessionPrice * 0.06); // Deduct 6% tax
+                                    commission = sessionPrice * (instructorPercent / 100) - (sessionPrice * 0.06);
                                 }
                             }
 
@@ -2286,13 +2315,12 @@
 
                             sessionList.push({
                                 clientName: clientName,
-                                discipline: details.discipline,
-                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
-                                commission: commission // Store the calculated commission
+                                discipline: session.discipline,
+                                time: new Date(session.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+                                commission: commission
                             });
                         }
-
-                        // 4. Log the entire day's data for the instructor using the correct dateKey
+                        
                         await firestoreApi.logDailyTimesheet(instructorId, dateKey, {
                             totalCommission: dailyTotalCommission,
                             sessionList: sessionList
@@ -2304,7 +2332,6 @@
                     renderNotification(`Eroare la înregistrarea pontajului: ${err.message}`, 'error');
                 } finally {
                     button.disabled = false;
-                    // MODIFICATION: The button text is now handled by updateUI, so we just reset the content here.
                     button.innerHTML = state.activeTab === 'today' ? 'Înregistrează Pontajul de Azi' : 'Înregistrează Pontajul de Ieri';
                 }
             };
@@ -3467,8 +3494,9 @@
             };
 
                const processCalendarItems = async (items) => {
-                const processedClients = {};
-                if (!items) return processedClients;
+                // MODIFICATION: Changed from an object {} to an array [] to handle multiple sessions per client.
+                const processedSessions = [];
+                if (!items) return processedSessions;
 
                 const clientsCollection = collection(db, "clients");
                 const snapshot = await getDocs(clientsCollection);
@@ -3511,18 +3539,15 @@
                         const dataToUpdate = {};
                         let needsUpdate = false;
 
-                        // Case 1: New client
                         if (!existingData) {
                             needsUpdate = true;
                             dataToUpdate.name = name;
                             dataToUpdate.discipline = discipline;
                             if (phone) dataToUpdate.phone = phone;
                             if (studentEmail) dataToUpdate.email = studentEmail;
-                            dataToUpdate.youtubePlaylist = []; // Initialize playlist
+                            dataToUpdate.youtubePlaylist = [];
                         } 
-                        // Case 2: Existing client
                         else {
-                            // Check for changes in core data
                             if (existingData.discipline !== discipline) {
                                 needsUpdate = true;
                                 dataToUpdate.discipline = discipline;
@@ -3535,7 +3560,6 @@
                                 needsUpdate = true;
                                 dataToUpdate.email = studentEmail;
                             }
-                            // Check if playlist needs to be initialized for the existing client
                             if (!existingData.hasOwnProperty('youtubePlaylist')) {
                                 needsUpdate = true;
                                 dataToUpdate.youtubePlaylist = [];
@@ -3544,20 +3568,25 @@
                         
                         if (needsUpdate) {
                             console.log(`Syncing data for ${sanitizedName}: New or changed.`);
-                            // Since saveClientData merges, we only send the fields that need to be added or changed.
                             firestoreApi.saveClientData(name, dataToUpdate)
                                 .catch(err => console.error("Failed to save client info to Firestore:", err));
                         }
                     }
-
-                    processedClients[name] = {
-                        eventId: event.id, discipline, sessionNumber, studentEmail,
+                    
+                    // MODIFICATION: Push each session as a separate object into the array.
+                    // The client's name is now a property within the object.
+                    processedSessions.push({
+                        name: name, // Added name property
+                        eventId: event.id, 
+                        discipline, 
+                        sessionNumber, 
+                        studentEmail,
                         startTime: event.start?.dateTime,
-                        phone: phone || processedClients[name]?.phone,
+                        phone: phone,
                         lastPayment: null,
-                    };
+                    });
                 }
-                return processedClients;
+                return processedSessions;
             };
 
             async function fetchAndMergeLastPayments(clients, clientFirebaseData) {
