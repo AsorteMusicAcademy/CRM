@@ -2163,11 +2163,15 @@
 
             const handleIncrementSessionClick = async (button) => {
                 const { eventId, name } = button.dataset;
-                const clientDetails = state.clients[name];
+                
+                // MODIFICATION: Find the correct session object from the state array using its eventId.
+                const sessionDetails = state.clients.find(s => s.eventId === eventId);
+                
                 const clientFirebaseData = state.clientFirebaseData[name] || { subscription: '4' };
                 const subscriptionMax = parseInt(clientFirebaseData.subscription);
 
-                if (!clientDetails || (state.activeTab !== 'today' && state.activeTab !== 'tomorrow')) {
+                // MODIFICATION: The check now uses the 'sessionDetails' object we found.
+                if (!sessionDetails || (state.activeTab !== 'today' && state.activeTab !== 'tomorrow')) {
                     renderNotification('Incrementarea sesiunilor este disponibilă doar pentru sesiunile de astăzi sau de mâine.', 'error');
                     return;
                 }
@@ -2194,7 +2198,8 @@
                             }
                         }
                     } else { // 'today' tab
-                        lastSessionNumber = clientDetails.sessionNumber;
+                        // MODIFICATION: Use the sessionNumber from the found session object.
+                        lastSessionNumber = sessionDetails.sessionNumber;
                     }
 
                     newSessionNumber = (lastSessionNumber % subscriptionMax) + 1;
@@ -2207,12 +2212,14 @@
                     } else {
                         colorToApply = '8'; // Gray (Graphite)
                     }
-
-                    const newSummary = `${name} - ${clientDetails.discipline} - Sedinta ${newSessionNumber}`;
+                    
+                    // MODIFICATION: Use the discipline from the found session object.
+                    const newSummary = `${name} - ${sessionDetails.discipline} - Sedinta ${newSessionNumber}`;
                     await api.updateEventSummary(eventId, newSummary, colorToApply);
                     renderNotification(`Sesiunea pentru ${name} a fost incrementată la ${newSessionNumber}.`, 'success');
-
-                    state.clients[name].sessionNumber = newSessionNumber;
+                    
+                    // MODIFICATION: Update the sessionNumber directly in the session object within the array.
+                    sessionDetails.sessionNumber = newSessionNumber;
                     renderClients(state.clients, state.clientFirebaseData);
 
                 } catch (err) {
@@ -2227,8 +2234,9 @@
             const handleIncrementAllTomorrow = async () => {
                 if (state.activeTab !== 'tomorrow') return;
 
-                const tomorrowClients = Object.entries(state.clients);
-                if (tomorrowClients.length === 0) {
+                // MODIFICATION: The function now gets the list of sessions directly from the state array.
+                const tomorrowSessions = state.clients;
+                if (tomorrowSessions.length === 0) {
                     renderNotification("Nicio sesiune de incrementat pentru mâine.", "success");
                     return;
                 }
@@ -2236,9 +2244,10 @@
                 dom.incrementAllBtn.disabled = true;
                 dom.incrementAllBtn.innerHTML = `<i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i> Se incrementează...`;
                 lucide.createIcons();
-
-                for (const [name, details] of tomorrowClients) {
-                    const clientLi = document.getElementById(`client-${details.eventId}`);
+                
+                // MODIFICATION: Loop over the array of session objects.
+                for (const session of tomorrowSessions) {
+                    const clientLi = document.getElementById(`client-${session.eventId}`);
                     const button = clientLi?.querySelector('.increment-session-btn');
                     if (button) {
                         await handleIncrementSessionClick(button);
