@@ -2090,8 +2090,8 @@
 
             const handleSearch = async () => {
                 if (state.searchQuery.trim().length < 3) {
-                    state.clients = {};
-                    renderClients({});
+                    state.clients = []; // Use an empty array
+                    renderClients([], {}); // Pass empty array and object
                     return;
                 }
                 state.isSearching = true;
@@ -2099,8 +2099,13 @@
                 updateUI();
 
                 try {
+                    // This correctly returns an array of sessions
                     state.clients = await api.searchEvents(state.searchQuery);
-                    const clientDataPromises = Object.keys(state.clients).map(name => firestoreApi.getClientData(name));
+
+                    // MODIFICATION: Get unique client names from the new sessions array
+                    const uniqueClientNames = [...new Set(state.clients.map(session => session.name))];
+                    const clientDataPromises = uniqueClientNames.map(name => firestoreApi.getClientData(name));
+                    
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     state.clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
                         if (data.name) {
@@ -2108,6 +2113,7 @@
                         }
                         return acc;
                     }, {});
+
                     await fetchAndMergeLastPayments(state.clients, state.clientFirebaseData);
                     populateDisciplineFilter(state.clients);
                     renderClients(state.clients, state.clientFirebaseData);
@@ -2400,7 +2406,6 @@
                     return;
                 }
 
-                // --- Step 1: Update UI to show loading state on the button ---
                 if (button) {
                     button.disabled = true;
                     button.innerHTML = `<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i>`;
@@ -2408,9 +2413,13 @@
                 }
 
                 try {
-                    // --- Step 2: Fetch all data from APIs first ---
-                    const tomorrowsClients = await api.getEvents('tomorrow');
-                    const clientDataPromises = Object.keys(tomorrowsClients).map(name => firestoreApi.getClientData(name));
+                    // MODIFICATION: tomorrowsClients is now an array of sessions, renamed to tomorrowsSessions for clarity.
+                    const tomorrowsSessions = await api.getEvents('tomorrow');
+                    
+                    // MODIFICATION: Correctly get unique client names from the sessions array.
+                    const uniqueClientNames = [...new Set(tomorrowsSessions.map(session => session.name))];
+                    const clientDataPromises = uniqueClientNames.map(name => firestoreApi.getClientData(name));
+                    
                     const clientFirebaseDataArray = await Promise.all(clientDataPromises);
                     const clientFirebaseData = clientFirebaseDataArray.reduce((acc, data) => {
                         if (data.name) {
@@ -2420,16 +2429,18 @@
                     }, {});
 
                     const instructorClients = [];
-                    for (const [clientName, details] of Object.entries(tomorrowsClients)) {
+                    // MODIFICATION: Correctly loop over the array of sessions.
+                    for (const session of tomorrowsSessions) {
+                        const clientName = session.name;
+                        // Check if this session's client is assigned to the target instructor.
                         if (clientFirebaseData[clientName]?.assignedInstructor === instructorName) {
                             instructorClients.push({
-                                name: clientName,
-                                time: new Date(details.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
+                                name: session.name, // Use the correct name from the session object
+                                time: new Date(session.startTime).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
                             });
                         }
                     }
 
-                    // --- Step 3: Build the final message ---
                     let finalMessage;
                     if (instructorClients.length === 0) {
                         finalMessage = `Salut ${instructorName}! Nu ai ședințe programate pentru mâine.`;
@@ -2441,14 +2452,12 @@
                         renderNotification(`Raport generat pentru ${instructorName}.`, 'success');
                     }
                     
-                    // --- Step 4: Open WhatsApp with the final, correct message ---
                     const link = getWhatsAppLink(instructorPhone, finalMessage);
                     window.open(link, '_blank');
 
                 } catch (err) {
                     renderNotification(`Eroare la generarea raportului: ${err.message}`, 'error');
                 } finally {
-                    // --- Step 5: Restore the button's original state ---
                     if (button) {
                         button.disabled = false;
                         button.innerHTML = `<i data-lucide="send" class="h-4 w-4"></i>`;
